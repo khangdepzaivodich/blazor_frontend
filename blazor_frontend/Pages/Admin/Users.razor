@@ -1,0 +1,240 @@
+﻿@page "/admin/users"
+@using blazor_frontend.Models
+<PageTitle>Quản lý Người dùng</PageTitle>
+
+<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Quản lý Tài khoản</h2>
+            <p class="text-sm text-gray-500 mt-1">Quản lý thông tin và phân quyền cho nhân viên, khách hàng</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+            <i class="ph ph-user-plus text-xl"></i>
+            Thêm tài khoản
+        </button>
+    </div>
+
+    <!-- Bộ lọc & Tìm kiếm -->
+    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div class="flex-1 relative">
+            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+            placeholder="Tìm kiếm theo Tên, SĐT...">
+        </div>
+        <div class="w-full md:w-48">
+            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                <option value="">Tất cả Vai trò</option>
+                <option value="Admin">Quản trị viên</option>
+                <option value="Staff">Nhân viên</option>
+                <option value="Customer">Khách hàng</option>
+            </select>
+        </div>
+        <div class="w-full md:w-48">
+            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                <option value="">Tất cả Trạng thái</option>
+                <option value="true">Đang hoạt động</option>
+                <option value="false">Đã khóa</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Bảng Dữ liệu -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                    <th class="p-4 font-semibold border-b border-gray-200">Tài khoản</th>
+                    <th class="p-4 font-semibold border-b border-gray-200">Vai trò</th>
+                    <th class="p-4 font-semibold border-b border-gray-200">Dữ liệu liên hệ</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-center">Ngày tham gia</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-center">Trạng Thái</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700 text-sm">
+                @foreach (var user in TaiKhoans)
+                {
+                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(!user.TrangThai ? "bg-gray-50/50" : "")">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <!-- Avatar -->
+                                <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(user.HoTen)&background=f3f4f6&color=475569"
+                                alt="@user.HoTen" class="w-10 h-10 rounded-full border border-gray-200 @(!user.TrangThai ? "opacity-50 grayscale" : "")" />
+                                <div>
+                                    <p class="font-bold text-gray-800 @(!user.TrangThai ? "text-gray-500" : "")">@user.HoTen</p>
+                                    <p class="text-xs text-gray-500 font-mono mt-0.5">ID: @user.MaTK.ToString().Substring(0,8).ToUpper()</p>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Màu Role -->
+                        <td class="p-4">
+                            @if (user.VaiTro == "Admin")
+                            {
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                    <i class="ph ph-shield-star mr-1"></i> Admin
+                                </span>
+                            }
+                            else if (user.VaiTro == "Staff")
+                            {
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                    <i class="ph ph-user-gear mr-1"></i> Nhân viên
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                    <i class="ph ph-user mr-1"></i> Khách hàng
+                                </span>
+                            }
+                        </td>
+
+                        <!-- Địa chỉ & SĐT -->
+                        <td class="p-4">
+                            <div class="flex flex-col gap-1">
+                                <span class="font-medium text-gray-800 flex items-center gap-1.5">
+                                    <i class="ph ph-phone text-gray-400"></i> @user.SoDienThoai
+                                </span>
+                                <span class="text-xs text-gray-500 flex items-center gap-1.5">
+                                    <i class="ph ph-map-pin text-gray-400"></i> @user.DiaChi
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Ngày tạo -->
+                        <td class="p-4 text-center text-gray-500">
+                            @user.NgayTao.ToString("dd/MM/yyyy")
+                        </td>
+
+                        <!-- Trạng thái -->
+                        <td class="p-4 text-center">
+                            @if (user.TrangThai)
+                            {
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                    Hoạt động
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
+                                    Bị khóa
+                                </span>
+                            }
+                        </td>
+
+                        <!-- Thao tác -->
+                        <td class="p-4 text-right space-x-1">
+                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa thông tin">
+                                <i class="ph ph-pencil-simple text-xl"></i>
+                            </button>
+                            @if (user.TrangThai)
+                            {
+                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Khóa tài khoản">
+                                    <i class="ph ph-lock text-xl"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="p-1.5 text-green-500 hover:bg-green-100 rounded transition-colors" title="Mở khóa tài khoản">
+                                    <i class="ph ph-lock-key-open text-xl"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang thông minh -->
+    <div class="flex items-center justify-center mt-6 text-sm">
+        <div class="flex gap-1">
+            <!-- Nút Trước -->
+            <button @onclick="() => GoToPage(CurrentPage - 1)" 
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" 
+                    disabled="@(CurrentPage == 1)">
+                Trước
+            </button>
+
+            <!-- Render danh sách số trang -->
+            @if (TotalPages <= 5)
+            {
+                @for (int i = 1; i <= TotalPages; i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)" 
+                            class="px-3 py-1 border rounded-md shadow-sm 
+                            @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
+                        @pageNum
+                    </button>
+                }
+            }
+            else
+            {
+                <!-- Luôn hiện trang 1 -->
+                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">1</button>
+
+                <!-- Dấu ... thứ nhất nếu CurrentPage cách xa trang 1 -->
+                @if (CurrentPage > 3)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                <!-- Các trang xung quanh trang hiện tại -->
+                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm 
+                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
+                }
+
+                <!-- Dấu ... thứ hai nếu CurrentPage cách xa trang cuối -->
+                @if (CurrentPage < TotalPages - 2)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                <!-- Luôn hiện trang Cuối cùng -->
+                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
+            }
+
+            <!-- Nút Sau -->
+            <button @onclick="() => GoToPage(CurrentPage + 1)" 
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" 
+                    disabled="@(CurrentPage == TotalPages)">
+                Sau
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<TaiKhoan> TaiKhoans = new();
+
+    // Biến lưu trạng thái Phân trang
+    private int CurrentPage { get; set; } = 1;
+    private int TotalPages { get; set; } = 50; // Giả lập có 50 trang dữ liệu
+
+    protected override void OnInitialized()
+    {
+        // Fake Data Call
+        TaiKhoans = MockStoreData.GetMockTaiKhoans();
+    }
+
+    // Hàm chuyển trang
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            CurrentPage = page;
+
+            // gọi API backend: TaiKhoans = await ApiService.GetUsersAsync(pageNumber: CurrentPage, pageSize: 10); 
+        }
+    }
+}

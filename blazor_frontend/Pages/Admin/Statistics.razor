@@ -1,0 +1,139 @@
+﻿@page "/admin/dashboard"
+@using ApexCharts
+<PageTitle>Thống kê</PageTitle>
+
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Thống kê Tổng quan</h2>
+
+    <!-- Các thẻ thống kê (Cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Khối 1 -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl 
+                    p-4 flex items-center shadow-sm">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500">Tổng doanh thu</p>
+                <p class="text-lg font-bold text-gray-700">125,000,000 đ</p>
+            </div>
+        </div>
+
+        <!-- Khối 2 -->
+        <div class="bg-green-50 border border-green-100 rounded-xl 
+                    p-4 flex items-center shadow-sm">
+            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500">Sản phẩm bán ra</p>
+                <p class="text-lg font-bold text-gray-700">1,240</p>
+            </div>
+        </div>
+
+        <!-- Khối 3 -->
+        <div class="bg-yellow-50 border border-yellow-100 rounded-xl 
+                    p-4 flex items-center shadow-sm">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500">Người dùng mới</p>
+                <p class="text-lg font-bold text-gray-700">342</p>
+            </div>
+        </div>
+
+        <!-- Khối 4 -->
+        <div class="bg-red-50 border border-red-100 rounded-xl 
+                    p-4 flex items-center shadow-sm">
+            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-500">Tỷ lệ chốt đơn</p>
+                <p class="text-lg font-bold text-gray-700">68%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khu vực 2 Biểu đồ (Charts) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Biểu đồ 1: Doanh thu -->
+        <div class="border border-gray-200 rounded-xl p-6 shadow-sm bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Doanh thu tuần này</h3>
+                <i class="ph ph-dots-three-outline font-bold text-gray-400 cursor-pointer hover:text-blue-500"></i>
+            </div>
+
+            <ApexChart TItem="ChartData" Title="" Height="300">
+                <ApexPointSeries TItem="ChartData"
+                                 Items="revenueData"
+                                 Name="Triệu VNĐ"
+                                 SeriesType="SeriesType.Bar"
+                                 XValue="@(e => e.Category)"
+                                 YAggregate="@(e => e.Sum(x => x.Value))" />
+            </ApexChart>
+        </div>
+
+        <!-- Biểu đồ 2: Sản phẩm bán ra -->
+        <div class="border border-gray-200 rounded-xl p-6 shadow-sm bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Sản phẩm bán ra</h3>
+                <i class="ph ph-dots-three-outline font-bold text-gray-400 cursor-pointer hover:text-green-500"></i>
+            </div>
+
+            <ApexChart TItem="ChartData" Title="" Height="300">
+                <ApexPointSeries TItem="ChartData"
+                                 Items="productData"
+                                 Name="Sản phẩm"
+                                 SeriesType="SeriesType.Area"
+                                 XValue="@(e => e.Category)"
+                                 YAggregate="@(e => e.Sum(x => x.Value))" />
+            </ApexChart>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    public class ChartData
+    {
+        public string Category { get; set; } = string.Empty;
+        public int Value { get; set; }
+    }
+
+    private List<ChartData> revenueData = new()
+    {
+        new ChartData { Category = "T2", Value = 40 },
+        new ChartData { Category = "T3", Value = 60 },
+        new ChartData { Category = "T4", Value = 80 },
+        new ChartData { Category = "T5", Value = 45 },
+        new ChartData { Category = "T6", Value = 70 },
+        new ChartData { Category = "T7", Value = 95 },
+        new ChartData { Category = "CN", Value = 35 }
+    };
+
+    private List<ChartData> productData = new()
+    {
+        new ChartData { Category = "T2", Value = 120 },
+        new ChartData { Category = "T3", Value = 150 },
+        new ChartData { Category = "T4", Value = 230 },
+        new ChartData { Category = "T5", Value = 140 },
+        new ChartData { Category = "T6", Value = 210 },
+        new ChartData { Category = "T7", Value = 350 },
+        new ChartData { Category = "CN", Value = 160 }
+    };
+}

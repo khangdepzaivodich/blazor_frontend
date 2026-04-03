@@ -1,0 +1,161 @@
+﻿@page "/admin/categories"
+@using blazor_frontend.Models
+<PageTitle>Quản lý Danh mục</PageTitle>
+
+<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Quản lý Danh mục</h2>
+            <p class="text-sm text-gray-500 mt-1">Quản lý các loại danh mục</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+            <i class="ph ph-plus-circle text-xl"></i>
+            Thêm danh mục
+        </button>
+    </div>
+
+    <!-- Bộ lọc -->
+    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div class="flex-1 relative">
+            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow" placeholder="Tìm kiếm theo Tên danh mục...">
+        </div>
+        <div class="w-full md:w-48">
+            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                <option value="">Tất cả danh mục</option>
+                <option value="ao">Áo</option>
+                <option value="quan">Quần</option>
+                <option value="phukien">Phụ kiện</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Bảng Dữ liệu -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                    <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Danh mục</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Loại danh mục</th>
+                    <th class="p-4 font-semibold border-b border-gray-200">Slug</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700 text-sm">
+                @foreach (var ldm in LoaiDanhMucs)
+                {
+                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
+
+                        <!-- Tên danh mục -->
+                        <td class="p-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                <i class="ph ph-folder text-sm mr-2"></i>
+                                @ldm.DanhMuc?.TenDM
+                            </span>
+                        </td>
+
+                        <!-- Tên loại danh mục -->
+                        <td class="p-4 font-bold text-gray-800">
+                            @ldm.TenLDM
+                        </td>
+
+                        <!-- SLUGGGGG -->
+                        <td class="p-4">
+                            <code class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">
+                                /@ldm.DanhMuc?.Slug/@ldm.Slug
+                            </code>
+                        </td>
+
+                        <!-- Thao tác -->
+                        <td class="p-4 text-right space-x-2">
+                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa danh mục">
+                                <i class="ph ph-pencil-simple text-xl"></i>
+                            </button>
+                            <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Xóa danh mục">
+                                <i class="ph ph-trash text-xl"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Chuyển trang -->
+    <div class="flex items-center justify-center mt-6 text-sm">
+        <div class="flex gap-1">
+            <!-- Nút Trước -->
+            <button @onclick="() => GoToPage(CurrentPage - 1)"
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
+                    disabled="@(CurrentPage == 1)">
+                Trước
+            </button>
+
+            <!-- Render danh sách số trang -->
+            @if (TotalPages <= 5)
+            {
+                @for (int i = 1; i <= TotalPages; i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)"
+                            class="px-3 py-1 border rounded-md shadow-sm 
+                            @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
+                        @pageNum
+                    </button>
+                }
+            }
+            else
+            {
+                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">1</button>
+
+                @if (CurrentPage > 3)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm 
+                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
+                }
+
+                @if (CurrentPage < TotalPages - 2)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
+            }
+
+            <button @onclick="() => GoToPage(CurrentPage + 1)"
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
+                    disabled="@(CurrentPage == TotalPages)">
+                Sau
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int CurrentPage { get; set; } = 1;
+    private int TotalPages { get; set; } = 50;
+    private List<LoaiDanhMuc> LoaiDanhMucs = new();
+
+    protected override void OnInitialized()
+    {
+        LoaiDanhMucs = MockStoreData.GetMockLoaiDanhMucs();
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            CurrentPage = page;
+        }
+    }
+}
