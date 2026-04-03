@@ -1,0 +1,30 @@
+@inherits LayoutComponentBase
+
+<div class="flex h-screen bg-gray-100 overflow-hidden">
+    <!-- Sidebar  -->
+    <aside class="h-full shadow-lg z-20 transition-all duration-300 ease-in-out flex-shrink-0" style="width: @(_drawerOpen ? "256px" : "0px"); overflow: hidden;">
+        <div style="width: 256px; height: 100%;">
+            <StaffSidebar Role="Admin" />
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0 h-screen transition-all duration-300 ease-in-out">
+        <!-- Header -->
+        <StaffHeader OnToggleSidebar="DrawerToggle" Role="Admin" />
+
+        <!-- Main Body -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

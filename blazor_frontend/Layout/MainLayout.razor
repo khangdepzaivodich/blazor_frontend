@@ -1,43 +1,19 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="flex h-screen bg-gray-100">
-    <!-- Sidebar -->
-    @if (_drawerOpen)
-    {
-        <aside class="w-64 bg-white shadow-md flex-shrink-0">
-            <div class="h-16 flex items-center justify-center border-b border-gray-200">
-                <span class="text-xl font-bold text-gray-800">My App</span>
-            </div>
-            <nav class="p-4">
-                <!-- Navigation links go here -->
-            </nav>
-        </aside>
-    }
+<div class="min-h-screen bg-gray-50 flex flex-col">
+    <!-- Navbar cho khách hàng -->
+    <header class="bg-white shadow">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-gray-800">FashionStore</a>
+        </div>
+    </header>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <!-- Header -->
-        <header class="h-16 bg-blue-600 text-white flex items-center px-4 shadow-sm">
-            <button @onclick="DrawerToggle" class="p-2 mr-4 rounded-md hover:bg-blue-700 focus:outline-none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            <h1 class="text-xl font-semibold">My Application</h1>
-        </header>
+    <!-- Nội dung chính -->
+    <main class="flex-1 container mx-auto px-4 py-8">
+        @Body
+    </main>
 
-        <!-- Main Body -->
-        <main class="flex-1 p-6 overflow-y-auto">
-            @Body
-        </main>
-    </div>
 </div>
 
 @code {
-    bool _drawerOpen = true;
-
-    void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
 }

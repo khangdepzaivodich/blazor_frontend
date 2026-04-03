@@ -1,0 +1,235 @@
+﻿@page "/admin/products"
+@using blazor_frontend.Models
+<PageTitle>Quản lý Sản phẩm</PageTitle>
+
+<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Quản lý Sản phẩm</h2>
+            <p class="text-sm text-gray-500 mt-1">Quản lý các loại quần áo và chi tiết màu sắc, kích cỡ</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+            <i class="ph ph-plus-circle text-xl"></i>
+            Thêm sản phẩm
+        </button>
+    </div>
+
+    <!-- Bộ lọc & Tìm kiếm -->
+    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div class="flex-1 relative">
+            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow" placeholder="Tìm kiếm theo Tên sản phẩm...">
+        </div>
+        <div class="w-full md:w-48">
+            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                <option value="">Tất cả Loại Danh mục</option>
+                <option value="A01">Áo thun</option>
+                <option value="A02">Áo khoác</option>
+                <option value="Q01">Quần Jean</option>
+            </select>
+        </div>
+        <div class="w-full md:w-48">
+            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                <option value="">Tất cả Trạng thái</option>
+                <option value="true">Đang bán</option>
+                <option value="false">Ngừng kinh doanh</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Bảng Dữ liệu Sản phẩm (Bảng Gốc) -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-left border-collapse">
+            <!-- Row đầu -->
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                    <th class="p-4 font-semibold border-b border-gray-200">Sản phẩm Gốc</th>
+                    <th class="p-4 font-semibold border-b border-gray-200">Danh mục</th>
+                    <th class="p-4 font-semibold border-b border-gray-200">Chi tiết</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-center">Trạng Thái</th>
+                    <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700 text-sm">
+
+                @foreach (var sp in SanPhams)
+                {
+                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(sp.TrangThai ? "" : "opacity-75")">
+
+                        <!-- Sản phẩm -->
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="@sp.AnhDaiDien" alt="@sp.TenSP" class="w-12 h-12 rounded bg-gray-100 object-cover border border-gray-200 @(sp.TrangThai ? "" : "grayscale")" />
+                                <div>
+                                    <p class="font-bold text-gray-800 @(sp.TrangThai ? "" : "line-through")">@sp.TenSP</p>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Danh mục -->
+                        <td class="p-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                @(sp.LoaiDanhMuc?.TenLDM) (@(sp.LoaiDanhMuc?.DanhMuc?.TenDM))
+                            </span>
+                        </td>
+
+                        <!-- Chi tiết -->
+                        <td class="p-4">
+                            <div class="flex -space-x-2">
+                                @{
+                                    var topMaus = sp.ChiTietSanPhams.GroupBy(c => c.Mau).Take(3).ToList();
+                                    foreach (var group in topMaus)
+                                    {
+                                        <div class="w-8 h-8 rounded-full border-2 border-white @GetColorClass(group.Key) 
+                                                    flex items-center justify-center text-[10px] font-bold" 
+                                             title="@group.Key - @string.Join(", ", group.Select(x => x.KichCo))">
+                                            @group.Count()
+                                        </div>
+                                    }
+                                }
+                                @if (sp.ChiTietSanPhams.Select(c => c.Mau).Distinct().Count() > 3)
+                                {
+                                    <div class="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 bg-gray-100 
+                                                flex items-center justify-center text-xs text-gray-500 font-bold 
+                                                hover:bg-gray-200 cursor-pointer" 
+                                         title="Xem tất cả biến thể">
+                                        <i class="ph ph-plus"></i>
+                                    </div>
+                                }
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Có <span class="font-bold text-gray-700">@sp.ChiTietSanPhams.Count</span> Chi tiết SP</p>
+                        </td>
+
+                        <!-- Trạng thái -->
+                        <td class="p-4 text-center">
+                            @if (sp.TrangThai)
+                            {
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                    Đang bán
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    Ngừng kinh doanh
+                                </span>
+                            }
+                        </td>
+
+                        <!-- Thao tác -->
+                        <td class="p-4 text-right space-x-2">
+                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Chỉnh sửa">
+                                <i class="ph ph-pencil-simple text-xl"></i>
+                            </button>
+                            @if (sp.TrangThai)
+                            {
+                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Ẩn">
+                                    <i class="ph ph-eye-slash text-xl"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang Simulator =)) (Pagination) -->
+    <div class="flex items-center justify-center mt-6 text-sm">
+        <div class="flex gap-1">
+            <!-- Nút Trước -->
+            <button @onclick="() => GoToPage(CurrentPage - 1)"
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
+                    disabled="@(CurrentPage == 1)">
+                Trước
+            </button>
+
+            <!-- Render danh sách số trang -->
+            @if (TotalPages <= 5)
+            {
+                @for (int i = 1; i <= TotalPages; i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)"
+                            class="px-3 py-1 border rounded-md shadow-sm 
+                            @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
+                        @pageNum
+                    </button>
+                }
+            }
+            else
+            {
+                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">1</button>
+
+                @if (CurrentPage > 3)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
+                {
+                    var pageNum = i;
+                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm 
+                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
+                }
+
+                @if (CurrentPage < TotalPages - 2)
+                {
+                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
+                }
+
+                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
+            }
+
+            <button @onclick="() => GoToPage(CurrentPage + 1)"
+                    class="px-3 py-1 border rounded-md shadow-sm 
+                    @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
+                    disabled="@(CurrentPage == TotalPages)">
+                Sau
+            </button>
+        </div>
+    </div>
+
+    <div class="hidden bg-red-500 bg-blue-500 bg-blue-600 bg-green-500 bg-gray-800 bg-white bg-gray-500 bg-yellow-400 bg-pink-400 bg-purple-500 bg-orange-500 bg-gray-300 text-white text-gray-800 border border-gray-300"></div>
+</div>
+
+@code {
+    private int CurrentPage { get; set; } = 1;
+    private int TotalPages { get; set; } = 50;
+    private List<SanPham> SanPhams = new();
+
+    protected override void OnInitialized()
+    {
+        SanPhams = MockStoreData.GetMockSanPhams();
+    }
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            CurrentPage = page;
+        }
+    }
+    private string GetColorClass(string mau)
+    {
+        return mau.ToLower() switch
+        {
+            "đỏ" => "bg-red-500 text-white",
+            "xanh" => "bg-blue-500 text-white",
+            "xanh dương" => "bg-blue-600 text-white",
+            "xanh lá" => "bg-green-500 text-white",
+            "đen" => "bg-gray-800 text-white",
+            "trắng" => "bg-white text-gray-800 border border-gray-300",
+            "xám" => "bg-gray-500 text-white",
+            "vàng" => "bg-yellow-400 text-gray-800",
+            "hồng" => "bg-pink-400 text-white",
+            "tím" => "bg-purple-500 text-white",
+            "cam" => "bg-orange-500 text-white",
+            _ => "bg-gray-300 text-gray-800"
+        };
+    }
+}

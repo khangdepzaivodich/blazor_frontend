@@ -1,0 +1,84 @@
+﻿<header class="h-16 bg-white border-b border-gray-200 grid grid-cols-3 items-center px-4 shadow-sm z-10 w-full relative">
+    <!-- Nút Menu (Left) -->
+    <div class="flex justify-start">
+        <button @onclick="OnToggleSidebar" 
+                class="p-2 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 focus:outline-none transition-colors duration-200">
+            <i class="ph ph-list text-2xl"></i>
+        </button>
+    </div>
+
+    <!-- Tên Store (Middle) -->
+    <div class="flex justify-center text-center">
+        <span class="text-xl font-extrabold text-blue-600 tracking-wide uppercase">
+            Fashion<span class="text-gray-800">Store</span>
+        </span>
+    </div>
+
+    <!--Click đóng dropdown-->
+    @if (_isDropdownOpen)
+    {
+        <div class="fixed inset-0 z-40" @onclick="CloseDropdown"></div>
+    }
+
+    <!-- Avatar và Tên (Right) -->
+    <div class="flex justify-end items-center gap-3 relative cursor-pointer">
+        <div class="flex items-center gap-3 z-50 relative" @onclick="ToggleDropdown">
+            <!-- Tên và vai trò -->
+            <div class="hidden md:flex flex-col items-end">
+                <span class="text-sm font-bold text-gray-800 leading-tight">@StaffName</span>
+                <span class="text-xs font-medium text-gray-500 leading-tight">@Role</span>
+            </div>
+
+            <!-- PFP Avatar -->
+            <div class="w-10 h-10 rounded-full border-2 border-blue-100 overflow-hidden shadow-sm hover:border-blue-400 transition-colors duration-200">
+                <img src="@AvatarUrl" alt="Staff Avatar" class="w-full h-full object-cover" />
+            </div>
+        </div>
+
+        <!-- Dropdown menu -->
+        @if (_isDropdownOpen)
+        {
+            <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-blue-100 z-50">
+                <a href="/admin/profile" 
+                   class="block px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition-colors" 
+                   @onclick="CloseDropdown">
+                    Hồ sơ
+                </a>
+                <a href="/admin/settings" 
+                   class="block px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-800 transition-colors" 
+                   @onclick="CloseDropdown">
+                    Cài đặt
+                </a>
+            </div>
+        }
+    </div>
+</header>
+
+@code {
+    private bool _isDropdownOpen = false;
+
+    private void ToggleDropdown()
+    {
+        _isDropdownOpen = !_isDropdownOpen;
+    }
+
+    private void CloseDropdown()
+    {
+        _isDropdownOpen = false;
+    }
+
+  
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
+    // Thông tin hiển thị của Staff
+    [Parameter]
+    public string StaffName { get; set; } = "Nguyễn Văn A";
+
+    [Parameter]
+    public string Role { get; set; } = "Admin";
+
+    // Hình Avatar Random từ UI Faces
+    [Parameter]
+    public string AvatarUrl { get; set; } = "https://ui-avatars.com/api/?name=Nguyễn+A&background=e0f2fe&color=2563eb&size=100";
+}

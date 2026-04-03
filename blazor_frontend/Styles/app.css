@@ -2,3 +2,9 @@
 
 @source "../**/*.razor";
 @source "../**/*.html";
+
+@layer base {
+    a {
+        text-decoration: none !important;
+    }
+}
