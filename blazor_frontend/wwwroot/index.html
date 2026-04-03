@@ -16,17 +16,21 @@
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="flex items-center justify-center h-screen bg-gray-50">
+            <div class="flex flex-col items-center gap-4">
+                <!-- Tailwind Spinner -->
+                <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                <div class="text-lg font-medium text-gray-600">Loading...</div>
+            </div>
+        </div>
     </div>
 
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+    <div id="blazor-error-ui" class="fixed bottom-0 left-0 w-full p-4 bg-yellow-100 text-yellow-900 z-50 shadow-lg justify-between items-center" style="display: none;">
+        <span>An unhandled error has occurred.</span>
+        <div>
+            <a href="." class="font-bold underline text-blue-600 hover:text-blue-800 mr-4">Reload</a>
+            <span class="dismiss cursor-pointer font-bold text-red-600">🗙</span>
+        </div>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
