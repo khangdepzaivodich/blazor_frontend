@@ -10,7 +10,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.2" PrivateAssets="all" />
-    <PackageReference Include="MudBlazor" Version="9.2.0" />
   </ItemGroup>
+
+  <Target Name="Tailwind" BeforeTargets="Build">
+    <Exec Command="npx @tailwindcss/cli -i .\Styles\app.css -o .\wwwroot\css\app.css" />
+  </Target>
 
 </Project>
