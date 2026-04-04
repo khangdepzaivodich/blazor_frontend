@@ -1,0 +1,234 @@
+﻿@page "/staff/messages"
+<PageTitle>Tư vấn khách hàng</PageTitle>
+
+<div class="p-6 h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+    <!-- Chat Container -->
+    <div class="flex-1 flex rounded-xl shadow-sm border border-gray-200 overflow-hidden bg-white">
+        <!-- Cột trái -->
+        <div class="w-full md:w-[320px] lg:w-[350px] border-r border-gray-200 flex flex-col bg-white flex-shrink-0">
+            <!-- Header danh sách -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">Trò chuyện</h2>
+                    <button class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Tải lại">
+                        <i class="ph ph-arrows-clockwise text-lg"></i>
+                    </button>
+                </div>
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                    <input type="text" placeholder="Tìm kiếm khách hàng..." 
+                           class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition-all" />
+                </div>
+            </div>
+
+            <!-- Danh sách trò chuyện -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                @foreach (var chat in conversations)
+                {
+                    <div @onclick="() => SelectConversation(chat)" 
+                         class="flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-all @(selectedChat?.Id == chat.Id ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "hover:bg-gray-50 border-l-4 border-l-transparent")">
+                        <div class="relative flex-shrink-0">
+                            <img src="@(chat.AvatarUrl)" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                            @if (chat.IsOnline)
+                            {
+                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                            }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="text-sm font-semibold text-gray-900 truncate">@chat.CustomerName</h4>
+                                <span class="text-xs text-gray-500 whitespace-nowrap ml-2">@chat.LastMessageTime.ToString("HH:mm")</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <p class="truncate text-gray-500">
+                                    @(chat.LastSender == "Me" ? "Bạn: " : "")@chat.LastMessage
+                                </p>
+                                @if (chat.UnreadCount > 0)
+                                {
+                                    <span class="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full ml-2 min-w-[18px] text-center">@chat.UnreadCount</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Cột phải -->
+        <div class="hidden md:flex flex-col flex-1 bg-gray-50 relative">
+            @if (selectedChat == null)
+            {
+                <div class="flex-1 flex flex-col items-center justify-center text-gray-400">
+                    <i class="ph ph-chats-circle text-6xl mb-4 text-gray-300"></i>
+                    <h3 class="text-lg font-medium text-gray-600">Chưa chọn đoạn chat</h3>
+                    <p class="text-sm">Chọn một khách hàng từ danh sách bên trái để phản hồi</p>
+                </div>
+            }
+            else
+            {
+                <!-- Header Chat -->
+                <div class="px-6 py-3 border-b border-gray-200 flex justify-between items-center bg-white shadow-sm z-10 min-h-[64px]">
+                    <div class="flex items-center gap-3">
+                        <img src="@selectedChat.AvatarUrl" class="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                        <div>
+                            <h3 class="font-bold text-gray-900 leading-tight text-[15px]">@selectedChat.CustomerName</h3>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full @(selectedChat.IsOnline ? "bg-green-500" : "bg-gray-400")"></span>
+                                <span class="text-xs text-gray-500">@(selectedChat.IsOnline ? "Trực tuyến" : "Ngoại tuyến")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phần nhắn tin -->
+                <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar bg-gray-50/50">
+                    <div class="text-center">
+                        <span class="text-xs font-medium text-gray-500 bg-gray-200/60 px-3 py-1 rounded-full">
+                            @selectedChat.LastMessageTime.ToString("dd/MM/yyyy")
+                        </span>
+                    </div>
+
+                    @foreach (var msg in currentMessages)
+                    {
+                        <div class="flex @(msg.IsMine ? "justify-end" : "justify-start") group items-end gap-2">
+                            @if (!msg.IsMine)
+                            {
+                                <img src="@selectedChat.AvatarUrl" class="w-8 h-8 rounded-full flex-shrink-0" />
+                            }
+
+                            <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
+                                <div class="px-4 py-2.5 shadow-sm text-[15px] @(msg.IsMine ? "bg-blue-600 text-white rounded-lg rounded-br-sm" : "bg-white border border-gray-200 text-gray-800 rounded-lg rounded-bl-sm") leading-relaxed break-words whitespace-pre-wrap">
+                                    @msg.Text
+                                </div>
+                                <span class="text-[11px] text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    @msg.Timestamp.ToString("HH:mm")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Phần nhập tin nhắn -->
+                <div class="p-4 bg-white border-t border-gray-200">
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1 relative">
+                            <textarea @bind="newMessage" @bind:event="oninput" @onkeyup="HandleKeyUp"
+                                      placeholder="Trả lời khách hàng..." 
+                                      rows="3"
+                                      class="w-full block border border-gray-300 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[80px] max-h-[250px] custom-scrollbar"></textarea>
+                        </div>
+
+                        <button @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)" 
+                                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg flex items-center gap-2 transition font-medium text-[15px] h-fit">
+                            <span>Gửi</span>
+                            <i class="ph ph-paper-plane-right"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling scrollbar for general look */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+    }
+</style>
+
+@code {
+    private List<ChatModel> conversations = new();
+    private ChatModel? selectedChat;
+    private List<MessageModel> currentMessages = new();
+    private string newMessage = "";
+
+    protected override void OnInitialized()
+    {
+        conversations = new List<ChatModel>
+        {
+            new ChatModel { Id = 1, CustomerName = "Nguyễn Văn Khiêm", AvatarUrl = "https://i.pravatar.cc/150?u=1", LastMessage = "Shop cho mình hỏi sản phẩm này còn hàng không?", LastSender = "Customer", LastMessageTime = DateTime.Today.AddHours(10).AddMinutes(24), UnreadCount = 2, IsOnline = true },
+            new ChatModel { Id = 2, CustomerName = "Trần Minh Tùng", AvatarUrl = "https://i.pravatar.cc/150?u=2", LastMessage = "Ok shop, giao cho mình nha", LastSender = "Customer", LastMessageTime = DateTime.Today.AddHours(9), UnreadCount = 0, IsOnline = false },
+            new ChatModel { Id = 3, CustomerName = "Lê Hoàng Phúc", AvatarUrl = "https://i.pravatar.cc/150?u=3", LastMessage = "Dạ vâng ạ", LastSender = "Me", LastMessageTime = DateTime.Today.AddDays(-1).AddHours(15), UnreadCount = 0, IsOnline = true },
+            new ChatModel { Id = 4, CustomerName = "Phạm Quỳnh Anh", AvatarUrl = "https://i.pravatar.cc/150?u=4", LastMessage = "Mình đã chuyển khoản rồi nè", LastSender = "Customer", LastMessageTime = DateTime.Today.AddDays(-1).AddHours(8), UnreadCount = 1, IsOnline = false },
+            new ChatModel { Id = 5, CustomerName = "Đỗ Tấn Phát", AvatarUrl = "https://i.pravatar.cc/150?u=5", LastMessage = "Cảm ơn shop!", LastSender = "Customer", LastMessageTime = DateTime.Today.AddDays(-2), UnreadCount = 0, IsOnline = false }
+        };
+    }
+
+    private void SelectConversation(ChatModel chat)
+    {
+        selectedChat = chat;
+        chat.UnreadCount = 0; // Đánh dấu đã đọc
+
+        // Mock messages giả định cho cuộc trò chuyện
+        currentMessages = new List<MessageModel>
+        {
+            new MessageModel { Text = "Chào shop, mình muốn hỏi về đơn hàng DH10041", Timestamp = chat.LastMessageTime.AddMinutes(-5), IsMine = false },
+            new MessageModel { Text = "Dạ chào bạn, shop đang kiểm tra ạ. Vui lòng đợi trong giây lát.", Timestamp = chat.LastMessageTime.AddMinutes(-2), IsMine = true },
+            new MessageModel { Text = chat.LastMessage, Timestamp = chat.LastMessageTime, IsMine = chat.LastSender == "Me" }
+        };
+    }
+
+    private void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            if (!string.IsNullOrWhiteSpace(newMessage))
+            {
+                SendMessage();
+            }
+        }
+    }
+
+    private void SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage) || selectedChat == null) return;
+
+        currentMessages.Add(new MessageModel 
+        { 
+            Text = newMessage.Trim(), 
+            Timestamp = DateTime.Now, 
+            IsMine = true 
+        });
+
+        // Cập nhật preview bên danh sách trái
+        selectedChat.LastMessage = newMessage;
+        selectedChat.LastSender = "Me";
+        selectedChat.LastMessageTime = DateTime.Now;
+
+        // Đẩy hội thoại lên đầu
+        conversations.Remove(selectedChat);
+        conversations.Insert(0, selectedChat);
+
+        newMessage = "";
+    }
+
+    public class ChatModel
+    {
+        public int Id { get; set; }
+        public string CustomerName { get; set; } = "";
+        public string AvatarUrl { get; set; } = "";
+        public string LastMessage { get; set; } = "";
+        public string LastSender { get; set; } = "";
+        public DateTime LastMessageTime { get; set; }
+        public int UnreadCount { get; set; }
+        public bool IsOnline { get; set; }
+    }
+
+    public class MessageModel
+    {
+        public string Text { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+        public bool IsMine { get; set; }
+    }
+}

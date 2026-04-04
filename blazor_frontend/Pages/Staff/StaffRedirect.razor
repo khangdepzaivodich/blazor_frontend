@@ -1,0 +1,10 @@
+﻿@page "/staff"
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/staff/orders", replace: true);
+    }
+}
+
