@@ -50,6 +50,35 @@ namespace blazor_frontend.Models
         public string DiaChi { get; set; } = string.Empty;
         public bool TrangThai { get; set; }
         public DateTime NgayTao { get; set; } = DateTime.Now;
+        public DateTime? LastActiveAt { get; set; }
+    }
+
+    public class CuocTroChuyen
+    {
+        public Guid MaCTC { get; set; } = Guid.NewGuid();
+        public Guid MaKhachHang { get; set; }
+        public Guid? MaNhanVien { get; set; }
+        public int SoTinNhanChuaDocNV { get; set; } = 0;
+        public int SoTinNhanChuaDocKH { get; set; } = 0;
+        public string LastMessagePreview { get; set; } = string.Empty;
+        public DateTime NgayCapNhat { get; set; } = DateTime.Now;
+
+        public TaiKhoan? KhachHang { get; set; }
+        public TaiKhoan? NhanVien { get; set; }
+        public List<TinNhan> TinNhans { get; set; } = new();
+    }
+
+    public class TinNhan
+    {
+        public long MaTN { get; set; }
+        public Guid MaCTC { get; set; }
+        public Guid MaNguoiGui { get; set; }
+        public string NoiDung { get; set; } = string.Empty;
+        public DateTime NgayGui { get; set; } = DateTime.Now;
+        public bool DaDoc { get; set; } = false;
+
+        public CuocTroChuyen? CuocTroChuyen { get; set; }
+        public TaiKhoan? NguoiGui { get; set; }
     }
 
     // Mock Data sản phẩm

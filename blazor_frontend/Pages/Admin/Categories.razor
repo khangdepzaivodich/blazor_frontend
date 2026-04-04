@@ -130,7 +130,7 @@
                 <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
                     @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
             }
-
+            <!-- Nút sau -->
             <button @onclick="() => GoToPage(CurrentPage + 1)"
                     class="px-3 py-1 border rounded-md shadow-sm 
                     @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
