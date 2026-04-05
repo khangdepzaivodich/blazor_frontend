@@ -1,0 +1,66 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<div class="group bg-white rounded-lg shadow-sm overflow-hidden relative flex flex-col h-full">
+    @if (!string.IsNullOrEmpty(BadgeText))
+    {
+        <div class="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded">
+            @BadgeText
+        </div>
+    }
+
+    <div class="relative bg-gray-100 flex-1">
+        <div tabindex="0" class="h-64 md:h-72 lg:h-80 relative overflow-hidden">
+            <img src="@ImagePath" alt="@Title" class="absolute inset-0 w-full h-full object-cover object-top" />
+
+            @if (ShowActions)
+            {
+                <div class="absolute left-1/2 -translate-x-1/2 bottom-4 bg-white rounded-md shadow-md flex items-center gap-2 p-2
+                            opacity-0 translate-y-2 pointer-events-none
+                            group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
+                            group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto
+                            transition-opacity transition-transform duration-150 ease-in-out">
+                    <button class="p-2 text-gray-800 hover:text-black" aria-label="Add to cart" @onclick="OnAddToCartClicked">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6"/></svg>
+                    </button>
+                    <button class="p-2 text-gray-800 hover:text-black" aria-label="Quick view" @onclick="OnQuickViewClicked">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="p-3">
+        <div class="text-sm text-gray-800 font-medium mb-1 line-clamp-2" title="@Title">@Title</div>
+
+        <div class="flex items-center justify-between">
+            <div class="text-lg font-bold text-[#0b3b72]">@Price</div>
+        </div>
+
+        @if (Colors?.Any() == true)
+        {
+            <div class="mt-3 flex items-center gap-2">
+                @foreach (var c in Colors)
+                {
+                    <button class="w-6 h-6 rounded-full border-2 border-white shadow-sm" style="background:@c" aria-label="Color @c"></button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ImagePath { get; set; } = "product.png";
+    [Parameter] public string Title { get; set; } = "Product title";
+    [Parameter] public string Price { get; set; } = "0₫";
+    [Parameter] public string BadgeText { get; set; } = "HÀNG MỚI";
+    [Parameter] public string[] Colors { get; set; } = new[] { "#000", "#fff", "#f00" };
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public int ProductId { get; set; }
+
+    [Parameter] public EventCallback<int> OnAddToCart { get; set; }
+    [Parameter] public EventCallback<int> OnQuickView { get; set; }
+
+    private Task OnAddToCartClicked() => OnAddToCart.InvokeAsync(ProductId);
+    private Task OnQuickViewClicked() => OnQuickView.InvokeAsync(ProductId);
+}

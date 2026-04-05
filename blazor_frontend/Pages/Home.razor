@@ -1,7 +1,36 @@
 ﻿@page "/"
+@using blazor_frontend.Shared
 
-<PageTitle>Trang chủ | FashionStore</PageTitle>
+@code {
+    private ProductList.ProductDto[] featured = new[]
+    {
+        new ProductList.ProductDto(1, "product1.jpg", "Áo Polo Nam Urban Accent For Men - Comfortable Fit", "349,000₫", "HÀNG MỚI", new[] { "#ffffff", "#d1cbbd", "#000000" }),
+        new ProductList.ProductDto(2, "product1.jpg", "Áo Polo Nam Raglan Dominus - Casual", "379,000₫", "HÀNG MỚI", new[] { "#ffffff", "#000000" }),
+        new ProductList.ProductDto(3, "product1.jpg", "Quần Kaki Nam Essential Baggy - Soft Fabric", "449,000₫", "HÀNG MỚI", new[] { "#dddddd", "#000000", "#b0926f" }),
+        new ProductList.ProductDto(4, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Rogner - Classic", "349,000₫", "HÀNG MỚI", new[] { "#e9eef6", "#dcdcdc" }),
+        new ProductList.ProductDto(3, "product1.jpg", "Quần Kaki Nam Essential Baggy - Soft Fabric", "449,000₫", "HÀNG MỚI", new[] { "#dddddd", "#000000", "#b0926f" }),
+        new ProductList.ProductDto(4, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Rogner - Classic", "349,000₫", "HÀNG MỚI", new[] { "#e9eef6", "#dcdcdc" }),
+    };
+}
 
-<h1>Hello, world!</h1>
+<div class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <!-- Left promo banner (tall) -->
+        <div class="lg:col-span-1">
+            <PromoBanner ImagePath="/static/promo.jpg" Title="ĐỒ CÔNG SỞ" CtaText="XEM NGAY" Link="/collection/office" />
+        </div>
 
-Welcome to your new app.
+        <!-- Right: product grid (3 columns) -->
+        <div class="lg:col-span-3">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Đồ Công Sở</h2>
+                <nav class="text-sm text-gray-500">
+                    <a class="mr-6">Hàng mới</a>
+                    <a class="mr-6">Set đồ</a>
+                </nav>
+            </div>
+
+            <ProductList Items="featured" ShowActions="true" />
+        </div>
+    </div>
+</div>

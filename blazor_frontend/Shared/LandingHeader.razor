@@ -1,0 +1,75 @@
+﻿@using Microsoft.AspNetCore.Components
+@code {
+    private bool _mobileOpen;
+    [Parameter] public int CartCount { get; set; } = 0;
+
+    void ToggleMobile() => _mobileOpen = !_mobileOpen;
+}
+
+<!-- Main navbar -->
+<header class="bg-white shadow-sm">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 flex items-center justify-between py-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+            <button class="md:hidden p-2" @onclick="ToggleMobile" aria-label="Open menu">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <a href="/" class="flex items-center gap-3">
+                <img src="images/logo.png" alt="SERIOUS" class="h-8 w-auto object-contain" onerror="this.style.display='none'" />
+                <span class="hidden md:inline-block text-2xl font-bold tracking-tight text-[#0b3b72]">Serious</span>
+            </a>
+        </div>
+
+        <!-- Center menu -->
+        <nav class="hidden lg:flex items-center gap-8 text-gray-700 font-medium">
+            <div class="relative group">
+                <button class="flex items-center gap-2">Sản phẩm <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06 0L10 10.92l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.23 8.27a.75.75 0 010-1.06z" /></svg></button>
+            </div>
+
+            <div class="relative group">
+                <button class="flex items-center gap-2">Hàng Mới <span class="ml-1 text-xs text-white bg-red-500 px-2 py-0.5 rounded">New</span></button>
+            </div>
+
+            <div>Hàng Bán Chạy</div>
+            <div>DENIM</div>
+            <div class="text-red-600 font-bold">OUTLET</div>
+            <div>Collection</div>
+        </nav>
+        <!-- Right icons -->
+        <div class="flex items-center gap-3">
+            <div class="hidden md:flex items-center bg-gray-100 rounded-full px-3 py-1">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
+                <input class="bg-transparent outline-none text-sm ml-2 w-40" placeholder="Search products" />
+            </div>
+
+            <button class="p-2 hidden md:inline-flex" aria-label="Account">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+
+            <button class="p-2 hidden md:inline-flex" aria-label="Store locator">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" /></svg>
+            </button>
+
+            <a href="/cart" class="relative">
+                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" /></svg>
+                <span class="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-1 rounded-full">@CartCount</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="lg:hidden">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+            <div class="@(_mobileOpen ? "block" : "hidden") bg-white border-t">
+                <ul class="flex flex-col py-4 space-y-3">
+                    <li class="px-2"><a class="block">Sản phẩm</a></li>
+                    <li class="px-2"><a class="block">Hàng Mới <span class="ml-2 text-xs text-white bg-red-500 px-2 py-0.5 rounded">New</span></a></li>
+                    <li class="px-2"><a class="block">Hàng Bán Chạy</a></li>
+                    <li class="px-2"><a class="block">DENIM</a></li>
+                    <li class="px-2"><a class="block text-red-600 font-bold">OUTLET</a></li>
+                    <li class="px-2"><a class="block">Collection</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</header>

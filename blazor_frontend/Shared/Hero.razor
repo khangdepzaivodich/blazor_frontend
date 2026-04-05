@@ -1,0 +1,13 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<section class="relative" style="padding-top:@TopOffset">
+    <div class="h-72 md:h-96 lg:h-[560px] relative overflow-hidden">
+        <img src="@ImagePath" alt="@Alt" class="absolute inset-0 w-full h-full object-cover object-top" style="object-position: top center;" />
+    </div>
+</section>
+
+@code {
+    [Parameter] public string ImagePath { get; set; } = "hero.png";
+    [Parameter] public string Alt { get; set; } = "Hero image";
+    [Parameter] public string TopOffset { get; set; } = "0px";
+}
