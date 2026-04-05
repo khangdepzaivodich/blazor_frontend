@@ -1,18 +1,16 @@
 ﻿@inherits LayoutComponentBase
-
+@using blazor_frontend.Shared
 <div class="min-h-screen bg-gray-50 flex flex-col">
-    <!-- Navbar cho khách hàng -->
-    <header class="bg-white shadow">
-        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="/" class="text-2xl font-bold text-gray-800">FashionStore</a>
-        </div>
-    </header>
+    <!-- Landing header -->
+    <LandingHeader CartCount="0" />
 
-    <!-- Nội dung chính -->
+    <!-- Hero section: use absolute path and set TopOffset to header height -->
+    <Hero ImagePath="hero.png"/>
+
+    <!-- Main content -->
     <main class="flex-1 container mx-auto px-4 py-8">
         @Body
     </main>
-
 </div>
 
 @code {

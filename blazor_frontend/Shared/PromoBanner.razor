@@ -1,0 +1,26 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<a href="@Link" class="block group" aria-label="@Title">
+    <div class="h-[520px] md:h-[560px] rounded-lg overflow-hidden relative bg-gray-100">
+        <img src="@ImagePath" alt="@Alt" class="absolute inset-0 w-full h-full object-cover object-top" />
+        <div class="absolute inset-0 bg-black/20"></div>
+
+        <div class="absolute left-6 bottom-10 text-white z-10">
+            <div class="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight">@Title</div>
+            @if (!string.IsNullOrWhiteSpace(CtaText))
+            {
+                <div class="mt-4">
+                    <span class="inline-block bg-white text-black px-4 py-2 rounded-full font-semibold">@CtaText</span>
+                </div>
+            }
+        </div>
+    </div>
+</a>
+
+@code {
+    [Parameter] public string ImagePath { get; set; } = "promo.jpg";
+    [Parameter] public string Alt { get; set; } = "Promo";
+    [Parameter] public string Title { get; set; } = "ĐỒ CÔNG SỞ";
+    [Parameter] public string CtaText { get; set; } = "XEM NGAY";
+    [Parameter] public string Link { get; set; } = "/collection";
+}
