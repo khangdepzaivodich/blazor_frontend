@@ -1,0 +1,88 @@
+@page "/products"
+@using blazor_frontend.Shared
+
+<div class="bg-gray-50 pb-12 min-h-screen">
+    <!-- Breadcrumb -->
+    <div class="bg-white border-b border-gray-100">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-3">
+            <nav class="text-xs text-gray-500 font-medium">
+                <a href="/" class="text-blue-600 hover:underline transition-colors">Trang chủ</a>
+                <span class="mx-2 text-gray-400">/</span>
+                <a href="#" class="text-blue-600 hover:underline transition-colors">Danh mục</a>
+                <span class="mx-2 text-gray-400">/</span>
+                <span class="text-gray-800">Tất cả sản phẩm</span>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Category Banner -->
+    <div class="bg-[#E9F0FA] relative overflow-hidden mb-8 shadow-sm">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 flex items-center min-h-[350px]">
+            <div class="w-1/2 relative z-10">
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#002855] tracking-tighter whitespace-nowrap mb-2">TẤT CẢ SẢN PHẨM</h1>
+                <p class="text-2xl md:text-3xl text-[#004bb8] font-medium tracking-[0.2em] uppercase pl-1">ALL ITEMS</p>
+                <div class="mt-8 hidden md:block">
+                    <svg class="text-[#002855] opacity-10 w-64 h-64 absolute -left-12 -top-12 z-[-1]" viewBox="0 0 100 100" fill="currentColor">
+                        <path d="M10 10h80v80H10z" stroke="currentColor" stroke-width="4" fill="none"/>
+                        <!-- Decorative element -->
+                        <path d="M30 30h40v40H30z" fill="currentColor"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="w-1/2 absolute right-0 top-0 bottom-0">
+                <!-- Fallbacks if hero.png not found -->
+                <img src="hero.png" alt="Tất Cả Sản Phẩm" class="w-full h-full object-cover object-top" onerror="this.src='product1.jpg';this.onerror='';" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Buttons & Tool bar -->
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div class="flex flex-wrap items-center justify-center gap-4 mb-6">
+            <button class="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                Đồ Hè
+            </button>
+            <button class="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                Áo
+            </button>
+            <button class="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l1.29-1.29A2 2 0 0111.71 4h.58a2 2 0 011.41.59L15 6v13m-6 0h6m-6 0H6m9 0h3" /></svg>
+                Quần
+            </button>
+            <button class="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v8l9-11h-7z" /></svg>
+                Phụ Kiện
+            </button>
+        </div>
+
+        <div class="flex items-center justify-end mb-6 border-b border-gray-200 pb-4">
+            <select class="border border-gray-300 rounded-md px-4 py-2 text-sm bg-white font-medium text-gray-700 outline-none hover:border-black focus:border-black transition-colors focus:ring-1 focus:ring-black cursor-pointer shadow-sm">
+                <option>Sản phẩm nổi bật</option>
+                <option>Giá: Tăng dần</option>
+                <option>Giá: Giảm dần</option>
+                <option>Mới nhất</option>
+            </select>
+        </div>
+
+        <!-- Product Grid (5 columns per image requirement) -->
+        <ProductList Items="allProducts" GridClass="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ShowActions="true" />
+    </div>
+</div>
+
+@code {
+    private ProductList.ProductDto[] allProducts = new[]
+    {
+        new ProductList.ProductDto(1, "product1.jpg", "Áo Thun Nam Insignia ID Form Oversize", "329,000₫", "HÀNG MỚI", new[] { "#000000" }),
+        new ProductList.ProductDto(2, "product1.jpg", "Quần Short Nam Minimal Luxe Form", "349,000₫", "HÀNG MỚI", new[] { "#e0ded1", "#545759", "#000000" }),
+        new ProductList.ProductDto(3, "product1.jpg", "Áo Polo Nam Gentle Form Boxy", "429,000₫", "HÀNG MỚI", new[] { "#0a1f44" }),
+        new ProductList.ProductDto(4, "product1.jpg", "Quần Short Nam Speckled Form Loose", "329,000₫", "HÀNG MỚI", new[] { "#a8a9a0", "#dcdbd1", "#362f2d" }),
+        new ProductList.ProductDto(5, "product1.jpg", "Thắt Lưng Nam Đầu Xoay Họa Tiết Đúc", "399,000₫", "HÀNG MỚI", new[] { "#4d4d4d", "#000000" }),
+        new ProductList.ProductDto(6, "product1.jpg", "Áo Thun Nam Básico", "229,000₫", "", new[] { "#ffffff", "#000000", "#ff0000" }),
+        new ProductList.ProductDto(7, "product1.jpg", "Quần Jean Dài Ống Suông", "449,000₫", "HÀNG MỚI", new[] { "#34558b" }),
+        new ProductList.ProductDto(8, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Premium", "499,000₫", "HÀNG TỐT", new[] { "#ffffff", "#e0ded1" }),
+        new ProductList.ProductDto(9, "product1.jpg", "Giày Classic Nam Bền Đẹp", "699,000₫", "OUTLET", new[] { "#000000", "#ffffff" }),
+        new ProductList.ProductDto(10, "product1.jpg", "Mũ Lưỡi Trai Sports", "129,000₫", "", new[] { "#000000", "#545759" })
+    };
+}

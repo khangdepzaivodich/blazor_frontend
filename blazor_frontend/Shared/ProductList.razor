@@ -1,8 +1,8 @@
-﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components
 @using System.Collections.Generic
 @using System.Linq
 
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+<div class="@GridClass gap-6">
     @if (Items != null)
     {
         @foreach (var p in Items)
@@ -21,6 +21,7 @@
 @code {
     [Parameter] public IEnumerable<ProductDto> Items { get; set; } = Enumerable.Empty<ProductDto>();
     [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public string GridClass { get; set; } = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
 
     public record ProductDto(int Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors);
 }

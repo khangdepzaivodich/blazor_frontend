@@ -1,0 +1,320 @@
+@page "/product/{Id:int}"
+@using blazor_frontend.Shared
+@inject IJSRuntime JSRuntime
+
+<div class="bg-white pb-16 min-h-screen">
+    <!-- Breadcrumb -->
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-4">
+        <nav class="text-xs text-gray-500 font-medium">
+            <a href="/" class="text-blue-600 hover:underline">Trang chủ</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <a href="/products" class="text-blue-600 hover:underline">Danh mục</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <a href="/products" class="text-blue-600 hover:underline">Tất cả sản phẩm</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <span class="text-gray-800">Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim</span>
+        </nav>
+    </div>
+
+    <!-- Product Top Section -->
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 flex flex-col lg:flex-row gap-8 mb-12">
+        
+        <!-- LEFT: Gallery (Thumbnails + Main Media) -->
+        <div class="w-full lg:w-[45%] flex gap-4" style="height: 600px;">
+            <!-- Vertical Thumbnails Scrollable -->
+            <div class="w-20 hidden md:flex flex-col relative">
+                <!-- Nút ấn Lên -->
+                <button aria-label="Up" onclick="document.getElementById('thumb-scroll').scrollBy({ top: -108, behavior: 'smooth' })" class="w-full h-6 mb-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                </button>
+
+                <div id="thumb-scroll" class="flex-1 flex flex-col gap-3 overflow-y-auto snap-y scroll-smooth" style="max-height: 420px; scrollbar-width: none; -ms-overflow-style: none;">
+                    <style>#thumb-scroll::-webkit-scrollbar { display: none; }</style>
+                    @foreach (var (index, thumbnail, type) in thumbnails)
+                    {
+                        <button id="thumb-@index" @onclick="() => SelectMedia(index)" class="snap-start shrink-0 h-24 relative border-2 transition-all overflow-hidden @(selectedMediaIndex == index ? "border-black shadow-md" : "border-transparent opacity-70 hover:opacity-100")">
+                            <img src="@thumbnail" class="w-full h-full object-cover object-top" onerror="this.src='/product1.jpg';" />
+                            @if (type == "video")
+                            {
+                                <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-white drop-shadow" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            }
+                        </button>
+                    }
+                </div>
+
+                <!-- Nút ấn Xuống -->
+                <button aria-label="Down" onclick="document.getElementById('thumb-scroll').scrollBy({ top: 108, behavior: 'smooth' })" class="w-full h-6 mt-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+            </div>
+
+            <!-- Main Large Image/Video -->
+            <div class="flex-1 bg-gray-100 relative rounded-md overflow-hidden shadow-sm flex items-center justify-center group">
+                <button @onclick="PrevMedia" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow z-10 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">
+                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+
+                @if (thumbnails[selectedMediaIndex].Type == "video")
+                {
+                    <iframe width="100%" height="100%" src="https://www.youtube.com/embed/j8U06veqxdU?si=DKPFA3B77Bly3NVw" 
+                    title="YouTube video player" frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen class="w-full h-full object-cover">
+                    </iframe>
+                }
+                else
+                {
+                    <img src="@thumbnails[selectedMediaIndex].Url" class="w-full h-full object-cover object-top" onerror="this.src='product1.jpg';" />
+                }
+
+                <button @onclick="NextMedia" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow z-10 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">
+                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7-7" /></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT: Product Info -->
+        <div class="w-full lg:w-[55%] flex flex-col">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim</h1>
+            <div class="mb-4">
+                <span class="inline-block bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">Còn hàng</span>
+            </div>
+            
+            <p class="text-sm text-gray-600 mb-2">Mã sản phẩm: <span class="font-semibold text-gray-800">PLID0153-13</span></p>
+            
+            <div class="flex items-end gap-3 mb-6">
+                <span class="text-3xl font-extrabold text-[#002f6c]">311,200₫</span>
+                <s class="text-gray-400 text-lg mb-0.5">389,000₫</s>
+            </div>
+
+            <!-- Ưu Đãi Online Promo Box -->
+            <div class="border-2 border-dashed border-red-500 rounded-md p-4 bg-red-50 mb-6 text-sm text-red-700 relative">
+                <div class="absolute -top-3 left-4 bg-white px-2 flex items-center gap-1 font-bold">
+                    <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2l1.6 4.9h5.1l-4.1 3 1.6 4.9-4.2-3.1-4.2 3.1 1.6-4.9-4.1-3h5.1L10 2z"/></svg> 
+                    <span class="text-red-600">ƯU ĐÃI ONLINE</span>
+                </div>
+                <ul class="space-y-2 mt-2">
+                    <li class="flex items-start gap-2">
+                        <span>🔥</span>
+                        <strong>DIỆN MÁT ĐÓN HÈ - ƯU ĐÃI 20%</strong>
+                    </li>
+                    <li class="flex items-start gap-2 text-gray-700">
+                        <span>⚡</span>
+                        <span>Áp dụng toàn bộ: Procool Jeans, Áo Thun & Polo Procool, Quần Smart Jeans dài, Áo khoác Jeans</span>
+                    </li>
+                    <li class="flex items-start gap-2 text-blue-600 font-medium">
+                        <span>🎫</span>
+                        <span>Nhập mã <strong class="text-black">APR60</strong> GIẢM 60K đơn từ 799K</span>
+                    </li>
+                    <li class="flex items-start gap-2 text-blue-600 font-medium">
+                        <span>🎫</span>
+                        <span>Nhập mã <strong class="text-black">APR90</strong> GIẢM 90K đơn từ 1099K</span>
+                    </li>
+                    <li class="flex items-start gap-2 text-orange-600 font-bold">
+                        <span>🚚</span>
+                        <span>FREESHIP đơn từ 399K</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Voucher Section -->
+            <div class="mb-6">
+                <p class="text-sm font-semibold text-gray-800 mb-2">Mã giảm giá</p>
+                <div class="flex flex-wrap gap-2">
+                    <div class="border border-blue-600 text-blue-700 text-xs font-bold px-3 py-1 rounded relative overflow-hidden bg-blue-50 cursor-pointer hover:bg-blue-100">
+                        VOUCHER 20K
+                    </div>
+                    <div class="border border-blue-600 text-blue-700 text-xs font-bold px-3 py-1 rounded relative overflow-hidden bg-blue-50 cursor-pointer hover:bg-blue-100">
+                        VOUCHER 60K
+                    </div>
+                    <div class="border border-blue-600 text-blue-700 text-xs font-bold px-3 py-1 rounded relative overflow-hidden bg-blue-50 cursor-pointer hover:bg-blue-100">
+                        VOUCHER 90K
+                    </div>
+                    <div class="border border-blue-600 text-blue-700 text-xs font-bold px-3 py-1 rounded relative overflow-hidden bg-blue-50 cursor-pointer hover:bg-blue-100">
+                        VOUCHER 150K
+                    </div>
+                </div>
+            </div>
+
+            <!-- Color Options -->
+            <div class="mb-6">
+                <p class="text-sm font-semibold text-gray-800 mb-2">Màu sắc: <span class="font-bold">Đen</span></p>
+                <div class="flex gap-3">
+                    <button class="w-8 h-8 rounded-full border border-gray-300 ring-2 ring-transparent focus:ring-gray-800 bg-[#2b2b2b]"></button>
+                    <button class="w-8 h-8 rounded-full border border-gray-300 ring-2 ring-transparent focus:ring-gray-800 bg-[#3f5f8a]"></button>
+                    <button class="w-8 h-8 rounded-full border border-gray-300 ring-2 ring-transparent focus:ring-gray-800 bg-[#8c574b]"></button>
+                    <button class="w-8 h-8 rounded-full border border-gray-300 ring-2 ring-transparent focus:ring-gray-800 bg-[#e4e4e2]"></button>
+                </div>
+            </div>
+
+            <!-- Size Options -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-sm font-semibold text-gray-800">Kích thước: <span class="font-bold">S</span></p>
+                    <a href="#" class="text-xs text-gray-600 underline flex items-center gap-1 hover:text-black">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        Hướng dẫn chọn size
+                    </a>
+                </div>
+                <div class="flex gap-2 mb-3">
+                    <button class="w-10 h-10 border-2 border-gray-900 rounded font-bold text-gray-900">S</button>
+                    <button class="w-10 h-10 border border-gray-300 rounded font-medium text-gray-600 hover:border-gray-900">M</button>
+                    <button class="w-10 h-10 border border-gray-300 rounded font-medium text-gray-600 hover:border-gray-900">L</button>
+                    <button class="w-10 h-10 border border-gray-300 rounded font-medium text-gray-600 hover:border-gray-900 line-through opacity-50 relative" disabled>XL</button>
+                </div>
+                <div class="grid grid-cols-4 gap-2 text-xs text-center text-gray-600">
+                    <div class="border border-gray-900 rounded py-2 py-1 font-semibold text-black bg-gray-50">Ôm<br/><span class="font-normal">(Slim-Fit)</span></div>
+                    <div class="border border-gray-200 rounded py-2 py-1">Linh Hoạt<br/>(Regular)</div>
+                    <div class="border border-gray-200 rounded py-2 py-1">Rộng Vừa<br/>(Relaxed)</div>
+                    <div class="border border-gray-200 rounded py-2 py-1">Rộng<br/>(Oversize)</div>
+                </div>
+            </div>
+
+            <!-- Actions (Add to Cart / Buy Now) -->
+            <div class="flex gap-4 mb-4">
+                <div class="flex items-center justify-between w-32 border border-gray-300 rounded-md bg-white">
+                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none">-</button>
+                    <div class="flex-1 text-center font-semibold text-gray-800">1</div>
+                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none">+</button>
+                </div>
+                <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors">
+                    THÊM VÀO GIỎ
+                </button>
+            </div>
+            <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6">
+                MUA NGAY
+            </button>
+
+            <!-- Store Policies / Features Icons -->
+            <div class="grid grid-cols-4 gap-2 border-t border-gray-200 pt-6">
+                <div class="flex flex-col items-center justify-center text-center gap-1">
+                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                    <span class="text-xs text-gray-600">Freeship đơn<br/>từ 399K</span>
+                </div>
+                <div class="flex flex-col items-center justify-center text-center gap-1">
+                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+                    <span class="text-xs text-gray-600">Cộng dồn<br/>Membership</span>
+                </div>
+                <div class="flex flex-col items-center justify-center text-center gap-1">
+                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <span class="text-xs text-gray-600">Thanh toán<br/>COD</span>
+                </div>
+                <div class="flex flex-col items-center justify-center text-center gap-1">
+                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <span class="text-xs text-gray-600">Đổi hàng<br/>trong 15 ngày</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MIDDLE: Tabs Section -->
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 mb-16">
+        <div class="border-b border-gray-200">
+            <nav class="flex gap-8">
+                <button @onclick="() => activeTab = 1" class="py-4 font-bold text-sm tracking-wide transition-colors border-b-2 @(activeTab == 1 ? "border-[#002f6c] text-[#002f6c]" : "border-transparent text-gray-500 hover:text-black")">
+                    MÔ TẢ
+                </button>
+                <button @onclick="() => activeTab = 2" class="py-4 font-bold text-sm tracking-wide transition-colors border-b-2 @(activeTab == 2 ? "border-[#002f6c] text-[#002f6c]" : "border-transparent text-gray-500 hover:text-black")">
+                    CHÍNH SÁCH GIAO HÀNG
+                </button>
+                <button @onclick="() => activeTab = 3" class="py-4 font-bold text-sm tracking-wide transition-colors border-b-2 @(activeTab == 3 ? "border-[#002f6c] text-[#002f6c]" : "border-transparent text-gray-500 hover:text-black")">
+                    CHÍNH SÁCH ĐỔI HÀNG
+                </button>
+            </nav>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="py-8 text-gray-700 leading-relaxed text-sm">
+            @if (activeTab == 1)
+            {
+                <h3 class="font-bold text-lg mb-2">ICONDENIM &reg; [TechUrban] | ProCOOL COLLECTION</h3>
+                <h4 class="font-bold mb-4">Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim</h4>
+                <p class="mb-4 text-justify">
+                    *Những sản phẩm thuộc <strong class="italic">ProCOOL COLLECTION</strong> được nghiên cứu và phát triển bởi đội ngũ <strong>ICONDENIM&reg;</strong>. Áo Polo Nam Trơn Ép Diềm ProCOOL Seam Sealing [TechUrban] có độ mát ấn tượng ngay từ lần chạm tay đầu tiên.
+                </p>
+                <ul class="list-disc pl-5 mb-6 space-y-2 font-medium">
+                    <li><span class="text-gray-900 font-bold">Chất liệu:</span> 83% Polyamide & 17% Spandex</li>
+                    <li><span class="text-gray-900 font-bold">Form:</span> Slim Fit</li>
+                </ul>
+            }
+            else if (activeTab == 2)
+            {
+                <h3 class="font-bold text-lg mb-4 text-[#002f6c]">Chính sách giao hàng</h3>
+                <ul class="list-disc pl-5 space-y-3">
+                    <li>Giao hàng nhanh trong 2-3 ngày làm việc đối với các khu vực trung tâm.</li>
+                    <li>Miễn phí vận chuyển cho những hóa đơn có tổng giá trị trên 399.000 VNĐ.</li>
+                    <li>Có hỗ trợ đồng kiểm trước khi nhận và thanh toán trực tiếp (COD).</li>
+                </ul>
+            }
+            else if (activeTab == 3)
+            {
+                <h3 class="font-bold text-lg mb-4 text-[#002f6c]">Chính sách đổi trả</h3>
+                <ul class="list-disc pl-5 space-y-3">
+                    <li>Khách hàng được hỗ trợ đổi size, đổi mẫu trong vòng 15 ngày kể từ khi nhận hàng.</li>
+                    <li>Sản phẩm đổi trả phải còn nguyên tem mác, chưa qua sử dụng hay giặt ủi.</li>
+                    <li>Với các sản phẩm lỗi do nhà sản xuất, ICONDENIM sẽ chịu 100% phí chuyển hoàn 2 chiều.</li>
+                </ul>
+            }
+        </div>
+    </div>
+
+    <!-- BOTTOM: Similar Products (Sản phẩm cùng loại) -->
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 mb-12">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 font-sans">Sản phẩm cùng loại</h2>
+        <!-- 5 Columns Product List -->
+        <ProductList Items="similarProducts" GridClass="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5" ShowActions="true" />
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private int selectedMediaIndex = 0;
+    private int activeTab = 1;
+
+    // Tuple defines URL and media format type
+    private (int Index, string Url, string Type)[] thumbnails = new[]
+    {
+        (0, "product1.jpg", "image"),
+        (1, "https://img.youtube.com/vi/tgbNymZ7vqY/mqdefault.jpg", "video"),
+        (2, "hero.png", "image"),
+        (3, "product1.jpg", "image"),
+        (4, "product1.jpg", "image"),
+        (5, "product1.jpg", "image"),
+        (6, "product1.jpg", "image")
+    };
+
+    private async Task SelectMedia(int index)
+    {
+        selectedMediaIndex = index;
+        StateHasChanged();
+        // Cuộn hộp thumbnail đủ để ảnh đang chọn xuất hiện trong khung nhìn (không ép lên đầu nếu không cần thiết)
+        await JSRuntime.InvokeVoidAsync("eval", $"var el = document.getElementById('thumb-{index}'); if(el) el.scrollIntoView({{behavior: 'smooth', block: 'nearest'}});");
+    }
+
+    private async Task PrevMedia()
+    {
+        int newIndex = selectedMediaIndex > 0 ? selectedMediaIndex - 1 : thumbnails.Length - 1;
+        await SelectMedia(newIndex);
+    }
+
+    private async Task NextMedia()
+    {
+        int newIndex = selectedMediaIndex < thumbnails.Length - 1 ? selectedMediaIndex + 1 : 0;
+        await SelectMedia(newIndex);
+    }
+
+    // Mock Similar Products
+    private ProductList.ProductDto[] similarProducts = new[]
+    {
+        new ProductList.ProductDto(11, "product1.jpg", "Áo Thun Nam Insignia ID Form Oversize", "329,000₫", "HÀNG MỚI", new[] { "#2e3236" }),
+        new ProductList.ProductDto(12, "product1.jpg", "Áo Thun Nam Gravitas Form Regular", "329,000₫", "HÀNG MỚI", new[] { "#f6f6f6" }),
+        new ProductList.ProductDto(13, "product1.jpg", "Áo Thun Nam Refined Form Classic", "349,000₫", "HÀNG MỚI", new[] { "#a8202b" }),
+        new ProductList.ProductDto(14, "product1.jpg", "Áo Thun Nam Elevyn Form Boxy", "349,000₫", "HÀNG MỚI", new[] { "#8c574b", "#222222", "#d5c9ba" }),
+        new ProductList.ProductDto(15, "product1.jpg", "Áo Thun Nam Endurance League Graphic", "349,000₫", "HÀNG MỚI", new[] { "#252628" })
+    };
+}
