@@ -1,17 +1,21 @@
 ﻿@inherits LayoutComponentBase
 @using blazor_frontend.Shared
+@inject NavigationManager Nav
+
 <div class="min-h-screen bg-gray-50 flex flex-col">
-    <!-- Landing header -->
     <LandingHeader CartCount="0" />
 
-    <!-- Hero section: use absolute path and set TopOffset to header height -->
-    <Hero ImagePath="hero.png"/>
+    @if (!IsCartPage)
+    {
+        <Hero ImagePath="hero.png" />
+    }
 
-    <!-- Main content -->
     <main class="flex-1 container mx-auto px-4 py-8">
         @Body
     </main>
 </div>
 
 @code {
+    private bool IsCartPage =>
+        Nav.ToBaseRelativePath(Nav.Uri).StartsWith("cart", StringComparison.OrdinalIgnoreCase);
 }

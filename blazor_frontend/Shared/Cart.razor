@@ -1,0 +1,155 @@
+﻿@page "/cart"
+@using Microsoft.AspNetCore.Components
+
+<div class="max-w-[1200px] mx-auto px-4 md:px-6 py-6 pb-32">
+    <div class="text-sm text-gray-500 mb-6 flex items-center gap-2">
+        <a href="/" class="text-blue-500 hover:underline">Trang chủ</a>
+        <span>/</span>
+        <a href="/products" class="text-blue-500 hover:underline">Danh mục</a>
+        <span>/</span>
+        <span class="text-gray-700">Giỏ hàng</span>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <div class="w-full lg:w-3/5 space-y-8">
+            
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Thông tin đơn hàng</h2>
+                <div class="space-y-4">
+                    <input type="text" placeholder="Họ và tên" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="tel" placeholder="Số điện thoại" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="text" placeholder="Địa chỉ" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                            <option value="">Chọn tỉnh/thành phố</option>
+                        </select>
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                            <option value="">Chọn Quận/huyện</option>
+                        </select>
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                            <option value="">Chọn Phường/xã</option>
+                        </select>
+                    </div>
+
+                    <input type="text" placeholder="Ví dụ: giao hàng giờ hành chính" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Hình thức thanh toán</h2>
+                <div class="space-y-3">
+                    
+                    <div class="border @(PaymentMethod == 1 ? "border-[#0b3b72]" : "border-gray-200") rounded-md overflow-hidden cursor-pointer" @onclick="() => PaymentMethod = 1">
+                        <div class="flex items-center gap-3 p-4">
+                            <input type="radio" name="payment" checked="@(PaymentMethod == 1)" class="w-4 h-4 text-[#0b3b72] focus:ring-[#0b3b72]" />
+                            <div class="bg-[#0b3b72] text-white text-xs font-bold px-2 py-1 rounded">COD</div>
+                            <span class="text-gray-800">Thanh toán khi giao hàng (COD)</span>
+                        </div>
+                        @if (PaymentMethod == 1)
+                        {
+                            <div class="border-t border-gray-200 p-4 bg-gray-50 text-sm text-gray-600 space-y-1">
+                                <p>- Khách hàng được kiểm tra hàng trước khi nhận hàng.</p>
+                                <p>- Freeship đơn từ 399K</p>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="border @(PaymentMethod == 2 ? "border-[#0b3b72]" : "border-gray-200") rounded-md flex items-center gap-3 p-4 cursor-pointer" @onclick="() => PaymentMethod = 2">
+                        <input type="radio" name="payment" checked="@(PaymentMethod == 2)" class="w-4 h-4 text-[#0b3b72] focus:ring-[#0b3b72]" />
+                        <div class="bg-[#004a9c] text-white text-xs font-bold px-2 py-1 rounded">VNPAY</div>
+                        <span class="text-gray-800">Ví điện tử VNPAY</span>
+                    </div>
+
+                    <div class="border @(PaymentMethod == 3 ? "border-[#0b3b72]" : "border-gray-200") rounded-md flex items-center gap-3 p-4 cursor-pointer" @onclick="() => PaymentMethod = 3">
+                        <input type="radio" name="payment" checked="@(PaymentMethod == 3)" class="w-4 h-4 text-[#0b3b72] focus:ring-[#0b3b72]" />
+                        <div class="bg-[#a50064] text-white text-xs font-bold px-2 py-1 rounded">MoMo</div>
+                        <span class="text-gray-800">Thanh toán MoMo</span>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+
+        <div class="w-full lg:w-2/5">
+            <div class="lg:sticky lg:top-6 space-y-6">
+                
+                <div class="flex items-center justify-between border-b pb-2">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" /></svg>
+                        <h2 class="text-xl font-bold">Giỏ hàng</h2>
+                    </div>
+                    <a href="/products" class="text-gray-500 underline text-sm">Sản phẩm</a>
+                </div>
+
+                <div class="bg-[#4669a8] text-white p-3 rounded-md flex items-center justify-between cursor-pointer hover:bg-[#3b598f] transition-colors">
+                    <span class="text-sm font-medium">GIẢM NGAY 20K khi bạn mua thêm 399,000đ nữa!</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </div>
+
+                <div class="flex flex-col items-center justify-center py-8 text-center">
+                    <svg class="w-32 h-32 mb-4" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="100" cy="100" r="80" fill="#fef3c7" opacity="0.5" />
+                        <path d="M50 80 L150 80 L130 140 L70 140 Z" fill="#f59e0b" stroke="#333" stroke-width="4" stroke-linejoin="round" />
+                        <path d="M70 80 L50 40 M130 80 L150 40" stroke="#333" stroke-width="4" stroke-linecap="round" />
+                        <path d="M85 105 Q100 120 115 105" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="85" cy="95" r="3" fill="#fff" />
+                        <circle cx="115" cy="95" r="3" fill="#fff" />
+                    </svg>
+                    
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Hiện giỏ hàng của bạn không có sản phẩm nào!</h3>
+                    <p class="text-sm text-gray-500 mb-4">Về trang cửa hàng để chọn mua sản phẩm bạn nhé!!</p>
+                    <a href="/products" class="border border-gray-800 text-gray-800 font-medium px-6 py-2 rounded hover:bg-gray-50 transition-colors">
+                        Mua sắm ngay
+                    </a>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-lg mb-3">Ưu Đãi Dành Cho Bạn</h3>
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="Nhập mã giảm giá" class="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#0b3b72]" />
+                        <button class="bg-[#0b3b72] text-white px-6 py-2 rounded-md font-medium hover:bg-blue-900 transition-colors whitespace-nowrap">
+                            Áp dụng Voucher
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-4 text-gray-700">
+                    <div class="flex justify-between items-center">
+                        <span>Tạm tính:</span>
+                        <div class="text-right">
+                            <span class="font-bold text-gray-900">0đ</span>
+                            <div class="text-xs text-red-500">Tiết kiệm: 0đ</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Phí vận chuyển:</span>
+                        <span class="text-gray-900">Miễn phí</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Voucher giảm giá:</span>
+                        <span class="text-gray-900">0đ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
+    <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-end gap-6">
+        <div class="text-right">
+            <div class="text-xl font-bold text-[#0b3b72]">0đ</div>
+            <div class="text-sm text-gray-600 font-medium">Tiết kiệm: 0đ</div>
+        </div>
+        <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors">
+            Thanh toán
+        </button>
+    </div>
+</div>
+
+@code {
+    // Biến lưu trữ trạng thái phương thức thanh toán được chọn (1: COD, 2: VNPAY, 3: MoMo)
+    private int PaymentMethod = 1;
+}
