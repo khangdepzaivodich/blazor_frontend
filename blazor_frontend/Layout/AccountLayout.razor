@@ -1,0 +1,40 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components
+
+<div class="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+    <div class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <!-- Left: promo / visual -->
+        <div class="hidden md:flex rounded-lg overflow-hidden shadow-lg h-[560px]">
+            <div class="relative w-full">
+                <img src="/static/account-promo.jpg" alt="Welcome" class="w-full h-full object-cover object-center" onerror="this.src='hero.png';" />
+                <div class="absolute inset-0 bg-gradient-to-br from-black/40 to-black/10"></div>
+
+                <div class="absolute inset-0 flex flex-col justify-center items-start p-8 text-white max-w-[420px]">
+                    <h2 class="text-3xl md:text-4xl font-extrabold mb-2">Welcome back</h2>
+                    <p class="text-sm md:text-base text-white/90 mb-6">Sign in to access your orders, wishlist and faster checkout. New here? Create an account — it's quick and easy.</p>
+                    <a href="/account/signup" class="inline-block bg-white text-[#0b3b72] px-4 py-2 rounded-md font-semibold shadow hover:opacity-95">Create account</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: content -->
+        <div class="flex items-center justify-center">
+            <div class="w-full max-w-md">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                        <a href="/" class="text-2xl font-bold text-[#0b3b72]">Serious</a>
+                        <div class="text-sm text-gray-500">Secure · Fast · Simple</div>
+                    </div>
+
+                    <div class="p-6">
+                        @Body
+                    </div>
+                </div>
+
+                <div class="text-center text-sm text-gray-500 mt-4">
+                    © @DateTime.Now.Year Serious — <a href="/terms" class="underline">Terms</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

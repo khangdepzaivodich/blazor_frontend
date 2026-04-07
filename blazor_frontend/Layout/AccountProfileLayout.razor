@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components
+
+<div class="min-h-screen bg-gray-50 flex items-start justify-center py-12">
+    <div class="w-full max-w-6xl mx-auto px-4">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <a href="/" class="text-2xl font-bold text-[#0b3b72]">Serious</a>
+                <div class="text-sm text-gray-500">Account</div>
+            </div>
+
+            <div class="p-6">
+                @Body
+            </div>
+        </div>
+
+        <div class="text-center text-sm text-gray-500 mt-4">
+            © @DateTime.Now.Year Serious — <a href="/terms" class="underline">Terms</a>
+        </div>
+    </div>
+</div>
