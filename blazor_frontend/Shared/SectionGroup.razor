@@ -1,0 +1,36 @@
+@using Microsoft.AspNetCore.Components
+@using blazor_frontend.Models
+
+<div class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div class="lg:col-span-1">
+            <PromoBanner ImagePath="@PromoImagePath" Title="@PromoTitle" CtaText="@PromoCta" Link="@PromoLink" />
+        </div>
+
+        <div class="lg:col-span-3">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">@Title</h2>
+                <nav class="text-sm text-gray-500">
+                    @if (!string.IsNullOrWhiteSpace(Tab1)) { <a class="mr-6">@Tab1</a> }
+                    @if (!string.IsNullOrWhiteSpace(Tab2)) { <a class="mr-6">@Tab2</a> }
+                </nav>
+            </div>
+
+            <ProductList Items="Items" ShowActions="ShowActions" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Section";
+    [Parameter] public string PromoImagePath { get; set; } = "/static/promo.jpg";
+    [Parameter] public string PromoTitle { get; set; } = "Promo";
+    [Parameter] public string PromoCta { get; set; } = "XEM NGAY";
+    [Parameter] public string PromoLink { get; set; } = "/collection";
+    [Parameter] public string Tab1 { get; set; }
+    [Parameter] public string Tab2 { get; set; }
+
+    // Use domain model SanPham list
+    [Parameter] public IEnumerable<SanPham> Items { get; set; } = MockStoreData.GetMockSanPhams();
+    [Parameter] public bool ShowActions { get; set; } = true;
+}
