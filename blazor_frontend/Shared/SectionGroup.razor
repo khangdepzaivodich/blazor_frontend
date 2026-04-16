@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components
+@using System.Linq
 @using blazor_frontend.Models
 
 <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
@@ -16,7 +17,7 @@
                 </nav>
             </div>
 
-            <ProductList Items="Items" ShowActions="ShowActions" />
+            <ProductList Items="MappedItems" ShowActions="ShowActions" />
         </div>
     </div>
 </div>
@@ -27,10 +28,19 @@
     [Parameter] public string PromoTitle { get; set; } = "Promo";
     [Parameter] public string PromoCta { get; set; } = "XEM NGAY";
     [Parameter] public string PromoLink { get; set; } = "/collection";
-    [Parameter] public string Tab1 { get; set; }
-    [Parameter] public string Tab2 { get; set; }
+    [Parameter] public string? Tab1 { get; set; }
+    [Parameter] public string? Tab2 { get; set; }
 
     // Use domain model SanPham list
     [Parameter] public IEnumerable<SanPham> Items { get; set; } = MockStoreData.GetMockSanPhams();
     [Parameter] public bool ShowActions { get; set; } = true;
+
+    private IEnumerable<blazor_frontend.Shared.ProductList.ProductDto> MappedItems => Items.Select(p => new blazor_frontend.Shared.ProductList.ProductDto(
+        p.MaSP.GetHashCode(),
+        string.IsNullOrEmpty(p.AnhDaiDien) ? "product.png" : p.AnhDaiDien,
+        p.TenSP ?? string.Empty,
+        (p.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0).ToString("N0") + "₫",
+        p.TrangThai ? "CÒN HÀNG" : "HẾT HÀNG",
+        p.ChiTietSanPhams?.Select(c => c.Mau == "Đỏ" ? "#f00" : c.Mau == "Đen" ? "#000" : c.Mau == "Xanh" ? "#00f" : "#ccc").Distinct().ToArray() ?? Array.Empty<string>()
+    ));
 }

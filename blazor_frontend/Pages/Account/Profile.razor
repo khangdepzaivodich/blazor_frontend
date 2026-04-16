@@ -140,7 +140,7 @@
 @code {
     private TaiKhoan? account;
     private ProfileModel profile = new();
-    private bool loading = true;
+    // private bool loading = true;
     private bool isEditing;
     private string? avatarDataUrl;
     private string? message;
@@ -179,7 +179,7 @@
         }
 
         avatarDataUrl = await JS.InvokeAsync<string>("localStorage.getItem", "user_avatar");
-        loading = false;
+        // loading = false;
     }
 
     private void StartEdit()
