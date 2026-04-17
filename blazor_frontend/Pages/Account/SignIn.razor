@@ -95,7 +95,7 @@
                 account = new TaiKhoan
                 {
                     MaTK = Guid.NewGuid(),
-                    SoDienThoai = model.SoDienThoai,
+                    SoDienThoai = model.SoDienThoai ?? string.Empty,
                     HoTen = string.IsNullOrWhiteSpace(model.DisplayName) ? ("user" + suffix) : model.DisplayName,
                     DiaChi = string.Empty,
                     TrangThai = true,
