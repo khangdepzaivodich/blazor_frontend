@@ -1,0 +1,172 @@
+@page "/account/messages"
+@layout blazor_frontend.Layout.AccountProfileLayout
+@using System.Text.Json
+@inject IJSRuntime JS
+
+<div class="min-h-[calc(100vh-4rem)] flex items-start justify-center py-10">
+    <div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+        <!-- Sidebar -->
+        <aside class="lg:col-span-1 bg-white rounded-2xl shadow p-5">
+            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Account settings</h3>
+
+            <nav class="flex flex-col gap-2 text-sm">
+                <a href="/account/profile" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4a2 2 0 002 2h10a2 2 0 002-2V3"/></svg>
+                    Profile Settings
+                </a>
+
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 text-blue-700 font-medium" href="/account/messages">
+                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    Tin nhắn
+                </a>
+
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50" href="#">Password</a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50" href="#">Notifications</a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50" href="#">Verification</a>
+            </nav>
+        </aside>
+
+        <!-- Main Chat Panel -->
+        <main class="lg:col-span-4 bg-white rounded-2xl shadow overflow-hidden flex flex-col h-[700px]">
+            <!-- Header Chat -->
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white z-10 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200">
+                        <img src="https://ui-avatars.com/api/?name=CSKH&background=0b3b72&color=fff" alt="Support" class="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-lg">Hỗ trợ khách hàng (CSKH)</h3>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="w-2 h-2 rounded-full block bg-green-500"></span>
+                            <span class="text-sm text-gray-500">Thường trả lời trong vài phút</span>
+                        </div>
+                    </div>
+                </div>
+                <button @onclick="RefreshMessages" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Tải lại">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+
+            <!-- Phần nhắn tin -->
+            <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-gray-50/50 relative">
+                @if (messages != null && messages.Any())
+                {
+                    <div class="text-center mb-4">
+                        <span class="text-xs font-medium text-gray-500 bg-gray-200/60 px-3 py-1 rounded-full">
+                            Hôm nay
+                        </span>
+                    </div>
+
+                    @foreach (var msg in messages)
+                    {
+                        <div class="flex @(msg.IsMine ? "justify-end" : "justify-start") group items-end gap-2">
+                            @if (!msg.IsMine)
+                            {
+                                <img src="https://ui-avatars.com/api/?name=CSKH&background=0b3b72&color=fff" class="w-8 h-8 rounded-full flex-shrink-0" />
+                            }
+
+                            <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
+                                <div class="px-4 py-2.5 shadow-sm text-[15px] @(msg.IsMine ? "bg-blue-600 text-white rounded-lg rounded-br-sm" : "bg-white border border-gray-200 text-gray-800 rounded-lg rounded-bl-sm") leading-relaxed whitespace-pre-wrap">
+                                    @msg.Text
+                                </div>
+                                <span class="text-[11px] text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    @msg.Timestamp.ToString("HH:mm")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Ô nhập tin nhắn -->
+            <div class="p-4 border-t border-gray-200 bg-white">
+                <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-xl border border-gray-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                    <input type="text" @bind="newMessage" @onkeyup="HandleKeyUp" placeholder="Nhập tin nhắn của bạn..." class="flex-1 bg-transparent px-2 py-2 outline-none text-[15px] placeholder-gray-400" />
+
+                    <button @onclick="SendMessage" class="@(string.IsNullOrWhiteSpace(newMessage) ? "bg-gray-200 text-gray-400" : "bg-blue-600 text-white hover:bg-blue-700") p-2.5 rounded-lg transition-colors flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+    </div>
+</div>
+
+@code {
+    private string currentSessionId = "";
+    private string newMessage = "";
+    private List<ChatMessage> messages = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMessages();
+    }
+
+    private async Task LoadMessages()
+    {
+        var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
+
+        if (string.IsNullOrEmpty(session))
+        {
+            currentSessionId = Guid.NewGuid().ToString();
+            await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", currentSessionId);
+            messages.Add(new ChatMessage { Text = "Chào bạn! Chúng tôi có thể giúp gì cho bạn?", IsMine = false, Timestamp = DateTime.Now });
+            await SaveMessages();
+        }
+        else
+        {
+            currentSessionId = session;
+            var history = await JS.InvokeAsync<string>("localStorage.getItem", $"chat_history_{currentSessionId}");
+
+            if (!string.IsNullOrEmpty(history))
+            {
+                try { messages = JsonSerializer.Deserialize<List<ChatMessage>>(history) ?? new(); }
+                catch { messages = new(); }
+            }
+        }
+    }
+
+    private async Task RefreshMessages()
+    {
+        await LoadMessages();
+    }
+
+    private async Task HandleKeyUp(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(newMessage))
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage)) return;
+
+        messages.Add(new ChatMessage { Text = newMessage.Trim(), IsMine = true, Timestamp = DateTime.Now });
+        newMessage = "";
+
+        await SaveMessages();
+
+        // Simulate reply
+        await Task.Delay(1000);
+        messages.Add(new ChatMessage { Text = "Đây là phản hồi từ trang tin nhắn chi tiết.", IsMine = false, Timestamp = DateTime.Now });
+        await SaveMessages();
+        StateHasChanged();
+    }
+
+    private async Task SaveMessages()
+    {
+        var json = JsonSerializer.Serialize(messages);
+        await JS.InvokeVoidAsync("localStorage.setItem", $"chat_history_{currentSessionId}", json);
+    }
+
+    public class ChatMessage
+    {
+        public string Text { get; set; } = "";
+        public bool IsMine { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+}

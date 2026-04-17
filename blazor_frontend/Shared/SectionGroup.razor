@@ -16,7 +16,7 @@
                 </nav>
             </div>
 
-            <ProductList Items="Items" ShowActions="ShowActions" />
+            <ProductList Items="DtoItems" ShowActions="ShowActions" />
         </div>
     </div>
 </div>
@@ -27,10 +27,20 @@
     [Parameter] public string PromoTitle { get; set; } = "Promo";
     [Parameter] public string PromoCta { get; set; } = "XEM NGAY";
     [Parameter] public string PromoLink { get; set; } = "/collection";
-    [Parameter] public string Tab1 { get; set; }
-    [Parameter] public string Tab2 { get; set; }
+    [Parameter] public string? Tab1 { get; set; }
+    [Parameter] public string? Tab2 { get; set; }
 
     // Use domain model SanPham list
     [Parameter] public IEnumerable<SanPham> Items { get; set; } = MockStoreData.GetMockSanPhams();
     [Parameter] public bool ShowActions { get; set; } = true;
+
+    private IEnumerable<blazor_frontend.Shared.ProductList.ProductDto> DtoItems =>
+        Items?.Select(p => new blazor_frontend.Shared.ProductList.ProductDto(
+            p.MaSP.GetHashCode(),
+            p.AnhDaiDien,
+            p.TenSP,
+            (p.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0).ToString("N0") + "đ",
+            p.TrangThai ? "HÀNG MỚI" : string.Empty,
+            p.ChiTietSanPhams?.Select(c => c.Mau).Distinct().ToArray() ?? Array.Empty<string>()
+        )) ?? Enumerable.Empty<blazor_frontend.Shared.ProductList.ProductDto>();
 }
