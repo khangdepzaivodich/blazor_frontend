@@ -1,138 +1,201 @@
 @using Microsoft.AspNetCore.Components
+
 @code {
     private bool _mobileOpen;
+    private bool _accountOpen;
+
     [Parameter] public int CartCount { get; set; } = 0;
 
-    void ToggleMobile() => _mobileOpen = !_mobileOpen;
+    void ToggleMobile()
+    {
+        _mobileOpen = !_mobileOpen;
+        _accountOpen = false;
+    }
+
+    void ToggleAccount()
+    {
+        _accountOpen = !_accountOpen;
+        _mobileOpen = false;
+    }
+
+    void CloseAll()
+    {
+        _mobileOpen = false;
+        _accountOpen = false;
+    }
 }
 
-<!-- Main navbar -->
-<header class="bg-white shadow-sm relative z-50">
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 flex items-center justify-between py-4">
-        <!-- Logo -->
+<header class="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm">
+    <div class="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
+
+        <!-- LEFT -->
         <div class="flex items-center gap-3">
-            <button class="md:hidden p-2" @onclick="ToggleMobile" aria-label="Open menu">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <button type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-gray-100 active:scale-95 md:hidden"
+                    @onclick="ToggleMobile"
+                    aria-label="Open menu">
+                <svg class="h-6 w-6 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M4 6h16" />
+                    <path d="M4 12h16" />
+                    <path d="M4 18h16" />
+                </svg>
             </button>
-            <a href="/" class="flex items-center gap-3">
-                <img src="images/logo.png" alt="SERIOUS" class="h-8 w-auto object-contain" onerror="this.style.display='none'" />
-                <span class="hidden md:inline-block text-2xl font-bold tracking-tight text-[#0b3b72]">Serious</span>
+
+            <a href="/" class="flex items-center gap-2" @onclick="CloseAll">
+                <div class="hidden md:block leading-tight">
+                    <div class="text-xl font-extrabold tracking-tight text-[#0b3b72]">Serious</div>
+                    <div class="text-[11px] text-gray-500">Fashion Store</div>
+                </div>
             </a>
         </div>
 
-        <!-- Center menu -->
-        <nav class="hidden lg:flex items-center gap-8 text-gray-700 font-medium">
-            <!-- Sản Phẩm with Mega Menu -->
-            <div class="group pb-8 -mb-8 z-50">
-                <a href="/products" class="flex items-center gap-1 py-4 border-b-2 border-transparent hover:border-black transition-colors">
-                    Sản phẩm <svg class="w-4 h-4 transition-transform group-hover:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06 0L10 10.92l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.23 8.27a.75.75 0 010-1.06z" /></svg>
+        <!-- CENTER -->
+        <nav class="hidden items-center gap-7 text-sm font-medium lg:flex">
+            <div class="group relative">
+                <a href="/products" class="flex items-center gap-1 py-3 text-gray-700 transition hover:text-black">
+                    Sản phẩm
+                    <svg class="h-4 w-4 transition group-hover:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 8l5 5 5-5" />
+                    </svg>
                 </a>
-                
-                <!-- Mega Menu Content -->
-                <div class="absolute left-0 top-[100%] w-full bg-white border-t border-gray-200 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300">
-                    <div class="max-w-[1200px] mx-auto px-4 py-8 grid grid-cols-5 gap-8">
-                        <div>
-                            <h3 class="font-bold text-gray-900 mb-4 uppercase">Tất Cả Sản Phẩm</h3>
-                            <ul class="space-y-3 text-sm text-gray-600">
-                                <li><a href="/products" class="hover:text-black">Sản Phẩm Mới</a></li>
-                                <li><a href="/products" class="hover:text-black">Bán Chạy Nhất</a></li>
-                                <li><a href="/products" class="hover:text-black">OUTLET - Sale Up To 50%</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 mb-4 uppercase">Áo Nam</h3>
-                            <ul class="space-y-3 text-sm text-gray-600">
-                                <li><a href="/products" class="hover:text-black">Áo Thun</a></li>
-                                <li><a href="/products" class="hover:text-black">Áo Polo</a></li>
-                                <li><a href="/products" class="hover:text-black">Áo Sơmi</a></li>
-                                <li><a href="/products" class="hover:text-black">Áo Khoác</a></li>
-                                <li><a href="/products" class="hover:text-black">Áo Nỉ Và Len</a></li>
-                                <li><a href="/products" class="hover:text-black">Hoodie</a></li>
-                                <li><a href="/products" class="hover:text-black">Tank Top - Áo Ba Lỗ</a></li>
-                                <li><a href="/products" class="hover:text-black">Set đồ</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 mb-4 uppercase">Quần Nam</h3>
-                            <ul class="space-y-3 text-sm text-gray-600">
-                                <li><a href="/products" class="hover:text-black">Quần Jean</a></li>
-                                <li><a href="/products" class="hover:text-black">Quần Short</a></li>
-                                <li><a href="/products" class="hover:text-black">Quần Kaki & Chino</a></li>
-                                <li><a href="/products" class="hover:text-black">Quần Jogger - Quần Dài</a></li>
-                                <li><a href="/products" class="hover:text-black">Quần Tây</a></li>
-                                <li><a href="/products" class="hover:text-black">Quần Boxer</a></li>
-                                <li><a href="/products" class="hover:text-black">Set Đồ</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 mb-4 uppercase">Giày & Phụ Kiện</h3>
-                            <ul class="space-y-3 text-sm text-gray-600">
-                                <li><a href="/products" class="hover:text-black">Giày & Dép</a></li>
-                                <li><a href="/products" class="hover:text-black">Balo, Túi & Ví</a></li>
-                                <li><a href="/products" class="hover:text-black">Nón</a></li>
-                                <li><a href="/products" class="hover:text-black">Thắt Lưng</a></li>
-                                <li><a href="/products" class="hover:text-black">Vớ</a></li>
-                                <li><a href="/products" class="hover:text-black">Mắt Kính</a></li>
-                            </ul>
-                        </div>
-                        <div class="space-y-4">
-                            <a href="/products" class="block group/img overflow-hidden rounded-lg relative">
-                                <img src="hero.png" alt="Đồ Hè" class="w-full h-32 object-cover object-center transition-transform duration-500 group-hover/img:scale-110" onerror="this.src='product1.jpg';this.onerror='';" />
-                                <div class="absolute bottom-2 left-2 text-white font-bold text-lg drop-shadow-md">Đồ Hè</div>
-                            </a>
-                            <a href="/products" class="block group/img overflow-hidden rounded-lg relative bg-gray-100">
-                                <img src="product1.jpg" alt="Retro Sports" class="w-full h-32 object-cover object-top transition-transform duration-500 group-hover/img:scale-110" onerror="this.src='';this.onerror='';" />
-                                <div class="absolute bottom-2 left-2 text-white font-bold text-lg drop-shadow-md">Retro Sports</div>
-                            </a>
+
+                <!-- MEGA -->
+                <div class="pointer-events-none absolute left-0 top-full w-screen opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+                    <div class="border-t border-gray-200 bg-white shadow-2xl">
+                        <div class="mx-auto grid max-w-[1200px] grid-cols-5 gap-6 px-6 py-7">
+                            <div>
+                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">All</h3>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <li><a href="/products/new" class="transition hover:text-black">Sản phẩm mới</a></li>
+                                    <li><a href="/products/best-seller" class="transition hover:text-black">Bán chạy</a></li>
+                                    <li><a href="/products/sale" class="font-semibold text-red-500 transition hover:text-red-600">Sale</a></li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Áo</h3>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <li><a href="/products/ao-thun" class="transition hover:text-black">Thun</a></li>
+                                    <li><a href="/products/ao-polo" class="transition hover:text-black">Polo</a></li>
+                                    <li><a href="/products/ao-hoodie" class="transition hover:text-black">Hoodie</a></li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Quần</h3>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <li><a href="/products/quan-jean" class="transition hover:text-black">Jean</a></li>
+                                    <li><a href="/products/quan-kaki" class="transition hover:text-black">Kaki</a></li>
+                                    <li><a href="/products/short" class="transition hover:text-black">Short</a></li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Phụ kiện</h3>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <li><a href="/products/tui" class="transition hover:text-black">Túi</a></li>
+                                    <li><a href="/products/non" class="transition hover:text-black">Nón</a></li>
+                                    <li><a href="/products/kinh" class="transition hover:text-black">Kính</a></li>
+                                </ul>
+                            </div>
+
+                            <div class="space-y-3">
+                                <a href="/products/summer" class="group block overflow-hidden rounded-2xl bg-gray-100">
+                                    <img src="hero.png" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Summer collection" />
+                                    <div class="p-3 text-sm font-bold text-gray-900">Summer</div>
+                                </a>
+
+                                <a href="/products/sport" class="group block overflow-hidden rounded-2xl bg-gray-100">
+                                    <img src="product1.jpg" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Sport collection" />
+                                    <div class="p-3 text-sm font-bold text-gray-900">Sport</div>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="relative group">
-                <button class="flex items-center gap-2">Hàng Mới <span class="ml-1 text-xs text-white bg-red-500 px-2 py-0.5 rounded">New</span></button>
-            </div>
-
-            <div>Hàng Bán Chạy</div>
-            <div>DENIM</div>
-            <div class="text-red-600 font-bold">OUTLET</div>
-            <div>Collection</div>
+            <a href="/products/new" class="text-gray-700 transition hover:text-black">Hàng mới</a>
+            <a href="/products/best-seller" class="text-gray-700 transition hover:text-black">Bán chạy</a>
+            <a href="/products/denim" class="text-gray-700 transition hover:text-black">DENIM</a>
+            <a href="/products/outlet" class="font-semibold text-red-500 transition hover:text-red-600">OUTLET</a>
         </nav>
-        <!-- Right icons -->
-        <div class="flex items-center gap-3">
-            <div class="hidden md:flex items-center bg-gray-100 rounded-full px-3 py-1">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
-                <input class="bg-transparent outline-none text-sm ml-2 w-40" placeholder="Search products" />
+
+        <!-- RIGHT -->
+        <div class="flex items-center gap-1 sm:gap-2">
+
+            <!-- SEARCH -->
+            <div class="hidden items-center rounded-full bg-gray-100 px-3 py-2 transition focus-within:ring-2 focus-within:ring-[#0b3b72]/20 md:flex">
+                <svg class="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M21 21l-4.35-4.35" />
+                    <circle cx="11" cy="11" r="7" />
+                </svg>
+                <input class="ml-2 w-32 bg-transparent text-sm outline-none transition-all placeholder:text-gray-400 focus:w-48"
+                       placeholder="Search"
+                       type="text" />
             </div>
 
-            <button class="p-2 hidden md:inline-flex" aria-label="Account">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1118.879 6.196 9 9 0 015.12 17.804zM15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
+            <!-- ACCOUNT -->
+            <div class="relative">
+                <button type="button"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-gray-100 active:scale-95"
+                        @onclick="ToggleAccount"
+                        aria-label="Account">
+                    <svg class="h-5 w-5 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21a8 8 0 0 0-16 0" />
+                        <circle cx="12" cy="8" r="4" />
+                    </svg>
+                </button>
 
-            <button class="p-2 hidden md:inline-flex" aria-label="Store locator">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" /></svg>
-            </button>
+                <div class="@(_accountOpen ? "block" : "hidden") absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+                    <div class="border-b border-gray-100 px-4 py-3">
+                        <div class="text-sm font-semibold text-gray-900">Tài khoản</div>
+                        <div class="text-xs text-gray-500">Quản lý hồ sơ và đơn hàng</div>
+                    </div>
+                    <a href="/account/profile" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Hồ sơ</a>
+                    <a href="/orders" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đơn hàng</a>
+                    <a href="/wishlist" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Yêu thích</a>
+                    <div class="border-t border-gray-100"></div>
+                    <a href="/logout" class="block px-4 py-3 text-sm font-medium text-red-500 transition hover:bg-red-50" @onclick="CloseAll">Đăng xuất</a>
+                </div>
+            </div>
 
-            <a href="/cart" class="relative">
-                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" /></svg>
-                <span class="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-1 rounded-full">@CartCount</span>
+            <!-- CART -->
+            <a href="/cart" class="relative inline-flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-gray-100 active:scale-95" @onclick="CloseAll">
+                <svg class="h-6 w-6 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 6h15l-2 9H8L6 6Z" />
+                    <path d="M6 6 5 3H2" />
+                    <circle cx="9" cy="20" r="1.5" />
+                    <circle cx="18" cy="20" r="1.5" />
+                </svg>
+
+                @if (CartCount > 0)
+                {
+                    <span class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                        @CartCount
+                    </span>
+                }
             </a>
         </div>
     </div>
 
-    <!-- Mobile menu -->
-    <div class="lg:hidden">
-        <div class="max-w-[1200px] mx-auto px-4 md:px-6">
-            <div class="@(_mobileOpen ? "block" : "hidden") bg-white border-t">
-                <ul class="flex flex-col py-4 space-y-3">
-                    <li class="px-2"><a class="block">Sản phẩm</a></li>
-                    <li class="px-2"><a class="block">Hàng Mới <span class="ml-2 text-xs text-white bg-red-500 px-2 py-0.5 rounded">New</span></a></li>
-                    <li class="px-2"><a class="block">Hàng Bán Chạy</a></li>
-                    <li class="px-2"><a class="block">DENIM</a></li>
-                    <li class="px-2"><a class="block text-red-600 font-bold">OUTLET</a></li>
-                    <li class="px-2"><a class="block">Collection</a></li>
-                </ul>
-            </div>
+    <!-- MOBILE -->
+    <div class="@(_mobileOpen ? "block" : "hidden") border-t border-gray-200 bg-white lg:hidden">
+        <div class="space-y-1 px-4 py-4 text-sm">
+            <a href="/products" class="block rounded-xl px-3 py-3 font-medium text-gray-800 transition hover:bg-gray-100" @onclick="CloseAll">Sản phẩm</a>
+            <a href="/products/new" class="block rounded-xl px-3 py-3 font-medium text-gray-800 transition hover:bg-gray-100" @onclick="CloseAll">Hàng mới</a>
+            <a href="/products/best-seller" class="block rounded-xl px-3 py-3 font-medium text-gray-800 transition hover:bg-gray-100" @onclick="CloseAll">Bán chạy</a>
+            <a href="/products/denim" class="block rounded-xl px-3 py-3 font-medium text-gray-800 transition hover:bg-gray-100" @onclick="CloseAll">DENIM</a>
+            <a href="/products/outlet" class="block rounded-xl px-3 py-3 font-semibold text-red-500 transition hover:bg-red-50" @onclick="CloseAll">OUTLET</a>
+
+            <div class="my-2 border-t border-gray-200"></div>
+
+            <a href="/profile" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Hồ sơ</a>
+            <a href="/orders" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đơn hàng</a>
+            <a href="/wishlist" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Yêu thích</a>
+            <a href="/cart" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">
+                Giỏ hàng (@CartCount)
+            </a>
         </div>
     </div>
 </header>
