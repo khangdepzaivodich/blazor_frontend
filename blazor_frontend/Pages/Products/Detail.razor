@@ -1,6 +1,8 @@
 @page "/product/{Id:int}"
 @using blazor_frontend.Shared
 @inject IJSRuntime JSRuntime
+@inject IBasketService BasketService
+@inject NavigationManager Navigation
 
 <div class="bg-white pb-16 min-h-screen">
     <!-- Breadcrumb -->
@@ -175,15 +177,15 @@
             <!-- Actions (Add to Cart / Buy Now) -->
             <div class="flex gap-4 mb-4">
                 <div class="flex items-center justify-between w-32 border border-gray-300 rounded-md bg-white">
-                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none">-</button>
-                    <div class="flex-1 text-center font-semibold text-gray-800">1</div>
-                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none">+</button>
+                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none" @onclick="DecreaseQuantity">-</button>
+                    <div class="flex-1 text-center font-semibold text-gray-800">@Quantity</div>
+                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none" @onclick="IncreaseQuantity">+</button>
                 </div>
-                <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors">
+                <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors" @onclick="AddToCartAsync">
                     THÊM VÀO GIỎ
                 </button>
             </div>
-            <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6">
+            <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6" @onclick="BuyNowAsync">
                 MUA NGAY
             </button>
 
@@ -275,6 +277,7 @@
 
     private int selectedMediaIndex = 0;
     private int activeTab = 1;
+    private int Quantity { get; set; } = 1;
 
     // Tuple defines URL and media format type
     private (int Index, string Url, string Type)[] thumbnails = new[]
@@ -306,6 +309,48 @@
     {
         int newIndex = selectedMediaIndex < thumbnails.Length - 1 ? selectedMediaIndex + 1 : 0;
         await SelectMedia(newIndex);
+    }
+
+    private void IncreaseQuantity() => Quantity++;
+
+    private void DecreaseQuantity()
+    {
+        if (Quantity > 1)
+        {
+            Quantity--;
+        }
+    }
+
+    private async Task AddToCartAsync()
+    {
+        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? "guest";
+        var basket = await BasketService.GetBasketAsync(buyerId) ?? new BasketDto { UserName = buyerId };
+
+        var existing = basket.Items.FirstOrDefault(x => x.ProductId == Id.ToString());
+        if (existing != null)
+        {
+            existing.Quantity += Quantity;
+        }
+        else
+        {
+            basket.Items.Add(new BasketItemDto
+            {
+                ProductId = Id.ToString(),
+                ProductName = "Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim",
+                Price = 311200,
+                Quantity = Quantity,
+                ImageUrl = "product1.jpg"
+            });
+        }
+
+        await BasketService.UpdateBasketAsync(basket);
+        await JSRuntime.InvokeVoidAsync("alert", "Đã thêm vào giỏ hàng");
+    }
+
+    private async Task BuyNowAsync()
+    {
+        await AddToCartAsync();
+        Navigation.NavigateTo("/cart");
     }
 
     // Mock Similar Products

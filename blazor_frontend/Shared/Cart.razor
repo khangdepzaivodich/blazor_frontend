@@ -1,5 +1,10 @@
 ﻿@page "/cart"
 @using Microsoft.AspNetCore.Components
+@inject IBasketService BasketService
+@inject IDiscountService DiscountService
+@inject IOrderService OrderService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-6 pb-32">
     <div class="text-sm text-gray-500 mb-6 flex items-center gap-2">
@@ -17,9 +22,9 @@
             <section>
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Thông tin đơn hàng</h2>
                 <div class="space-y-4">
-                    <input type="text" placeholder="Họ và tên" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-                    <input type="tel" placeholder="Số điện thoại" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-                    <input type="text" placeholder="Địa chỉ" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="text" placeholder="Họ và tên" @bind="HoTen" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="tel" placeholder="Số điện thoại" @bind="SoDienThoai" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="text" placeholder="Địa chỉ" @bind="DiaChi" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
@@ -88,6 +93,23 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                 </div>
 
+                @if (CartModel?.Items?.Any() == true)
+                {
+                    <div class="space-y-3">
+                        @foreach (var item in CartModel.Items)
+                        {
+                            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+                                <div>
+                                    <div class="font-semibold text-sm">@item.ProductName</div>
+                                    <div class="text-xs text-gray-500">SL: @item.Quantity</div>
+                                </div>
+                                <div class="font-semibold">@FormatMoney(item.Price * item.Quantity)</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
                 <div class="flex flex-col items-center justify-center py-8 text-center">
                     <svg class="w-32 h-32 mb-4" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="100" cy="100" r="80" fill="#fef3c7" opacity="0.5" />
@@ -104,12 +126,13 @@
                         Mua sắm ngay
                     </a>
                 </div>
+                }
 
                 <div>
                     <h3 class="font-bold text-lg mb-3">Ưu Đãi Dành Cho Bạn</h3>
                     <div class="flex gap-2">
-                        <input type="text" placeholder="Nhập mã giảm giá" class="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#0b3b72]" />
-                        <button class="bg-[#0b3b72] text-white px-6 py-2 rounded-md font-medium hover:bg-blue-900 transition-colors whitespace-nowrap">
+                        <input type="text" @bind="DiscountCode" placeholder="Nhập mã giảm giá" class="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#0b3b72]" />
+                        <button class="bg-[#0b3b72] text-white px-6 py-2 rounded-md font-medium hover:bg-blue-900 transition-colors whitespace-nowrap" @onclick="ApplyVoucherAsync">
                             Áp dụng Voucher
                         </button>
                     </div>
@@ -119,8 +142,8 @@
                     <div class="flex justify-between items-center">
                         <span>Tạm tính:</span>
                         <div class="text-right">
-                            <span class="font-bold text-gray-900">0đ</span>
-                            <div class="text-xs text-red-500">Tiết kiệm: 0đ</div>
+                            <span class="font-bold text-gray-900">@FormatMoney(TamTinh)</span>
+                            <div class="text-xs text-red-500">Tiết kiệm: @FormatMoney(VoucherGiamGia)</div>
                         </div>
                     </div>
                     <div class="flex justify-between items-center">
@@ -129,7 +152,7 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span>Voucher giảm giá:</span>
-                        <span class="text-gray-900">0đ</span>
+                        <span class="text-gray-900">@FormatMoney(VoucherGiamGia)</span>
                     </div>
                 </div>
             </div>
@@ -140,16 +163,87 @@
 <div class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-sm border-t shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
     <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-end gap-6">
         <div class="text-right">
-            <div class="text-xl font-bold text-[#0b3b72]">0đ</div>
-            <div class="text-sm text-gray-600 font-medium">Tiết kiệm: 0đ</div>
+            <div class="text-xl font-bold text-[#0b3b72]">@FormatMoney(ThanhTien)</div>
+            <div class="text-sm text-gray-600 font-medium">Tiết kiệm: @FormatMoney(VoucherGiamGia)</div>
         </div>
-        <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors">
+        <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors" @onclick="CheckoutAsync" disabled="@(CartModel?.Items?.Any() != true)">
             Thanh toán
         </button>
     </div>
 </div>
 
 @code {
-    // Biến lưu trữ trạng thái phương thức thanh toán được chọn (1: COD, 2: VNPAY, 3: MoMo)
     private int PaymentMethod = 1;
+    private BasketDto? CartModel;
+    private string BuyerId = "guest";
+    private string HoTen = string.Empty;
+    private string SoDienThoai = string.Empty;
+    private string DiaChi = string.Empty;
+    private string DiscountCode = string.Empty;
+    private Guid? MaGiamGia;
+    private decimal VoucherGiamGia;
+
+    private decimal TamTinh => CartModel?.TotalPrice ?? 0;
+    private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? "guest";
+        CartModel = await BasketService.GetBasketAsync(BuyerId) ?? new BasketDto { UserName = BuyerId };
+    }
+
+    private async Task ApplyVoucherAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DiscountCode))
+        {
+            return;
+        }
+
+        var voucher = await DiscountService.GetDiscountByCodeAsync(DiscountCode);
+        if (voucher == null)
+        {
+            await JS.InvokeVoidAsync("alert", "Mã giảm giá không hợp lệ");
+            return;
+        }
+
+        MaGiamGia = voucher.MaGG;
+        VoucherGiamGia = voucher.Loai == "PhanTram"
+            ? Math.Min(TamTinh * voucher.SoTien / 100m, voucher.GiaTriGiamToiDa ?? decimal.MaxValue)
+            : voucher.SoTien;
+    }
+
+    private async Task CheckoutAsync()
+    {
+        if (CartModel?.Items?.Any() != true)
+        {
+            return;
+        }
+
+        var request = new CreateDonHangRequest
+        {
+            MaTK = Guid.NewGuid(),
+            MaGG = MaGiamGia,
+            DiaChiGiaoHang = DiaChi,
+            ChiTietDonHangs = CartModel.Items.Select(x => new CreateChiTietDonHangRequest
+            {
+                MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
+                TenSP_LuuTru = x.ProductName,
+                Gia_LuuTru = x.Price,
+                SoLuong = x.Quantity
+            }).ToList()
+        };
+
+        var order = await OrderService.CreateOrderAsync(request);
+        if (order == null)
+        {
+            await JS.InvokeVoidAsync("alert", "Đặt hàng thất bại");
+            return;
+        }
+
+        await BasketService.DeleteBasketAsync(BuyerId);
+        await JS.InvokeVoidAsync("alert", "Đặt hàng thành công");
+        Navigation.NavigateTo("/staff/orders");
+    }
+
+    private static string FormatMoney(decimal money) => $"{money:n0}đ";
 }

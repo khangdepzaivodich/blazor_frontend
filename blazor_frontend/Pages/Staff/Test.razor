@@ -1,0 +1,78 @@
+@page "/staff/test"
+@inject IOrderService OrderService
+
+<PageTitle>Test FE to BE</PageTitle>
+
+<div class="p-6">
+    <h2 class="text-2xl font-bold mb-4">Test Gọi OrderService API</h2>
+    <div class="mb-4">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition" @onclick="TaoDonHangTest">
+            Test Tạo Đơn Hàng Mới
+        </button>
+    </div>
+    
+    @if(orderId != null) 
+    {
+        <div class="p-4 mb-4 bg-green-100 text-green-800 rounded border border-green-200">
+            Tạo đơn thành công! Order ID: @orderId
+        </div>
+    }
+
+    @if(IsLoading) 
+    {
+         <div>Đang call API...</div>
+    }
+    
+    @if(TestMessage != null) 
+    {
+        <div class="p-4 bg-gray-100 rounded text-red-600 font-mono text-sm whitespace-pre-wrap">
+            @TestMessage
+        </div>
+    }
+</div>
+
+@code {
+    private string? orderId;
+    private string? TestMessage;
+    private bool IsLoading = false;
+
+    private async Task TaoDonHangTest()
+    {
+        try 
+        {
+            IsLoading = true;
+            TestMessage = null;
+
+            var request = new blazor_frontend.Models.BackendDTOs.CreateDonHangRequest 
+            {
+                MaTK = Guid.NewGuid(),
+                DiaChiGiaoHang = "123 Duong Test Blazor",
+                ChiTietDonHangs = new() 
+                {
+                    new blazor_frontend.Models.BackendDTOs.CreateChiTietDonHangRequest 
+                    {
+                        MaCTSP = Guid.NewGuid(),
+                        TenSP_LuuTru = "San pham test",
+                        Gia_LuuTru = 150000,
+                        SoLuong = 2
+                    }
+                }
+            };
+
+            var result = await OrderService.CreateOrderAsync(request);
+            if (result != null) 
+            {
+                orderId = result.MaDH.ToString();
+                TestMessage = "[SUCCESS] Call is OK";
+            }
+        } 
+        catch(Exception ex) 
+        {
+            TestMessage = "[ERROR] Call failed: " + ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}
