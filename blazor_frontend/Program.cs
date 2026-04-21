@@ -23,5 +23,7 @@ builder.Services.AddScoped<blazor_frontend.Services.IDiscountService, blazor_fro
 builder.Services.AddScoped<blazor_frontend.Services.IBasketService, blazor_frontend.Services.BasketService>();
 builder.Services.AddScoped<blazor_frontend.Services.ICatalogService, blazor_frontend.Services.CatalogService>();
 builder.Services.AddScoped<blazor_frontend.Services.IChatService, blazor_frontend.Services.ChatService>();
+builder.Services.AddScoped<blazor_frontend.Services.ICategoryService, blazor_frontend.Services.CategoryService>();
+builder.Services.AddScoped<blazor_frontend.Services.IProductService, blazor_frontend.Services.ProductService>();
 
 await builder.Build().RunAsync();
