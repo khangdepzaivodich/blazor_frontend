@@ -1,0 +1,79 @@
+@page "/staff/orders/{maDH:guid}"
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IOrderService OrderService
+@inject NavigationManager Nav
+
+<PageTitle>Chi tiết đơn hàng</PageTitle>
+
+<div class="p-6">
+    <button class="text-sm text-blue-600 mb-4" @onclick="GoBack">&larr; Quay lại</button>
+
+    @if (isLoading)
+    {
+        <div>Đang tải...</div>
+    }
+    else if (order == null)
+    {
+        <div class="text-red-500">Đơn hàng không tìm thấy</div>
+    }
+    else
+    {
+        <div class="bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-bold mb-2">Đơn hàng: @order.MaDH</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>Khách hàng: @order.MaTK</div>
+                <div>Ngày đặt: @order.NgayDat.ToString("dd/MM/yyyy HH:mm")</div>
+                <div>Địa chỉ giao: @order.DiaChiGiaoHang</div>
+                <div>Trạng thái: @order.TrangThaiDH</div>
+            </div>
+
+            <h3 class="font-semibold mt-4 mb-2">Chi tiết</h3>
+            <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 text-xs uppercase">
+                        <th class="p-2">Sản phẩm</th>
+                        <th class="p-2 text-right">Giá</th>
+                        <th class="p-2 text-center">Số lượng</th>
+                        <th class="p-2 text-right">Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var it in order.ChiTietDonHangs)
+                    {
+                        <tr>
+                            <td class="p-2">@it.TenSP_LuuTru</td>
+                            <td class="p-2 text-right">@it.Gia_LuuTru.ToString("N0")đ</td>
+                            <td class="p-2 text-center">@it.SoLuong</td>
+                            <td class="p-2 text-right">@(it.Gia_LuuTru * it.SoLuong).ToString("N0")đ</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="text-right mt-4 font-bold">Tổng: @order.TongTien.ToString("N0")đ</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid maDH { get; set; }
+
+    private DonHangDto? order;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            order = await OrderService.GetOrderByIdAsync(maDH);
+        }
+        catch { order = null; }
+        finally { isLoading = false; }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/staff/orders");
+    }
+}
