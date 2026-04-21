@@ -1,5 +1,7 @@
 ﻿@page "/staff/orders"
 <PageTitle>Quản lý Đơn hàng</PageTitle>
+@inject blazor_frontend.Services.IOrderService orderService
+@inject blazor_frontend.Services.IAuthService authService
 
 <div class="p-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -173,16 +175,46 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Mock dữ liệu ảo hiển thị UI
-        orders = new List<OrderModel>
+        // Thử lấy user hiện tại rồi gọi API lấy đơn hàng của user đó
+        try
         {
-            new OrderModel { CustomerName = "Nguyễn Văn A", PhoneNumber = "0901234567", OrderDate = DateTime.Now.AddHours(-2), TotalAmount = 1500000, Status = OrderStatus.Pending },
-            new OrderModel { CustomerName = "Trần Thị B", PhoneNumber = "0912345678", OrderDate = DateTime.Now.AddHours(-14), TotalAmount = 850000, Status = OrderStatus.Processing },
-            new OrderModel { CustomerName = "Lê Văn C", PhoneNumber = "0923456789", OrderDate = DateTime.Now.AddDays(-1), TotalAmount = 2400000, Status = OrderStatus.Shipping },
-            new OrderModel { CustomerName = "Phạm Thị D", PhoneNumber = "0934567890", OrderDate = DateTime.Now.AddDays(-2), TotalAmount = 320000, Status = OrderStatus.Completed },
-            new OrderModel { CustomerName = "Hoàng Văn E", PhoneNumber = "0945678901", OrderDate = DateTime.Now.AddDays(-3), TotalAmount = 5600000, Status = OrderStatus.Cancelled }
+            var user = await authService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                var ordersFromApi = await orderService.GetOrdersByUserIdAsync(user.MaTK);
+                orders = ordersFromApi.Select(d => new OrderModel
+                {
+                    Id = d.MaDH.ToString(),
+                    CustomerName = user.HoTen,
+                    PhoneNumber = user.SoDienThoai,
+                    OrderDate = d.NgayDat,
+                    TotalAmount = d.TongTien,
+                    Status = MapStatus(d.TrangThaiDH)
+                }).ToList();
+            }
+            else
+            {
+                orders = new List<OrderModel>();
+            }
+        }
+        catch
+        {
+            orders = new List<OrderModel>();
+        }
+    }
+
+    private OrderStatus MapStatus(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "pending" => OrderStatus.Pending,
+            "processing" => OrderStatus.Processing,
+            "shipping" => OrderStatus.Shipping,
+            "completed" => OrderStatus.Completed,
+            "cancelled" => OrderStatus.Cancelled,
+            _ => OrderStatus.Pending
         };
     }
 

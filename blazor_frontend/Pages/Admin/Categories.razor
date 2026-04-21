@@ -1,5 +1,6 @@
 ﻿@page "/admin/categories"
-@using blazor_frontend.Models
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.ICategoryService categoryService
 <PageTitle>Quản lý Danh mục</PageTitle>
 
 <div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
@@ -8,7 +9,7 @@
             <h2 class="text-2xl font-bold text-gray-800">Quản lý Danh mục</h2>
             <p class="text-sm text-gray-500 mt-1">Quản lý các loại danh mục</p>
         </div>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="New">
             <i class="ph ph-plus-circle text-xl"></i>
             Thêm danh mục
         </button>
@@ -42,40 +43,42 @@
                 </tr>
             </thead>
             <tbody class="text-gray-700 text-sm">
-                @foreach (var ldm in LoaiDanhMucs)
+                @if (items == null)
                 {
-                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
+                    <tr><td colspan="4">Đang tải...</td></tr>
+                }
+                else if (!items.Any())
+                {
+                    <tr><td colspan="4">Chưa có danh mục nào</td></tr>
+                }
+                else
+                {
+                    @foreach (var ldm in items)
+                    {
+                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                    <i class="ph ph-folder text-sm mr-2"></i>
+                                    @ldm.TenDM
+                                </span>
+                            </td>
 
-                        <!-- Tên danh mục -->
-                        <td class="p-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                                <i class="ph ph-folder text-sm mr-2"></i>
-                                @ldm.DanhMuc?.TenDM
-                            </span>
-                        </td>
+                            <td class="p-4 font-bold text-gray-800">@ldm.MaLDM</td>
 
-                        <!-- Tên loại danh mục -->
-                        <td class="p-4 font-bold text-gray-800">
-                            @ldm.TenLDM
-                        </td>
+                            <td class="p-4">
+                                <code class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">@ldm.MaDM</code>
+                            </td>
 
-                        <!-- SLUGGGGG -->
-                        <td class="p-4">
-                            <code class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">
-                                /@ldm.DanhMuc?.Slug/@ldm.Slug
-                            </code>
-                        </td>
-
-                        <!-- Thao tác -->
-                        <td class="p-4 text-right space-x-2">
-                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa danh mục">
-                                <i class="ph ph-pencil-simple text-xl"></i>
-                            </button>
-                            <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Xóa danh mục">
-                                <i class="ph ph-trash text-xl"></i>
-                            </button>
-                        </td>
-                    </tr>
+                            <td class="p-4 text-right space-x-2">
+                                <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" @onclick="() => Edit(ldm)" title="Sửa danh mục">
+                                    <i class="ph ph-pencil-simple text-xl"></i>
+                                </button>
+                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" @onclick="() => Delete(ldm.MaDM)" title="Xóa danh mục">
+                                    <i class="ph ph-trash text-xl"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -143,12 +146,56 @@
 
 @code {
     private int CurrentPage { get; set; } = 1;
-    private int TotalPages { get; set; } = 50;
-    private List<LoaiDanhMuc> LoaiDanhMucs = new();
+    private int TotalPages { get; set; } = 1;
+    private List<DanhMucDto> items = new();
 
-    protected override void OnInitialized()
+    private bool showEditor = false;
+    private DanhMucCreateUpdateRequest editor = new();
+    private Guid editingId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
     {
-        LoaiDanhMucs = MockStoreData.GetMockLoaiDanhMucs();
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        items = (await categoryService.GetAllAsync()).ToList();
+    }
+
+    private void New()
+    {
+        editingId = Guid.Empty;
+        editor = new DanhMucCreateUpdateRequest();
+        showEditor = true;
+    }
+
+    private void Edit(DanhMucDto dm)
+    {
+        editingId = dm.MaDM;
+        editor = new DanhMucCreateUpdateRequest { MaLDM = dm.MaLDM, TenDM = dm.TenDM };
+        showEditor = true;
+    }
+
+    private async Task Save()
+    {
+        if (editingId == Guid.Empty)
+        {
+            await categoryService.CreateAsync(editor);
+        }
+        else
+        {
+            await categoryService.UpdateAsync(editingId, editor);
+        }
+
+        showEditor = false;
+        await Load();
+    }
+
+    private async Task Delete(Guid id)
+    {
+        await categoryService.DeleteAsync(id);
+        await Load();
     }
 
     private void GoToPage(int page)
@@ -158,4 +205,6 @@
             CurrentPage = page;
         }
     }
+
+    private void Cancel() => showEditor = false;
 }

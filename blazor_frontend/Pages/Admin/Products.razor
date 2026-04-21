@@ -1,5 +1,7 @@
 ﻿@page "/admin/products"
-@using blazor_frontend.Models
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IProductService productService
+@inject blazor_frontend.Services.ICategoryService categoryService
 <PageTitle>Quản lý Sản phẩm</PageTitle>
 
 <div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
@@ -52,86 +54,59 @@
             </thead>
             <tbody class="text-gray-700 text-sm">
 
-                @foreach (var sp in SanPhams)
+                @if (items == null)
                 {
-                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(sp.TrangThai ? "" : "opacity-75")">
+                    <tr><td colspan="5">Đang tải...</td></tr>
+                }
+                else if (!items.Any())
+                {
+                    <tr><td colspan="5">Chưa có sản phẩm nào</td></tr>
+                }
+                else
+                {
+                    @foreach (var sp in items)
+                    {
+                        var catName = categories.FirstOrDefault(c => c.MaDM == sp.MaDM)?.TenDM ?? sp.MaDM.ToString();
+                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
 
                         <!-- Sản phẩm -->
                         <td class="p-4">
                             <div class="flex items-center gap-3">
-                                <img src="@sp.AnhDaiDien" alt="@sp.TenSP" class="w-12 h-12 rounded bg-gray-100 object-cover border border-gray-200 @(sp.TrangThai ? "" : "grayscale")" />
                                 <div>
-                                    <p class="font-bold text-gray-800 @(sp.TrangThai ? "" : "line-through")">@sp.TenSP</p>
+                                    <p class="font-bold text-gray-800">@sp.TenSP</p>
                                 </div>
                             </div>
                         </td>
 
                         <!-- Danh mục -->
-                        <td class="p-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                @(sp.LoaiDanhMuc?.TenLDM) (@(sp.LoaiDanhMuc?.DanhMuc?.TenDM))
-                            </span>
-                        </td>
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    @catName
+                                </span>
+                            </td>
 
                         <!-- Chi tiết -->
-                        <td class="p-4">
-                            <div class="flex -space-x-2">
-                                @{
-                                    var topMaus = sp.ChiTietSanPhams.GroupBy(c => c.Mau).Take(3).ToList();
-                                    foreach (var group in topMaus)
-                                    {
-                                        <div class="w-8 h-8 rounded-full border-2 border-white @GetColorClass(group.Key) 
-                                                    flex items-center justify-center text-[10px] font-bold" 
-                                             title="@group.Key - @string.Join(", ", group.Select(x => x.KichCo))">
-                                            @group.Count()
-                                        </div>
-                                    }
-                                }
-                                @if (sp.ChiTietSanPhams.Select(c => c.Mau).Distinct().Count() > 3)
-                                {
-                                    <div class="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 bg-gray-100 
-                                                flex items-center justify-center text-xs text-gray-500 font-bold 
-                                                hover:bg-gray-200 cursor-pointer" 
-                                         title="Xem tất cả biến thể">
-                                        <i class="ph ph-plus"></i>
-                                    </div>
-                                }
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">Có <span class="font-bold text-gray-700">@sp.ChiTietSanPhams.Count</span> Chi tiết SP</p>
-                        </td>
+                            <td class="p-4">
+                                <div class="text-sm text-gray-600">@((sp.ChiTietSanPhams?.Count() ?? 0)) biến thể</div>
+                            </td>
 
                         <!-- Trạng thái -->
-                        <td class="p-4 text-center">
-                            @if (sp.TrangThai)
-                            {
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
-                                    Đang bán
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                    Ngừng kinh doanh
-                                </span>
-                            }
-                        </td>
+                            <td class="p-4 text-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span>
+                            </td>
 
                         <!-- Thao tác -->
                         <td class="p-4 text-right space-x-2">
-                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Chỉnh sửa">
+                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Chỉnh sửa" @onclick="() => Edit(sp)">
                                 <i class="ph ph-pencil-simple text-xl"></i>
                             </button>
-                            @if (sp.TrangThai)
-                            {
-                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Ẩn">
-                                    <i class="ph ph-eye-slash text-xl"></i>
-                                </button>
-                            }
+                            <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Xóa" @onclick="() => Delete(sp.MaSP)">
+                                <i class="ph ph-trash text-xl"></i>
+                            </button>
                         </td>
                     </tr>
+                    }
                 }
-
             </tbody>
         </table>
     </div>
@@ -200,12 +175,58 @@
 
 @code {
     private int CurrentPage { get; set; } = 1;
-    private int TotalPages { get; set; } = 50;
-    private List<SanPham> SanPhams = new();
+    private int TotalPages { get; set; } = 1;
+    private List<SanPhamDto> items = new();
+    private List<DanhMucDto> categories = new();
+    private bool showEditor = false;
+    private SanPhamCreateRequest editor = new();
+    private Guid editingId = Guid.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        SanPhams = MockStoreData.GetMockSanPhams();
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        categories = (await categoryService.GetAllAsync()).ToList();
+        items = (await productService.GetAllAsync()).ToList();
+    }
+
+    private void New()
+    {
+        editingId = Guid.Empty;
+        editor = new SanPhamCreateRequest();
+        showEditor = true;
+    }
+
+    private void Edit(SanPhamDto it)
+    {
+        editingId = it.MaSP;
+        editor = new SanPhamCreateRequest { MaDM = it.MaDM, TenSP = it.TenSP, MoTa = it.MoTa };
+        showEditor = true;
+    }
+
+    private async Task Save()
+    {
+        if (editingId == Guid.Empty)
+        {
+            var res = await productService.CreateAsync(editor);
+            if (res != null) await Load();
+        }
+        else
+        {
+            var ok = await productService.UpdateAsync(editingId, editor);
+            if (ok) await Load();
+        }
+
+        showEditor = false;
+    }
+
+    private async Task Delete(Guid id)
+    {
+        var ok = await productService.DeleteAsync(id);
+        if (ok) await Load();
     }
     private void GoToPage(int page)
     {
