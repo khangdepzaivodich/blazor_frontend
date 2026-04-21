@@ -1,7 +1,7 @@
 ﻿@page "/staff/orders"
 <PageTitle>Quản lý Đơn hàng</PageTitle>
 @inject blazor_frontend.Services.IOrderService orderService
-@inject blazor_frontend.Services.IAuthService authService
+@inject IJSRuntime JSRuntime
 
 <div class="p-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -14,6 +14,29 @@
             </button>
         </div>
     </div>
+
+@if (showStatusModal && selectedOrder != null)
+{
+    <div class="fixed inset-0 bg-black/30 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 w-96">
+            <h3 class="text-lg font-semibold mb-4">Cập nhật trạng thái đơn hàng</h3>
+            <div class="mb-4">
+                <div class="text-sm text-gray-600 mb-2">Đơn: @selectedOrder.Id</div>
+                <select @bind="selectedNewStatus" class="w-full border rounded px-3 py-2">
+                    <option value="pending">Chờ xác nhận</option>
+                    <option value="processing">Đang xử lý</option>
+                    <option value="shipping">Đang giao</option>
+                    <option value="completed">Hoàn tất</option>
+                    <option value="cancelled">Đã hủy</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button class="px-3 py-1 rounded border" @onclick="() => showStatusModal = false">Hủy</button>
+                <button class="px-3 py-1 rounded bg-blue-600 text-white" @onclick="ConfirmUpdateStatus">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+}
 
     <!-- Bộ lọc -->
     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
@@ -81,10 +104,10 @@
                                     </span>
                                 </td>
                                 <td class="py-4 px-6 text-center flex justify-center gap-2">
-                                    <button class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition" title="Xem chi tiết">
+                                    <a class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition" title="Xem chi tiết" href="/staff/orders/@order.Id">
                                         <i class="ph ph-eye text-xl"></i>
-                                    </button>
-                                    <button class="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition" title="Cập nhật trạng thái">
+                                    </a>
+                                    <button class="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition" title="Cập nhật trạng thái" @onclick="() => OpenUpdateStatusModal(order)">
                                         <i class="ph ph-pencil-simple text-xl"></i>
                                     </button>
                                 </td>
@@ -166,6 +189,9 @@
     private List<OrderModel> orders = new();
     private int CurrentPage { get; set; } = 1;
     private int TotalPages { get; set; } = 50;
+    private bool showStatusModal = false;
+    private OrderModel? selectedOrder;
+    private string selectedNewStatus = "processing";
 
     private void GoToPage(int page)
     {
@@ -175,29 +201,75 @@
         }
     }
 
+    private void OpenUpdateStatusModal(OrderModel o)
+    {
+        selectedOrder = o;
+        selectedNewStatus = "processing";
+        showStatusModal = true;
+    }
+
+    private async Task ConfirmUpdateStatus()
+    {
+        if (selectedOrder == null) return;
+        var ok = await orderService.UpdateOrderStatusAsync(Guid.Parse(selectedOrder.Id), selectedNewStatus);
+        showStatusModal = false;
+        selectedOrder = null;
+        if (ok)
+        {
+            // refresh list
+            await OnInitializedAsync();
+        }
+        else
+        {
+            // TODO: show error toast
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        // Thử lấy user hiện tại rồi gọi API lấy đơn hàng của user đó
+        // Load paged orders for staff (calls admin endpoint). Falls back to user orders if not staff.
         try
         {
-            var user = await authService.GetCurrentUserAsync();
-            if (user != null)
+            var paged = await orderService.GetAllPagedAsync(CurrentPage, 10);
+            if (paged != null)
             {
-                var ordersFromApi = await orderService.GetOrdersByUserIdAsync(user.MaTK);
-                orders = ordersFromApi.Select(d => new OrderModel
+                orders = paged.Items.Select(d => new OrderModel
                 {
                     Id = d.MaDH.ToString(),
-                    CustomerName = user.HoTen,
-                    PhoneNumber = user.SoDienThoai,
+                    CustomerName = d.MaTK.ToString(),
+                    PhoneNumber = "N/A",
                     OrderDate = d.NgayDat,
                     TotalAmount = d.TongTien,
                     Status = MapStatus(d.TrangThaiDH)
                 }).ToList();
+
+                TotalPages = (int)Math.Ceiling(paged.TotalCount / (double)paged.PageSize);
+                return;
             }
-            else
+
+            // Fallback: try to load orders by user if identity available in local storage.
+            // Since login is not implemented yet, we attempt to read buyer_id from localStorage via JSInterop.
+            try
             {
-                orders = new List<OrderModel>();
+                var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+                if (!string.IsNullOrEmpty(buyerId) && Guid.TryParse(buyerId, out var userId))
+                {
+                    var ordersFromApi = await orderService.GetOrdersByUserIdAsync(userId);
+                    orders = ordersFromApi.Select(d => new OrderModel
+                    {
+                        Id = d.MaDH.ToString(),
+                        CustomerName = d.MaTK.ToString(),
+                        PhoneNumber = "N/A",
+                        OrderDate = d.NgayDat,
+                        TotalAmount = d.TongTien,
+                        Status = MapStatus(d.TrangThaiDH)
+                    }).ToList();
+                    return;
+                }
             }
+            catch { }
+
+            orders = new List<OrderModel>();
         }
         catch
         {

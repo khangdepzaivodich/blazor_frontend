@@ -7,13 +7,6 @@ using blazor_frontend.Models.BackendDTOs;
 
 namespace blazor_frontend.Services
 {
-    public interface IOrderService
-    {
-        Task<DonHangDto?> CreateOrderAsync(CreateDonHangRequest request);
-        Task<DonHangDto?> GetOrderByIdAsync(Guid maDH);
-        Task<IEnumerable<DonHangDto>> GetOrdersByUserIdAsync(Guid maTK);
-    }
-
     public class OrderService : IOrderService
     {
         private readonly HttpClient _httpClient;
@@ -41,6 +34,19 @@ namespace blazor_frontend.Services
         public async Task<IEnumerable<DonHangDto>> GetOrdersByUserIdAsync(Guid maTK)
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<DonHangDto>>($"api/donhang/user/{maTK}") ?? new List<DonHangDto>();
+        }
+
+        public async Task<PagedDonHangResult?> GetAllPagedAsync(int page, int pageSize)
+        {
+            var res = await _httpClient.GetAsync($"api/donhang?page={page}&pageSize={pageSize}");
+            if (!res.IsSuccessStatusCode) return null;
+            return await res.Content.ReadFromJsonAsync<PagedDonHangResult>();
+        }
+
+        public async Task<bool> UpdateOrderStatusAsync(Guid maDH, string newStatus)
+        {
+            var res = await _httpClient.PatchAsync($"api/donhang/{maDH}/status", JsonContent.Create(newStatus));
+            return res.IsSuccessStatusCode;
         }
     }
 }
