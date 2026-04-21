@@ -53,6 +53,7 @@
     private List<ChatMessage> messages = new();
 
     private HubConnection? hubConnection;
+    private bool _hubConnected;
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,7 +67,7 @@
 
         // 2. Chờ kết nối SignalR...
         hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5041/chat-hub")
+            .WithUrl("https://localhost:7229/chat-hub")
             .WithAutomaticReconnect()
             .Build();
 
@@ -84,16 +85,18 @@
         try
         {
             await hubConnection.StartAsync();
+            _hubConnected = hubConnection.State == HubConnectionState.Connected;
         }
         catch (Exception ex)
         {
+            _hubConnected = false;
             Console.WriteLine("Lỗi khi kết nối SignalR Backend Chat: " + ex.Message);
         }
 
         // 3. Xử lý Session ID
         var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
 
-        if (string.IsNullOrEmpty(session))
+        if (string.IsNullOrEmpty(session) && _hubConnected)
         {
             // Gọi Backend tạo Phiên và trả về maPhien (Guid)
             currentSessionId = await hubConnection.InvokeAsync<string>("CreateNewChatSession", guestId, "GUEST");
@@ -106,7 +109,7 @@
         else
         {
             // tải phiên chat cũ từ localStorage
-            currentSessionId = session;
+            currentSessionId = string.IsNullOrWhiteSpace(session) ? Guid.NewGuid().ToString() : session;
             var history = await JS.InvokeAsync<string>("localStorage.getItem", $"chat_history_{currentSessionId}");
 
             if (!string.IsNullOrEmpty(history))
@@ -116,7 +119,10 @@
             }
 
             // Gọi Hub để join vào room cũ
-            await hubConnection.SendAsync("JoinChatSession", currentSessionId);
+            if (_hubConnected)
+            {
+                await hubConnection.SendAsync("JoinChatSession", currentSessionId);
+            }
         }
     }
 
@@ -145,7 +151,7 @@
         await SaveMessages();
 
         // Đẩy xuống Backend qua SignalR
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
         {
             var tn = new TinNhanDto
             {

@@ -8,7 +8,6 @@ namespace blazor_frontend.Services
     public interface IAuthService
     {
         Task<LoginResponse?> LoginAsync(LoginRequest request);
-        Task<UserDto?> GetCurrentUserAsync();
     }
 
     public class AuthService : IAuthService
@@ -26,17 +25,6 @@ namespace blazor_frontend.Services
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<LoginResponse>();
-            }
-            return null;
-        }
-
-        public async Task<UserDto?> GetCurrentUserAsync()
-        {
-            // Note: Token should be added to headers if actual Auth is used
-            var response = await _httpClient.GetAsync("api/auth/me");
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadFromJsonAsync<UserDto>();
             }
             return null;
         }
