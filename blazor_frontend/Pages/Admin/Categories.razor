@@ -1,4 +1,4 @@
-﻿@page "/admin/categories"
+@page "/admin/categories"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.ICategoryService categoryService
 <PageTitle>Quản lý Danh mục</PageTitle>
@@ -7,151 +7,201 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-800">Quản lý Danh mục</h2>
-            <p class="text-sm text-gray-500 mt-1">Quản lý các loại danh mục</p>
+            <p class="text-sm text-gray-500 mt-1">Quản lý các loại danh mục và danh mục</p>
         </div>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="New">
-            <i class="ph ph-plus-circle text-xl"></i>
-            Thêm danh mục
+        @if (activeTab == "danhmuc")
+        {
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="NewDanh">
+                <i class="ph ph-plus-circle text-xl"></i>
+                Thêm danh mục
+            </button>
+        }
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 mb-6">
+        <button class="@(activeTab == "loaidanhmuc" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") py-3 px-6 text-center border-b-2 font-medium text-sm transition-colors" @onclick='() => activeTab = "loaidanhmuc"'>
+            <div class="flex items-center gap-2">
+                <i class="ph ph-folder text-lg"></i>
+                Loại danh mục
+            </div>
+        </button>
+        <button class="@(activeTab == "danhmuc" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") py-3 px-6 text-center border-b-2 font-medium text-sm transition-colors" @onclick='() => activeTab = "danhmuc"'>
+            <div class="flex items-center gap-2">
+                <i class="ph ph-tree-structure text-lg"></i>
+                Danh mục
+            </div>
         </button>
     </div>
 
-    <!-- Bộ lọc -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
-        <div class="flex-1 relative">
-            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow" placeholder="Tìm kiếm theo Tên danh mục...">
-        </div>
-        <div class="w-full md:w-48">
-            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
-                <option value="">Tất cả danh mục</option>
-                <option value="ao">Áo</option>
-                <option value="quan">Quần</option>
-                <option value="phukien">Phụ kiện</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Bảng Dữ liệu -->
-    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                    <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Danh mục</th>
-                    <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Loại danh mục</th>
-                    <th class="p-4 font-semibold border-b border-gray-200">Slug</th>
-                    <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody class="text-gray-700 text-sm">
-                @if (items == null)
-                {
-                    <tr><td colspan="4">Đang tải...</td></tr>
-                }
-                else if (!items.Any())
-                {
-                    <tr><td colspan="4">Chưa có danh mục nào</td></tr>
-                }
-                else
-                {
-                    @foreach (var ldm in items)
+    @* Loại danh mục *@
+    @if (activeTab == "loaidanhmuc")
+    {
+        <div class="bg-gray-50/50 border border-gray-200 rounded-xl p-8 min-h-[250px] flex flex-col shadow-inner">
+            <div class="mb-6">
+                <h3 class="text-lg font-bold text-gray-800">Các Loại Danh Mục</h3>
+                <p class="text-sm text-gray-500 mt-1">Quản lý các loại danh mục</p>
+            </div>
+            
+            @if (itemsLoaiDanhMuc == null)
+            {
+                <div class="flex-1 flex items-center justify-center text-gray-500">
+                    <i class="ph ph-spinner animate-spin text-2xl mr-2"></i> Đang tải...
+                </div>
+            }
+            else
+            {
+                <div class="flex flex-wrap gap-4 items-center">
+                    @if (!itemsLoaiDanhMuc.Any())
                     {
-                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
-                            <td class="p-4">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                                    <i class="ph ph-folder text-sm mr-2"></i>
-                                    @ldm.TenDM
-                                </span>
-                            </td>
-
-                            <td class="p-4 font-bold text-gray-800">@ldm.MaLDM</td>
-
-                            <td class="p-4">
-                                <code class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono">@ldm.MaDM</code>
-                            </td>
-
-                            <td class="p-4 text-right space-x-2">
-                                <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" @onclick="() => Edit(ldm)" title="Sửa danh mục">
-                                    <i class="ph ph-pencil-simple text-xl"></i>
-                                </button>
-                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" @onclick="() => Delete(ldm.MaDM)" title="Xóa danh mục">
-                                    <i class="ph ph-trash text-xl"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        <span class="text-gray-400 italic mr-2 text-sm">Chưa có loại danh mục nào</span>
                     }
-                }
-            </tbody>
-        </table>
-    </div>
+                    
+                    @foreach (var ldm in itemsLoaiDanhMuc)
+                    {
+                        <div class="group flex items-center bg-white border border-blue-200 text-blue-800 px-3 py-1.5 rounded-lg font-medium text-sm shadow-sm transition-all hover:shadow-md hover:border-blue-400 hover:-translate-y-0.5">
+                            <i class="ph ph-folder-open mr-1.5 text-lg text-blue-500"></i>
+                            <span class="mr-1.5 cursor-pointer" @onclick="() => EditLoai(ldm)">@ldm.TenLDM</span>
+                            <button class="w-5 h-5 flex items-center justify-center rounded-md hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors" title="Xóa" @onclick="() => DeleteLoai(ldm.MaLDM)">
+                                <i class="ph ph-x text-xs font-bold"></i>
+                            </button>
+                        </div>
+                    }
+                    
+                    <button class="group flex items-center justify-center px-3 py-1.5 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-blue-600 hover:border-blue-500 hover:bg-blue-50 transition-all shadow-sm" title="Thêm loại danh mục" @onclick="NewLoai">
+                        <i class="ph ph-plus text-base font-bold mr-1.5 group-hover:scale-125 transition-transform"></i>
+                        <span class="text-sm font-semibold">Thêm</span>
+                    </button>
+                </div>
+            }
+        </div>
+    }
+    @* Danh mục *@
+    else if (activeTab == "danhmuc")
+    {
+        <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <div class="flex-1 relative">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input type="text" @bind="searchDanh" @bind:event="oninput" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow" placeholder="Tìm kiếm danh mục (tên, slug)...">
+            </div>
+            <div class="w-full md:w-48">
+                <select @bind="filterMaLDM" class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                    <option value="@Guid.Empty">Tất cả loại danh mục</option>
+                    @if (itemsLoaiDanhMuc != null)
+                    {
+                        @foreach(var ldm in itemsLoaiDanhMuc)
+                        {
+                            <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                        <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Danh mục</th>
+                        <th class="p-4 font-semibold border-b border-gray-200 w-1/4">Thuộc loại danh mục</th>
+                        <th class="p-4 font-semibold border-b border-gray-200">Slug</th>
+                        <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    @if (itemsDanhMuc == null)
+                    {
+                        <tr><td colspan="4" class="p-4 text-center">Đang tải...</td></tr>
+                    }
+                    else if (!FilteredDanhMuc.Any())
+                    {
+                        <tr><td colspan="4" class="p-4 text-center">Chưa có dữ liệu</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var dm in FilteredDanhMuc)
+                        {
+                            <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
+                                <td class="p-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                                        <i class="ph ph-tree-structure text-sm mr-2"></i>
+                                        @dm.TenDM
+                                    </span>
+                                </td>
+                                <td class="p-4">@dm.TenLDM</td>
+                                <td class="p-4 text-gray-600">
+                                    <code class="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-blue-600">@dm.Slug</code>
+                                </td>
+                                <td class="p-4 text-right space-x-2">
+                                    <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" @onclick="() => EditDanh(dm)" title="Sửa">
+                                        <i class="ph ph-pencil-simple text-xl"></i>
+                                    </button>
+                                    <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" @onclick="() => DeleteDanh(dm.MaDM)" title="Xóa">
+                                        <i class="ph ph-trash text-xl"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 
     <!-- Chuyển trang -->
     <div class="flex items-center justify-center mt-6 text-sm">
         <div class="flex gap-1">
-            <!-- Nút Trước -->
-            <button @onclick="() => GoToPage(CurrentPage - 1)"
-                    class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
-                    disabled="@(CurrentPage == 1)">
-                Trước
-            </button>
-
-            <!-- Render danh sách số trang -->
+            <button @onclick="() => GoToPage(CurrentPage - 1)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" disabled="@(CurrentPage == 1)">Trước</button>
             @if (TotalPages <= 5)
             {
                 @for (int i = 1; i <= TotalPages; i++)
                 {
                     var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)"
-                            class="px-3 py-1 border rounded-md shadow-sm 
-                            @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                        @pageNum
-                    </button>
+                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
                 }
             }
-            else
-            {
-                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">1</button>
-
-                @if (CurrentPage > 3)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
-                {
-                    var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm 
-                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
-                }
-
-                @if (CurrentPage < TotalPages - 2)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
-            }
-            <!-- Nút sau -->
-            <button @onclick="() => GoToPage(CurrentPage + 1)"
-                    class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
-                    disabled="@(CurrentPage == TotalPages)">
-                Sau
-            </button>
+            <button @onclick="() => GoToPage(CurrentPage + 1)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" disabled="@(CurrentPage == TotalPages)">Sau</button>
         </div>
     </div>
 </div>
 
 @code {
+    private string activeTab = "loaidanhmuc"; // "loaidanhmuc" or "danhmuc"
     private int CurrentPage { get; set; } = 1;
     private int TotalPages { get; set; } = 1;
-    private List<DanhMucDto> items = new();
+    private List<LoaiDanhMucDto> itemsLoaiDanhMuc = new();
+    private List<DanhMucDto> itemsDanhMuc = new();
 
-    private bool showEditor = false;
-    private DanhMucCreateUpdateRequest editor = new();
+    private bool showEditorLoai = false;
+    private bool showEditorDanh = false;
+    
+    private LoaiDanhMucCreateUpdateRequest editorLoai = new();
+    private DanhMucCreateUpdateRequest editorDanh = new();
+    
     private Guid editingId = Guid.Empty;
+    private string errorMessage = string.Empty;
+
+    // Filter properties
+    private string searchDanh = "";
+    private Guid filterMaLDM = Guid.Empty;
+
+    private IEnumerable<DanhMucDto> FilteredDanhMuc
+    {
+        get
+        {
+            var query = itemsDanhMuc.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(searchDanh))
+            {
+                query = query.Where(x => x.TenDM.Contains(searchDanh, StringComparison.OrdinalIgnoreCase) || 
+                                         x.Slug.Contains(searchDanh, StringComparison.OrdinalIgnoreCase));
+            }
+            if (filterMaLDM != Guid.Empty)
+            {
+                query = query.Where(x => x.MaLDM == filterMaLDM);
+            }
+            return query;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,39 +210,102 @@
 
     private async Task Load()
     {
-        items = (await categoryService.GetAllAsync()).ToList();
+        itemsLoaiDanhMuc = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
+        itemsDanhMuc = (await categoryService.GetAllAsync()).ToList();
     }
 
-    private void New()
+    private void NewLoai()
     {
+        errorMessage = string.Empty;
         editingId = Guid.Empty;
-        editor = new DanhMucCreateUpdateRequest();
-        showEditor = true;
+        editorLoai = new LoaiDanhMucCreateUpdateRequest();
+        showEditorLoai = true;
     }
 
-    private void Edit(DanhMucDto dm)
+    private void EditLoai(LoaiDanhMucDto ldm)
     {
+        errorMessage = string.Empty;
+        editingId = ldm.MaLDM;
+        editorLoai = new LoaiDanhMucCreateUpdateRequest { TenLDM = ldm.TenLDM };
+        showEditorLoai = true;
+    }
+
+    private void NewDanh()
+    {
+        errorMessage = string.Empty;
+        editingId = Guid.Empty;
+        editorDanh = new DanhMucCreateUpdateRequest();
+        showEditorDanh = true;
+    }
+
+    private void EditDanh(DanhMucDto dm)
+    {
+        errorMessage = string.Empty;
         editingId = dm.MaDM;
-        editor = new DanhMucCreateUpdateRequest { MaLDM = dm.MaLDM, TenDM = dm.TenDM };
-        showEditor = true;
+        editorDanh = new DanhMucCreateUpdateRequest { MaLDM = dm.MaLDM, TenDM = dm.TenDM };
+        showEditorDanh = true;
     }
 
-    private async Task Save()
+    private async Task SaveLoai()
     {
-        if (editingId == Guid.Empty)
+        errorMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(editorLoai.TenLDM))
         {
-            await categoryService.CreateAsync(editor);
-        }
-        else
-        {
-            await categoryService.UpdateAsync(editingId, editor);
+            errorMessage = "Vui lòng nhập tên loại danh mục.";
+            return;
         }
 
-        showEditor = false;
+        if (itemsLoaiDanhMuc.Any(x => x.TenLDM.Equals(editorLoai.TenLDM, StringComparison.OrdinalIgnoreCase) && x.MaLDM != editingId))
+        {
+            errorMessage = "Tên loại danh mục này đã tồn tại.";
+            return;
+        }
+
+        if (editingId == Guid.Empty)
+            await categoryService.CreateLoaiDanhMucAsync(editorLoai);
+        else
+            await categoryService.UpdateLoaiDanhMucAsync(editingId, editorLoai);
+
+        showEditorLoai = false;
         await Load();
     }
 
-    private async Task Delete(Guid id)
+    private async Task SaveDanh()
+    {
+        errorMessage = string.Empty;
+        if (editorDanh.MaLDM == Guid.Empty)
+        {
+            errorMessage = "Vui lòng chọn loại danh mục gốc.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editorDanh.TenDM))
+        {
+            errorMessage = "Vui lòng nhập tên danh mục.";
+            return;
+        }
+
+        if (itemsDanhMuc.Any(x => x.TenDM.Equals(editorDanh.TenDM, StringComparison.OrdinalIgnoreCase) && x.MaLDM == editorDanh.MaLDM && x.MaDM != editingId))
+        {
+            errorMessage = "Danh mục này đã tồn tại trong danh mục gốc đã chọn.";
+            return;
+        }
+
+        if (editingId == Guid.Empty)
+            await categoryService.CreateAsync(editorDanh);
+        else
+            await categoryService.UpdateAsync(editingId, editorDanh);
+
+        showEditorDanh = false;
+        await Load();
+    }
+
+    private async Task DeleteLoai(Guid id)
+    {
+        await categoryService.DeleteLoaiDanhMucAsync(id);
+        await Load();
+    }
+    
+    private async Task DeleteDanh(Guid id)
     {
         await categoryService.DeleteAsync(id);
         await Load();
@@ -200,11 +313,92 @@
 
     private void GoToPage(int page)
     {
-        if (page >= 1 && page <= TotalPages)
-        {
-            CurrentPage = page;
-        }
+        if (page >= 1 && page <= TotalPages) CurrentPage = page;
     }
 
-    private void Cancel() => showEditor = false;
+    private void Cancel() 
+    {
+        showEditorLoai = false;
+        showEditorDanh = false;
+    }
+}
+
+@if (showEditorLoai)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 transition-all">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">
+                    @(editingId == Guid.Empty ? "Thêm mới" : "Chỉnh sửa") Loại danh mục
+                </h3>
+                <button class="text-gray-400 hover:text-red-500 transition-colors rounded-lg p-1 hover:bg-red-50" @onclick="Cancel">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="p-3 bg-red-50 text-red-600 rounded-lg border border-red-200 flex items-center text-sm shadow-sm animate-in fade-in zoom-in duration-200">
+                        <i class="ph ph-warning-circle text-lg mr-2 font-bold"></i>
+                        @errorMessage
+                    </div>
+                }
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tên loại danh mục <span class="text-red-500">*</span></label>
+                    <input type="text" @bind="editorLoai.TenLDM" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Nhập tên..." autofocus />
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel">Hủy</button>
+                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveLoai">
+                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> Lưu lại
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showEditorDanh)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 transition-all">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">
+                    @(editingId == Guid.Empty ? "Thêm mới" : "Chỉnh sửa") Danh mục
+                </h3>
+                <button class="text-gray-400 hover:text-red-500 transition-colors rounded-lg p-1 hover:bg-red-50" @onclick="Cancel">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="p-3 bg-red-50 text-red-600 rounded-lg border border-red-200 flex items-center text-sm shadow-sm animate-in fade-in zoom-in duration-200">
+                        <i class="ph ph-warning-circle text-lg mr-2 font-bold"></i>
+                        @errorMessage
+                    </div>
+                }
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Thuộc loại danh mục <span class="text-red-500">*</span></label>
+                    <select @bind="editorDanh.MaLDM" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        <option value="@Guid.Empty">-- Chọn loại danh mục --</option>
+                        @foreach(var ldm in itemsLoaiDanhMuc)
+                        {
+                            <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tên danh mục <span class="text-red-500">*</span></label>
+                    <input type="text" @bind="editorDanh.TenDM" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Nhập tên..." />
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel">Hủy</button>
+                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveDanh">
+                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> Lưu lại
+                </button>
+            </div>
+        </div>
+    </div>
 }
