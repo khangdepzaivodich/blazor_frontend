@@ -13,7 +13,24 @@ namespace blazor_frontend.Models.BackendDTOs
     public class LoginResponse
     {
         public string Token { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
     }
+    public class RegisterRequest
+    {
+        public string HoTen { get; set; } = string.Empty;
+        public string SoDienThoai { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string DiaChi { get; set; } = string.Empty;
+        public string MatKhau { get; set; } = string.Empty;
+    }
+    public class RegisterResponse
+    {
+        public string Message { get; set; } = string.Empty;
+        public bool Success { get; set; } = false;
+
+    }   
 
     public class UserDto
     {

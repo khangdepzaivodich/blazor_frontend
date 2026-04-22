@@ -8,6 +8,7 @@ namespace blazor_frontend.Services
     public interface IAuthService
     {
         Task<LoginResponse?> LoginAsync(LoginRequest request);
+        Task<RegisterResponse?> RegisterAsync(RegisterRequest request);
     }
 
     public class AuthService : IAuthService
@@ -25,6 +26,20 @@ namespace blazor_frontend.Services
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<LoginResponse>();
+            }
+            return null;
+        }
+
+        public async Task<RegisterResponse?> RegisterAsync(RegisterRequest request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/auth/register", request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"STATUS: {response.StatusCode}");
+            Console.WriteLine($"BODY: {body}");
+            if (response != null)
+            {
+                return await response.Content.ReadFromJsonAsync<RegisterResponse>();
             }
             return null;
         }

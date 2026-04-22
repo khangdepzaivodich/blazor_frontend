@@ -1,15 +1,22 @@
-@page "/account/signup"
-@using System.Text.Json
-@using System.ComponentModel.DataAnnotations
-@using blazor_frontend.Models
-@inject IJSRuntime JS
+﻿@page "/account/signup"
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IAuthService AuthService
 @inject NavigationManager Nav
 
 <div class="space-y-4">
     <div>
         <h1 class="text-2xl font-bold text-gray-900">Create account</h1>
-        <p class="text-sm text-gray-600">Join Serious � manage orders, save favorites, and checkout faster.</p>
+        <p class="text-sm text-gray-600">
+            Join Serious — manage orders, save favorites, and checkout faster.
+        </p>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+            @errorMessage
+        </div>
+    }
 
     <EditForm Model="model" OnValidSubmit="HandleValidSubmit" class="space-y-4">
         <DataAnnotationsValidator />
@@ -17,8 +24,14 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Full name</label>
-            <InputText class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#cfe2ff]" @bind-Value="model.HoTen" />
+            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.HoTen" />
             <ValidationMessage For="@(() => model.HoTen)" />
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.Email" />
+            <ValidationMessage For="@(() => model.Email)" />
         </div>
 
         <div>
@@ -34,46 +47,55 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.Password" type="password" />
-            <ValidationMessage For="@(() => model.Password)" />
+            <InputText class="w-full border rounded px-3 py-2" type="password" @bind-Value="model.MatKhau" />
+            <ValidationMessage For="@(() => model.MatKhau)" />
         </div>
 
-        <div class="flex flex-col gap-3">
-            <button class="w-full bg-[#0b3b72] text-white px-4 py-2 rounded font-semibold" type="submit">Create account</button>
-
-            <div class="text-sm text-gray-600 text-center">
-                Already have an account? <a class="text-[#0b3b72] hover:underline" href="/account/signin">Sign in</a>
-            </div>
-        </div>
+        <button class="w-full bg-blue-800 text-white py-2 rounded font-semibold"
+                type="submit"
+                disabled="@isLoading">
+            @(isLoading ? "Creating..." : "Create account")
+        </button>
     </EditForm>
 </div>
 
 @code {
-    private SignUpModel model = new();
+    private RegisterRequest model = new();
+
+    private string? errorMessage;
+    private bool isLoading = false;
 
     private async Task HandleValidSubmit()
     {
-        var account = new TaiKhoan
+        errorMessage = null;
+        isLoading = true;
+
+        try
         {
-            MaTK = Guid.NewGuid(),
-            HoTen = model.HoTen,
-            SoDienThoai = model.SoDienThoai,
-            DiaChi = model.DiaChi,
-            TrangThai = true,
-            NgayTao = DateTime.Now
-        };
+            var result = await AuthService.RegisterAsync(model);
 
-        var json = JsonSerializer.Serialize(account);
-        await JS.InvokeVoidAsync("localStorage.setItem", "user_account", json);
+            if (result == null)
+            {
+                errorMessage = "Không thể kết nối đến server. Vui lòng thử lại.";
+                return;
+            }
 
-        Nav.NavigateTo("/account/profile");
-    }
-
-    class SignUpModel
-    {
-        [Required] public string HoTen { get; set; } = string.Empty;
-        [Required] public string SoDienThoai { get; set; } = string.Empty;
-        public string DiaChi { get; set; } = string.Empty;
-        [Required, MinLength(6)] public string Password { get; set; } = string.Empty;
+            if (result.Success)
+            {
+                Nav.NavigateTo("/account/signin");
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Đăng ký thất bại.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Đã xảy ra lỗi hệ thống: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }

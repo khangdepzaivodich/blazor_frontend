@@ -1,8 +1,8 @@
 @page "/account/signin"
-@using System.ComponentModel.DataAnnotations
-@inject IJSRuntime JS
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IAuthService AuthService
 @inject NavigationManager Nav
-@inject IAuthService AuthService
+@inject IJSRuntime JS
 
 <div class="space-y-4">
     <div>
@@ -12,104 +12,58 @@
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="mb-2 p-3 rounded bg-red-50 text-red-700 border border-red-100">@errorMessage</div>
+        <div class="p-3 rounded bg-red-50 text-red-700 border border-red-100">
+            @errorMessage
+        </div>
     }
 
-    <EditForm Model="model" OnValidSubmit="HandleValidSubmit" class="space-y-4">
+    <EditForm Model="model" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <InputText class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#cfe2ff]" @bind-Value="model.Email" />
-            <ValidationMessage For="@(() => model.Email)" />
+            <label>Email</label>
+            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.Email" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <InputText class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#cfe2ff]" @bind-Value="model.Password" type="password" />
-            <ValidationMessage For="@(() => model.Password)" />
+            <label>Password</label>
+            <InputText class="w-full border px-3 py-2 rounded" type="password" @bind-Value="model.MatKhau" />
         </div>
 
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <input id="remember" type="checkbox" class="h-4 w-4 text-[#0b3b72] rounded" />
-                <label for="remember" class="text-sm text-gray-600">Remember me</label>
-            </div>
-            <a class="text-sm text-[#0b3b72] hover:underline" href="#">Forgot password?</a>
-        </div>
-
-        <div class="flex flex-col gap-3">
-            <button class="w-full bg-[#0b3b72] text-white px-4 py-2 rounded font-semibold" type="submit" disabled="@isSubmitting">
-                @if (isSubmitting) { <span>Signing in...</span> } else { <span>Sign in</span> }
-            </button>
-
-            <div class="text-center text-sm text-gray-600">
-                Or sign in with
-            </div>
-
-            <div class="flex gap-3">
-                <button class="flex-1 border border-gray-200 rounded py-2 flex items-center justify-center gap-2 hover:bg-gray-50">
-                    <img src="/static/facebook.png" alt="fb" class="w-5 h-5" onerror="this.style.display='none'" /> Facebook
-                </button>
-                <button class="flex-1 border border-gray-200 rounded py-2 flex items-center justify-center gap-2 hover:bg-gray-50">
-                    <img src="/static/google.png" alt="g" class="w-5 h-5" onerror="this.style.display='none'" /> Google
-                </button>
-            </div>
-
-            <div class="text-sm text-gray-600 text-center">
-                Don't have an account? <a class="text-[#0b3b72] hover:underline" href="/account/signup">Create one</a>
-            </div>
-        </div>
+        <button class="w-full bg-blue-800 text-white py-2 rounded" disabled="@isSubmitting">
+            @(isSubmitting ? "Signing in..." : "Sign in")
+        </button>
     </EditForm>
 </div>
 
 @code {
-    private SignInModel model = new();
+    private LoginRequest model = new();
     private string? errorMessage;
     private bool isSubmitting;
 
     private async Task HandleValidSubmit()
     {
-        errorMessage = null;
         isSubmitting = true;
+        errorMessage = null;
 
         try
         {
-            var loginResult = await AuthService.LoginAsync(new LoginRequest
-            {
-                Email = model.Email,
-                MatKhau = model.Password
-            });
+            var res = await AuthService.LoginAsync(model);
 
-            if (loginResult == null || string.IsNullOrWhiteSpace(loginResult.Token))
+            if (res == null || string.IsNullOrEmpty(res.Token))
             {
-                errorMessage = "Email hoặc mật khẩu không đúng.";
+                errorMessage = "Invalid email or password";
                 return;
             }
 
-            await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", loginResult.Token);
-            await JS.InvokeVoidAsync("localStorage.setItem", "buyer_id", model.Email);
+            await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", res.Token);
 
-            Nav.NavigateTo("/account/profile", true);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Sign in failed. Open browser console for details.";
-            await JS.InvokeVoidAsync("console.error", ex.ToString());
+            Nav.NavigateTo("/");
         }
         finally
         {
             isSubmitting = false;
         }
-    }
-
-    class SignInModel
-    {
-        [Required, EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [Required, MinLength(3)]
-        public string Password { get; set; } = string.Empty;
     }
 }
