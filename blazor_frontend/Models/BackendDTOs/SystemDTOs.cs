@@ -42,6 +42,33 @@ namespace blazor_frontend.Models.BackendDTOs
         public string VaiTro { get; set; } = string.Empty;
         public string TrangThai { get; set; } = string.Empty;
         public DateTime NgayThangNamSinh { get; set; }
+        public DateTime? LastActiveAt { get; set; }
+    }
+
+    public class UserPaginatedResult
+    {
+        public int Total { get; set; }
+        public List<UserDto> Data { get; set; } = new();
+    }
+
+    public class CreateUserRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? SoDienThoai { get; set; }
+        public string HoTen { get; set; } = string.Empty;
+        public string? DiaChi { get; set; }
+        public string? VaiTro { get; set; }
+        public DateTime NgayThangNamSinh { get; set; } = DateTime.UtcNow;
+    }
+
+    public class UpdateUserByAdminRequest
+    {
+        public string? HoTen { get; set; }
+        public string? SoDienThoai { get; set; }
+        public string? DiaChi { get; set; }
+        public string? VaiTro { get; set; }
+        public string? TrangThai { get; set; }
     }
 
     // ORDERING
