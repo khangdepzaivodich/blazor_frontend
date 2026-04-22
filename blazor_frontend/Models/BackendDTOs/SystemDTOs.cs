@@ -106,12 +106,24 @@ namespace blazor_frontend.Models.BackendDTOs
         public DateTime HanSuDung { get; set; }
     }
 
-    // CATALOG - Categories and Products
+    public class LoaiDanhMucDto
+    {
+        public Guid MaLDM { get; set; }
+        public string TenLDM { get; set; } = string.Empty;
+    }
+
+    public class LoaiDanhMucCreateUpdateRequest
+    {
+        public string TenLDM { get; set; } = string.Empty;
+    }
+
     public class DanhMucDto
     {
         public Guid MaDM { get; set; }
         public Guid MaLDM { get; set; }
         public string TenDM { get; set; } = string.Empty;
+        public string TenLDM { get; set; } = string.Empty; // Tên danh mục cha để hiển thị
+        public string Slug { get; set; } = string.Empty;
     }
 
     public class DanhMucCreateUpdateRequest
