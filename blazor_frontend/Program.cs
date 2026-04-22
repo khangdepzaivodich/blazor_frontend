@@ -16,7 +16,6 @@ builder.Services.AddHttpClient("BasketAPI", client => client.BaseAddress = new U
 builder.Services.AddHttpClient("CatalogAPI", client => client.BaseAddress = new Uri("https://localhost:7103/"));
 builder.Services.AddHttpClient("ChatAPI", client => client.BaseAddress = new Uri("https://localhost:7229/"));
 
-
 // Register Frontend Services
 builder.Services.AddScoped<blazor_frontend.Services.IAuthService, blazor_frontend.Services.AuthService>();
 builder.Services.AddScoped<blazor_frontend.Services.IOrderService, blazor_frontend.Services.OrderService>();
