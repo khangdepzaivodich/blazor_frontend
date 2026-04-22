@@ -58,6 +58,8 @@
             }
 
             await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", res.Token);
+            await JS.InvokeVoidAsync("localStorage.setItem", "auth_user_id", res.UserId.ToString());
+            await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", res.HoTen ?? "");
 
             Nav.NavigateTo("/");
         }

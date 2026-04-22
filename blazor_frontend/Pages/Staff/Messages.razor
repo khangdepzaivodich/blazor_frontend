@@ -1,7 +1,8 @@
-﻿@page "/staff/messages"
+@page "/staff/messages"
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 <PageTitle>Tư vấn khách hàng</PageTitle>
 
@@ -9,7 +10,7 @@
     <!-- Chat Container -->
     <div class="flex-1 flex rounded-xl shadow-sm border border-gray-200 overflow-hidden bg-white">
         <!-- Cột trái -->
-        <div class="w-full md:w-[320px] lg:w-[350px] border-r border-gray-200 flex flex-col bg-white flex-shrink-0">
+        <div class="w-full md:w-[320px] lg:w-[350px] border-r border-gray-200 flex flex-col bg-white shrink-0">
             <!-- Header danh sách -->
             <div class="p-4 border-b border-gray-200">
                 <div class="flex justify-between items-center mb-4">
@@ -31,17 +32,27 @@
                 {
                     <div @onclick="() => SelectConversation(chat)" 
                          class="flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-all @(selectedChat?.Id == chat.Id ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "hover:bg-gray-50 border-l-4 border-l-transparent")">
-                        <div class="relative flex-shrink-0">
-                            <img src="@(chat.AvatarUrl)" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                            @if (chat.IsOnline)
+                        <div class="relative shrink-0">
+                            <img src="@(chat.AvatarUrl)" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-gray-200 @(chat.SessionStatus == "CLOSED" ? "opacity-50 grayscale" : "")" />
+                            @if (chat.IsOnline && chat.SessionStatus == "ACTIVE")
                             {
                                 <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                            }
+                            else if (chat.SessionStatus == "CLOSED")
+                            {
+                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-400 border-2 border-white rounded-full"></span>
                             }
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start mb-1">
-                                <h4 class="text-sm font-semibold text-gray-900 truncate">@chat.CustomerName</h4>
-                                <span class="text-xs text-gray-500 whitespace-nowrap ml-2">@chat.LastMessageTime.ToString("HH:mm")</span>
+                                <h4 class="text-sm font-semibold truncate @(chat.SessionStatus == "CLOSED" ? "text-gray-400" : "text-gray-900")">@chat.CustomerName</h4>
+                                <div class="flex items-center gap-1.5 ml-2">
+                                    @if (chat.SessionStatus == "CLOSED")
+                                    {
+                                        <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Đã đóng</span>
+                                    }
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">@chat.LastMessageTime.ToString("HH:mm")</span>
+                                </div>
                             </div>
                             <div class="flex justify-between items-center text-sm">
                                 <p class="truncate text-gray-500">
@@ -77,15 +88,39 @@
                         <div>
                             <h3 class="font-bold text-gray-900 leading-tight text-[15px]">@selectedChat.CustomerName</h3>
                             <div class="flex items-center gap-1.5 mt-0.5">
-                                <span class="w-1.5 h-1.5 rounded-full @(selectedChat.IsOnline ? "bg-green-500" : "bg-gray-400")"></span>
-                                <span class="text-xs text-gray-500">@(selectedChat.IsOnline ? "Trực tuyến" : "Ngoại tuyến")</span>
+                                @if (selectedChat.SessionStatus == "ACTIVE")
+                                {
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    <span class="text-xs text-green-600 font-medium">Đang hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                    <span class="text-xs text-gray-500">Phiên đã kết thúc</span>
+                                }
                             </div>
                         </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        @if (selectedChat.SessionStatus == "ACTIVE")
+                        {
+                            <button @onclick="CloseCurrentSession" class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors" title="Kết thúc phiên chat">
+                                <i class="ph ph-x-circle text-base"></i>
+                                Kết thúc
+                            </button>
+                        }
+                        else
+                        {
+                            <button @onclick="ReopenCurrentSession" class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors" title="Mở lại phiên chat">
+                                <i class="ph ph-arrow-counter-clockwise text-base"></i>
+                                Mở lại
+                            </button>
+                        }
                     </div>
                 </div>
 
                 <!-- Phần nhắn tin -->
-                <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar bg-gray-50/50">
+                <div id="staffChatContainer" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar bg-gray-50/50">
                     <div class="text-center">
                         <span class="text-xs font-medium text-gray-500 bg-gray-200/60 px-3 py-1 rounded-full">
                             @selectedChat.LastMessageTime.ToString("dd/MM/yyyy")
@@ -97,7 +132,7 @@
                         <div class="flex @(msg.IsMine ? "justify-end" : "justify-start") group items-end gap-2">
                             @if (!msg.IsMine)
                             {
-                                <img src="@selectedChat.AvatarUrl" class="w-8 h-8 rounded-full flex-shrink-0" />
+                                <img src="@selectedChat.AvatarUrl" class="w-8 h-8 rounded-full shrink-0" />
                             }
 
                             <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
@@ -113,22 +148,33 @@
                 </div>
 
                 <!-- Phần nhập tin nhắn -->
-                <div class="p-4 bg-white border-t border-gray-200">
-                    <div class="flex items-end gap-3">
-                        <div class="flex-1 relative">
-                            <textarea @bind="newMessage" @bind:event="oninput" @onkeyup="HandleKeyUp"
-                                      placeholder="Trả lời khách hàng..." 
-                                      rows="3"
-                                      class="w-full block border border-gray-300 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[80px] max-h-[250px] custom-scrollbar"></textarea>
+                @if (selectedChat.SessionStatus == "ACTIVE")
+                {
+                    <div class="p-4 bg-white border-t border-gray-200">
+                        <div class="flex items-end gap-3">
+                            <div class="flex-1 relative">
+                                <textarea @bind="newMessage" @bind:event="oninput" @onkeyup="HandleKeyUp"
+                                          placeholder="Trả lời khách hàng..." 
+                                          rows="3"
+                                          class="w-full block border border-gray-300 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[80px] max-h-[250px] custom-scrollbar"></textarea>
+                            </div>
+                            <button @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)" 
+                                    class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg flex items-center gap-2 transition font-medium text-[15px] h-fit">
+                                <span>Gửi</span>
+                                <i class="ph ph-paper-plane-right"></i>
+                            </button>
                         </div>
-
-                        <button @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)" 
-                                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg flex items-center gap-2 transition font-medium text-[15px] h-fit">
-                            <span>Gửi</span>
-                            <i class="ph ph-paper-plane-right"></i>
-                        </button>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="p-4 bg-gray-100 border-t border-gray-200 text-center">
+                        <div class="flex items-center justify-center gap-2 text-gray-500">
+                            <i class="ph ph-lock text-lg"></i>
+                            <span class="text-sm font-medium">Phiên chat đã kết thúc. Bấm "Mở lại" để tiếp tục tư vấn.</span>
+                        </div>
+                    </div>
+                }
             }
         </div>
     </div>
@@ -156,11 +202,11 @@
     private ChatModel? selectedChat;
     private List<MessageModel> currentMessages = new();
     private string newMessage = "";
-
-    // -- SIGNALR HUB CONNECTION --
+    
     private HubConnection? hubConnection;
     private string myStaffId = "STAFF_001"; // Giả lập id cho nhân viên này
-
+    private HashSet<Guid> receivedMessageIds = new(); // Chống duplicate tin nhắn
+    
     protected override async Task OnInitializedAsync()
     {
         // 1. TẢI DANH SÁCH KHÁCH HÀNG TỪ MONGODB (Khôi phục dữ liệu khi F5)
@@ -170,18 +216,18 @@
             if (dbSessions != null && dbSessions.Any())
             {
                 conversations = dbSessions
-                    // .Where(s => s.StaffID == myStaffId || s.StaffID == "BOT") // Nếu có login thì lọc theo id nhân viên
                     .OrderByDescending(s => s.LastTime)
                     .Select(s => new ChatModel
                     {
                         Id = s.Id.ToString(),
-                        CustomerName = s.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
+                        CustomerName = !string.IsNullOrEmpty(s.HoTen) ? s.HoTen : (s.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên"),
                         AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={s.Id}",
                         LastMessage = s.LastMessage,
                         LastSender = "N/A",
                         LastMessageTime = s.LastTime,
                         UnreadCount = s.UnreadCount,
-                        IsOnline = s.TrangThai == "ACTIVE"
+                        IsOnline = s.TrangThai == "ACTIVE",
+                        SessionStatus = s.TrangThai
                     }).ToList();
             }
             else 
@@ -204,16 +250,19 @@
         // 1. Lắng nghe Khách Hàng mới được chỉ định từ Backend
         hubConnection.On<PhienHoiThoaiDto>("NewChatAssigned", (phien) =>
         {
+            if (conversations.Any(c => c.Id == phien.Id.ToString())) return;
+
             var newChat = new ChatModel
             {
                 Id = phien.Id.ToString(),
                 CustomerName = phien.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
-                AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={phien.Id}", // Random avatar
+                AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={phien.Id}",
                 LastMessage = phien.LastMessage,
                 LastSender = "System",
                 LastMessageTime = phien.LastTime,
+                SessionStatus = phien.TrangThai,
                 IsOnline = true,
-                UnreadCount = 1
+                UnreadCount = phien.UnreadCount
             };
 
             conversations.Insert(0, newChat);
@@ -223,13 +272,16 @@
         // 2. Lắng nghe Tin Nhắn Mới gửi vào room
         hubConnection.On<TinNhanDto>("ReceiveNewMessage", (tinNhan) =>
         {
-            var phienIdStr = tinNhan.MaPhien.ToString();
-            Console.WriteLine($"[Nhân Viên] Nhận được tin: {tinNhan.NoiDung} cho phòng {phienIdStr}");
+            // CHỐNG DUPLICATE: Nếu đã nhận tin này rồi (từ AdminGroup hoặc Room) thì bỏ qua
+            if (!receivedMessageIds.Add(tinNhan.ClientID))
+            {
+                return;
+            }
 
-            // Cập nhật danh sách bên trái (so sánh không phân biệt hoa/thường để tránh lỗi GUID string)
+            var phienIdStr = tinNhan.MaPhien.ToString();
+
             var chatRoom = conversations.FirstOrDefault(c => c.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true);
 
-            // TỰ ĐỘNG TẠO PHÒNG MỚI (Trường hợp khách hàng đã có phiên chat cũ quay lại)
             if (chatRoom == null)
             {
                 chatRoom = new ChatModel
@@ -238,6 +290,7 @@
                     CustomerName = tinNhan.SenderType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
                     AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={tinNhan.MaPhien}",
                     UnreadCount = 0,
+                    SessionStatus = "ACTIVE",
                     IsOnline = true
                 };
                 conversations.Insert(0, chatRoom);
@@ -247,10 +300,8 @@
             chatRoom.LastSender = tinNhan.SenderType == "STAFF" ? "Me" : "Customer";
             chatRoom.LastMessageTime = tinNhan.ThoiGianGui;
 
-            // Nếu cửa sổ chat hiện tại đang mở đúng phiên này thì đẩy tin nhắn vô, ngược lại tăng số đếm chưa đọc.
             if (selectedChat != null && selectedChat.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true)
             {
-                // Tránh duplicate tin mình vừa tự tay gửi xuống local ở hàm SendMessage()
                 if (tinNhan.SenderType != "STAFF") 
                 {
                     currentMessages.Add(new MessageModel 
@@ -259,21 +310,70 @@
                         Timestamp = tinNhan.ThoiGianGui,
                         IsMine = false
                     });
+
+                    // Reset unread 
+                    if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+                    {
+                        _ = hubConnection.SendAsync("MarkAsRead", phienIdStr);
+                    }
                 }
             }
             else
             {
-                // Tăng số chưa đọc nếu không phải tin mình gửi (Tin hiển thị trên danh sách trái chờ Staff click)
                 if (tinNhan.SenderType != "STAFF") 
                 {
                     chatRoom.UnreadCount++;
                 }
             }
 
-            // Đưa người vừa chat lên đầu DS
             conversations.Remove(chatRoom);
             conversations.Insert(0, chatRoom);
 
+            InvokeAsync(async () => {
+                StateHasChanged();
+                await Task.Delay(100); // Chờ UI render xong tin mới
+                await ScrollToBottom();
+            });
+        });
+
+        // 3. Lắng nghe sự kiện Kết thúc phiên
+        hubConnection.On<string>("SessionClosed", (maPhien) =>
+        {
+            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+            if (chat != null)
+            {
+                chat.SessionStatus = "CLOSED";
+                chat.IsOnline = false;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        // 4. Lắng nghe sự kiện Mở lại phiên
+        hubConnection.On<string>("SessionReopened", (maPhien) =>
+        {
+            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+            if (chat != null)
+            {
+                chat.SessionStatus = "ACTIVE";
+                chat.IsOnline = true;
+
+                // Đưa phiên vừa reopen lên đầu danh sách
+                conversations.Remove(chat);
+                conversations.Insert(0, chat);
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        // 5. Lắng nghe sự kiện Nâng cấp phiên (Guest login → đổi tên thật)
+        hubConnection.On<string, string>("SessionUpgraded", (maPhien, hoTen) =>
+        {
+            Console.WriteLine($"[Staff] SessionUpgraded: SessionId={maPhien}, NewName={hoTen}");
+            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+            if (chat != null)
+            {
+                Console.WriteLine($"[Staff] Found chat in list, updating name...");
+                chat.CustomerName = hoTen;
+            }
             InvokeAsync(StateHasChanged);
         });
 
@@ -281,7 +381,7 @@
         {
             await hubConnection.StartAsync();
 
-            // 3. Đăng ký nhân viên này vào hàng chờ (Queue) rảnh rỗi
+            // 5. Đăng ký nhân viên này vào hàng chờ (Queue) rảnh rỗi
             await hubConnection.SendAsync("RegisterStaff", myStaffId);
         }
         catch (Exception ex)
@@ -293,10 +393,15 @@
     private async Task SelectConversation(ChatModel chat)
     {
         selectedChat = chat;
-        chat.UnreadCount = 0; // Đánh dấu đã đọc
+        chat.UnreadCount = 0;
 
-        // BẮT BUỘC XÓA SẠCH LỊCH SỬ CŨ KHI Staff CHUYỂN PHÒNG CHAT!! (Nếu không màn hình sẽ bị dính hội thoại cũ)
         currentMessages.Clear();
+
+        // Gọi Hub đánh dấu đã đọc trong MongoDB (fix bug unread sau F5)
+        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+        {
+            await hubConnection.SendAsync("MarkAsRead", chat.Id);
+        }
 
         // 2. TẢI LỊCH SỬ TIN NHẮN TỪ MONGODB API
         try
@@ -311,6 +416,10 @@
                         Timestamp = m.ThoiGianGui,
                         IsMine = m.SenderType == "STAFF"
                     }).ToList();
+                
+                StateHasChanged();
+                await Task.Delay(300);
+                await ScrollToBottom();
             }
         }
         catch (Exception ex)
@@ -365,6 +474,10 @@
         conversations.Remove(selectedChat);
         conversations.Insert(0, selectedChat);
 
+        StateHasChanged();
+        await Task.Delay(50);
+        await ScrollToBottom();
+
         // Gửi qua WebSocket
         if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
         {
@@ -377,6 +490,24 @@
             };
             await hubConnection.SendAsync("SendMessage", tn);
         }
+    }
+
+    private async Task CloseCurrentSession()
+    {
+        if (selectedChat == null || hubConnection == null) return;
+        await hubConnection.SendAsync("CloseSession", selectedChat.Id, myStaffId);
+    }
+
+    private async Task ReopenCurrentSession()
+    {
+        if (selectedChat == null || hubConnection == null) return;
+        await hubConnection.SendAsync("ReopenSession", selectedChat.Id, myStaffId);
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try { await JS.InvokeVoidAsync("scrollToBottomById", "staffChatContainer"); }
+        catch { }
     }
 
     public async ValueTask DisposeAsync()
@@ -394,6 +525,7 @@
         public string ClientType { get; set; } = string.Empty;
         public string StaffID { get; set; } = string.Empty;
         public string LastMessage { get; set; } = string.Empty;
+        public string HoTen { get; set; } = string.Empty;
         public DateTime LastTime { get; set; }
         public int UnreadCount { get; set; }
         public string TrangThai { get; set; } = "ACTIVE";
@@ -402,6 +534,7 @@
     public class TinNhanDto
     {
         public Guid MaPhien { get; set; }
+        public Guid ClientID { get; set; }
         public string SenderType { get; set; } = string.Empty;
         public string NoiDung { get; set; } = string.Empty;
         public DateTime ThoiGianGui { get; set; } = DateTime.UtcNow;
@@ -419,6 +552,7 @@
         public DateTime LastMessageTime { get; set; }
         public int UnreadCount { get; set; }
         public bool IsOnline { get; set; }
+        public string SessionStatus { get; set; } = "ACTIVE";
     }
 
     public class MessageModel

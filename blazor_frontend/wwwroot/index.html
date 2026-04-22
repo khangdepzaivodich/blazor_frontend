@@ -33,6 +33,17 @@
         </div>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        window.scrollToBottomById = (elementId) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.scrollTop = element.scrollHeight;
+                // Retry 2 times to catch slow rendering
+                setTimeout(() => { element.scrollTop = element.scrollHeight; }, 50);
+                setTimeout(() => { element.scrollTop = element.scrollHeight; }, 150);
+            }
+        };
+    </script>
 </body>
 
 </html>
