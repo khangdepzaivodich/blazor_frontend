@@ -1,5 +1,6 @@
-﻿@page "/admin/users"
-@using blazor_frontend.Models
+@page "/admin/users"
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IUserService userService
 <PageTitle>Quản lý Người dùng</PageTitle>
 
 <div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
@@ -8,7 +9,7 @@
             <h2 class="text-2xl font-bold text-gray-800">Quản lý Tài khoản</h2>
             <p class="text-sm text-gray-500 mt-1">Quản lý thông tin và phân quyền cho nhân viên, khách hàng</p>
         </div>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="NewUser">
             <i class="ph ph-user-plus text-xl"></i>
             Thêm tài khoản
         </button>
@@ -18,11 +19,11 @@
     <div class="flex flex-col md:flex-row gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
         <div class="flex-1 relative">
             <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-            placeholder="Tìm kiếm theo Tên, SĐT...">
+            <input type="text" @bind="searchQuery" @bind:event="oninput" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+            placeholder="Tìm kiếm theo Tên, Email, SĐT...">
         </div>
         <div class="w-full md:w-48">
-            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+            <select @bind="filterRole" class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
                 <option value="">Tất cả Vai trò</option>
                 <option value="Admin">Quản trị viên</option>
                 <option value="Staff">Nhân viên</option>
@@ -30,10 +31,10 @@
             </select>
         </div>
         <div class="w-full md:w-48">
-            <select class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+            <select @bind="filterStatus" class="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
                 <option value="">Tất cả Trạng thái</option>
-                <option value="true">Đang hoạt động</option>
-                <option value="false">Đã khóa</option>
+                <option value="Active">Đang hoạt động</option>
+                <option value="Blocked">Đã khóa</option>
             </select>
         </div>
     </div>
@@ -46,195 +47,354 @@
                     <th class="p-4 font-semibold border-b border-gray-200">Tài khoản</th>
                     <th class="p-4 font-semibold border-b border-gray-200">Vai trò</th>
                     <th class="p-4 font-semibold border-b border-gray-200">Dữ liệu liên hệ</th>
-                    <th class="p-4 font-semibold border-b border-gray-200 text-center">Ngày tham gia</th>
                     <th class="p-4 font-semibold border-b border-gray-200 text-center">Trạng Thái</th>
                     <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
                 </tr>
             </thead>
             <tbody class="text-gray-700 text-sm">
-                @foreach (var user in TaiKhoans)
+                @if (FilteredUsers == null)
                 {
-                    <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(!user.TrangThai ? "bg-gray-50/50" : "")">
-                        <td class="p-4">
-                            <div class="flex items-center gap-3">
-                                <!-- Avatar -->
-                                <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(user.HoTen)&background=f3f4f6&color=475569"
-                                alt="@user.HoTen" class="w-10 h-10 rounded-full border border-gray-200 @(!user.TrangThai ? "opacity-50 grayscale" : "")" />
-                                <div>
-                                    <p class="font-bold text-gray-800 @(!user.TrangThai ? "text-gray-500" : "")">@user.HoTen</p>
-                                    <p class="text-xs text-gray-500 font-mono mt-0.5">ID: @user.MaTK.ToString().Substring(0,8).ToUpper()</p>
+                    <tr><td colspan="5" class="p-4 text-center">Đang tải dữ liệu...</td></tr>
+                }
+                else if (!FilteredUsers.Any())
+                {
+                    <tr><td colspan="5" class="p-4 text-center">Không tìm thấy tài khoản nào</td></tr>
+                }
+                else
+                {
+                    @foreach (var user in FilteredUsers)
+                    {
+                        var isBlocked = user.TrangThai == "Blocked";
+                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(isBlocked ? "bg-gray-50/50" : "")">
+                            <td class="p-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(user.HoTen)&background=f3f4f6&color=475569"
+                                    alt="@user.HoTen" class="w-10 h-10 rounded-full border border-gray-200 @(isBlocked ? "opacity-50 grayscale" : "")" />
+                                    <div>
+                                        <p class="font-bold text-gray-800 @(isBlocked ? "text-gray-500" : "")">@user.HoTen</p>
+                                        <p class="text-xs text-gray-500 font-mono mt-0.5">@user.Email</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
+                            </td>
 
-                        <!-- Màu Role -->
-                        <td class="p-4">
-                            @if (user.VaiTro == "Admin")
-                            {
-                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                                    <i class="ph ph-shield-star mr-1"></i> Admin
-                                </span>
-                            }
-                            else if (user.VaiTro == "Staff")
-                            {
-                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                    <i class="ph ph-user-gear mr-1"></i> Nhân viên
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
-                                    <i class="ph ph-user mr-1"></i> Khách hàng
-                                </span>
-                            }
-                        </td>
+                            <td class="p-4">
+                                @if (user.VaiTro == "Admin")
+                                {
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                        <i class="ph ph-shield-star mr-1"></i> Admin
+                                    </span>
+                                }
+                                else if (user.VaiTro == "Staff")
+                                {
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                        <i class="ph ph-user-gear mr-1"></i> Nhân viên
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                        <i class="ph ph-user mr-1"></i> Khách hàng
+                                    </span>
+                                }
+                            </td>
 
-                        <!-- Địa chỉ & SĐT -->
-                        <td class="p-4">
-                            <div class="flex flex-col gap-1">
-                                <span class="font-medium text-gray-800 flex items-center gap-1.5">
-                                    <i class="ph ph-phone text-gray-400"></i> @user.SoDienThoai
-                                </span>
-                                <span class="text-xs text-gray-500 flex items-center gap-1.5">
-                                    <i class="ph ph-map-pin text-gray-400"></i> @user.DiaChi
-                                </span>
-                            </div>
-                        </td>
+                            <td class="p-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="font-medium text-gray-800 flex items-center gap-1.5">
+                                        <i class="ph ph-phone text-gray-400"></i> @(string.IsNullOrEmpty(user.SoDienThoai) ? "---" : user.SoDienThoai)
+                                    </span>
+                                </div>
+                            </td>
 
-                        <!-- Ngày tạo -->
-                        <td class="p-4 text-center text-gray-500">
-                            @user.NgayTao.ToString("dd/MM/yyyy")
-                        </td>
+                            <td class="p-4 text-center">
+                                @if (!isBlocked)
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                                        Hoạt động
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
+                                        Bị khóa
+                                    </span>
+                                }
+                            </td>
 
-                        <!-- Trạng thái -->
-                        <td class="p-4 text-center">
-                            @if (user.TrangThai)
-                            {
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
-                                    Hoạt động
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
-                                    Bị khóa
-                                </span>
-                            }
-                        </td>
-
-                        <!-- Thao tác -->
-                        <td class="p-4 text-right space-x-1">
-                            <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa thông tin">
-                                <i class="ph ph-pencil-simple text-xl"></i>
-                            </button>
-                            @if (user.TrangThai)
-                            {
-                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Khóa tài khoản">
-                                    <i class="ph ph-lock text-xl"></i>
+                            <td class="p-4 text-right space-x-1">
+                                <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa thông tin" @onclick="() => EditUser(user)">
+                                    <i class="ph ph-pencil-simple text-xl"></i>
                                 </button>
-                            }
-                            else
-                            {
-                                <button class="p-1.5 text-green-500 hover:bg-green-100 rounded transition-colors" title="Mở khóa tài khoản">
-                                    <i class="ph ph-lock-key-open text-xl"></i>
+                                @if (!isBlocked)
+                                {
+                                    <button class="p-1.5 text-yellow-500 hover:bg-yellow-100 rounded transition-colors" title="Khóa tài khoản" @onclick="() => LockUser(user.MaTK)">
+                                        <i class="ph ph-lock text-xl"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="p-1.5 text-green-500 hover:bg-green-100 rounded transition-colors" title="Mở khóa tài khoản" @onclick="() => UnlockUser(user.MaTK)">
+                                        <i class="ph ph-lock-key-open text-xl"></i>
+                                    </button>
+                                }
+                                <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Xóa tài khoản" @onclick="() => DeleteUser(user.MaTK)">
+                                    <i class="ph ph-trash text-xl"></i>
                                 </button>
-                            }
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
     </div>
 
-    <!-- Phân trang thông minh -->
+    <!-- Phân trang -->
     <div class="flex items-center justify-center mt-6 text-sm">
         <div class="flex gap-1">
-            <!-- Nút Trước -->
-            <button @onclick="() => GoToPage(CurrentPage - 1)" 
-                    class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" 
-                    disabled="@(CurrentPage == 1)">
-                Trước
-            </button>
-
-            <!-- Render danh sách số trang -->
+            <button @onclick="() => GoToPage(CurrentPage - 1)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" disabled="@(CurrentPage == 1)">Trước</button>
             @if (TotalPages <= 5)
             {
                 @for (int i = 1; i <= TotalPages; i++)
                 {
                     var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)" 
-                            class="px-3 py-1 border rounded-md shadow-sm 
-                            @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                        @pageNum
-                    </button>
+                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
                 }
             }
-            else
-            {
-                <!-- Luôn hiện trang 1 -->
-                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">1</button>
-
-                <!-- Dấu ... thứ nhất nếu CurrentPage cách xa trang 1 -->
-                @if (CurrentPage > 3)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                <!-- Các trang xung quanh trang hiện tại -->
-                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
-                {
-                    var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm 
-                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@pageNum</button>
-                }
-
-                <!-- Dấu ... thứ hai nếu CurrentPage cách xa trang cuối -->
-                @if (CurrentPage < TotalPages - 2)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                <!-- Luôn hiện trang Cuối cùng -->
-                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">@TotalPages</button>
-            }
-
-            <!-- Nút Sau -->
-            <button @onclick="() => GoToPage(CurrentPage + 1)" 
-                    class="px-3 py-1 border rounded-md shadow-sm 
-                    @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" 
-                    disabled="@(CurrentPage == TotalPages)">
-                Sau
-            </button>
+            <button @onclick="() => GoToPage(CurrentPage + 1)" class="px-3 py-1 border rounded-md shadow-sm @(CurrentPage == TotalPages || TotalPages == 0 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")" disabled="@(CurrentPage == TotalPages || TotalPages == 0)">Sau</button>
         </div>
     </div>
 </div>
 
+@if (showEditor)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 transition-all">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">
+                    @(editingId == Guid.Empty ? "Thêm tài khoản mới" : "Chỉnh sửa tài khoản")
+                </h3>
+                <button class="text-gray-400 hover:text-red-500 transition-colors rounded-lg p-1 hover:bg-red-50" @onclick="Cancel">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="p-3 bg-red-50 text-red-600 rounded-lg border border-red-200 flex items-center text-sm shadow-sm">
+                        <i class="ph ph-warning-circle text-lg mr-2 font-bold"></i>
+                        @errorMessage
+                    </div>
+                }
+                
+                @if (editingId == Guid.Empty)
+                {
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email <span class="text-red-500">*</span></label>
+                            <input type="email" @bind="editorCreate.Email" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu <span class="text-red-500">*</span></label>
+                            <input type="password" @bind="editorCreate.Password" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Họ tên <span class="text-red-500">*</span></label>
+                        <input type="text" @bind="editorCreate.HoTen" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Số điện thoại</label>
+                            <input type="text" @bind="editorCreate.SoDienThoai" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Vai trò</label>
+                            <select @bind="editorCreate.VaiTro" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="Customer">Khách hàng</option>
+                                <option value="Staff">Nhân viên</option>
+                                <option value="Admin">Quản trị viên</option>
+                            </select>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Họ tên</label>
+                        <input type="text" @bind="editorUpdate.HoTen" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Số điện thoại</label>
+                            <input type="text" @bind="editorUpdate.SoDienThoai" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Vai trò</label>
+                            <select @bind="editorUpdate.VaiTro" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="Customer">Khách hàng</option>
+                                <option value="Staff">Nhân viên</option>
+                                <option value="Admin">Quản trị viên</option>
+                            </select>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel">Hủy</button>
+                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveUser">
+                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> Lưu lại
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    private List<TaiKhoan> TaiKhoans = new();
+    private List<UserDto>? AllUsers;
 
-    // Biến lưu trạng thái Phân trang
-    private int CurrentPage { get; set; } = 1;
-    private int TotalPages { get; set; } = 50; // Giả lập có 50 trang dữ liệu
+    private int CurrentPage = 1;
+    private int PageSize = 10;
+    private int TotalPages = 1;
+    
+    private string searchQuery = "";
+    private string filterRole = "";
+    private string filterStatus = "";
 
-    protected override void OnInitialized()
+    private bool showEditor = false;
+    private Guid editingId = Guid.Empty;
+    private string errorMessage = string.Empty;
+
+    private CreateUserRequest editorCreate = new() { VaiTro = "Customer" };
+    private UpdateUserByAdminRequest editorUpdate = new();
+
+    private IEnumerable<UserDto>? FilteredUsers
     {
-        // Fake Data Call
-        TaiKhoans = MockStoreData.GetMockTaiKhoans();
+        get
+        {
+            if (AllUsers == null) return null;
+            var query = AllUsers.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(x => 
+                    x.HoTen.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                    x.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.SoDienThoai.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrWhiteSpace(filterRole))
+            {
+                query = query.Where(x => x.VaiTro == filterRole);
+            }
+            if (!string.IsNullOrWhiteSpace(filterStatus))
+            {
+                query = query.Where(x => x.TrangThai == filterStatus);
+            }
+            return query;
+        }
     }
 
-    // Hàm chuyển trang
-    private void GoToPage(int page)
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var result = await userService.GetAllUsersAsync(CurrentPage, PageSize);
+        if (result != null)
+        {
+            AllUsers = result.Data;
+            TotalPages = (int)Math.Ceiling(result.Total / (double)PageSize);
+        }
+        else
+        {
+            AllUsers = new List<UserDto>();
+            TotalPages = 1;
+        }
+    }
+
+    private async Task GoToPage(int page)
     {
         if (page >= 1 && page <= TotalPages)
         {
             CurrentPage = page;
-
-            // gọi API backend: TaiKhoans = await ApiService.GetUsersAsync(pageNumber: CurrentPage, pageSize: 10); 
+            await LoadData();
         }
+    }
+
+    private void Cancel()
+    {
+        showEditor = false;
+        errorMessage = string.Empty;
+    }
+
+    private void NewUser()
+    {
+        editingId = Guid.Empty;
+        editorCreate = new CreateUserRequest { VaiTro = "Customer" };
+        errorMessage = string.Empty;
+        showEditor = true;
+    }
+
+    private void EditUser(UserDto user)
+    {
+        editingId = user.MaTK;
+        editorUpdate = new UpdateUserByAdminRequest
+        {
+            HoTen = user.HoTen,
+            SoDienThoai = user.SoDienThoai,
+            DiaChi = user.DiaChi,
+            VaiTro = user.VaiTro,
+            TrangThai = user.TrangThai
+        };
+        errorMessage = string.Empty;
+        showEditor = true;
+    }
+
+    private async Task SaveUser()
+    {
+        errorMessage = string.Empty;
+        if (editingId == Guid.Empty)
+        {
+            if (string.IsNullOrWhiteSpace(editorCreate.Email) || string.IsNullOrWhiteSpace(editorCreate.Password) || string.IsNullOrWhiteSpace(editorCreate.HoTen))
+            {
+                errorMessage = "Vui lòng nhập đầy đủ Email, Mật khẩu và Họ tên.";
+                return;
+            }
+            var newId = await userService.CreateUserAsync(editorCreate);
+            if (newId == null)
+            {
+                errorMessage = "Thêm thất bại. Email có thể đã tồn tại.";
+                return;
+            }
+        }
+        else
+        {
+            var success = await userService.UpdateUserAsync(editingId, editorUpdate);
+            if (!success)
+            {
+                errorMessage = "Cập nhật thất bại.";
+                return;
+            }
+        }
+        
+        showEditor = false;
+        await LoadData();
+    }
+
+    private async Task LockUser(Guid id)
+    {
+        if (await userService.LockUserAsync(id)) await LoadData();
+    }
+
+    private async Task UnlockUser(Guid id)
+    {
+        if (await userService.UnlockUserAsync(id)) await LoadData();
+    }
+
+    private async Task DeleteUser(Guid id)
+    {
+        if (await userService.DeleteUserAsync(id)) await LoadData();
     }
 }

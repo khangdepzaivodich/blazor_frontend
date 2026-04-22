@@ -25,5 +25,6 @@ builder.Services.AddScoped<blazor_frontend.Services.ICatalogService, blazor_fron
 builder.Services.AddScoped<blazor_frontend.Services.IChatService, blazor_frontend.Services.ChatService>();
 builder.Services.AddScoped<blazor_frontend.Services.ICategoryService, blazor_frontend.Services.CategoryService>();
 builder.Services.AddScoped<blazor_frontend.Services.IProductService, blazor_frontend.Services.ProductService>();
+builder.Services.AddScoped<blazor_frontend.Services.IUserService, blazor_frontend.Services.UserService>();
 
 await builder.Build().RunAsync();
