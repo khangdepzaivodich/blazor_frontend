@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using blazor_frontend.Shared
 @inject NavigationManager Nav
 
@@ -7,12 +7,14 @@
 
     @if (!IsCartPage)
     {
-        <Hero ImagePath="hero.png" />
+        <Hero ImagePath="hero22.png" />
     }
 
     <main class="flex-1 container mx-auto px-4 py-8">
         @Body
     </main>
+
+    <LandingFooter />
 
     <ChatWidget />
 </div>

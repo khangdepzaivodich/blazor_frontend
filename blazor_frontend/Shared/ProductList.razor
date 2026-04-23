@@ -2,26 +2,98 @@
 @using System.Collections.Generic
 @using System.Linq
 
-<div class="@GridClass gap-6">
-    @if (Items != null)
-    {
-        @foreach (var p in Items)
+<div class="flex flex-col gap-12">
+    <!-- Grid with fade-in animation -->
+    <div class="@GridClass gap-6 animate-fade-in" @key="CurrentPage">
+        @if (Items != null)
         {
-            <ProductCard ImagePath="@p.ImagePath"
-                         Title="@p.Title"
-                         Price="@p.Price"
-                         BadgeText="@p.BadgeText"
-                         Colors="@p.Colors"
-                         ProductId="@p.Id"
-                         ShowActions="@ShowActions" />
+            @foreach (var p in Items)
+            {
+                <ProductCard ImagePath="@p.ImagePath"
+                             Title="@p.Title"
+                             Price="@p.Price"
+                             BadgeText="@p.BadgeText"
+                             Colors="@p.Colors"
+                             ProductId="@p.Id"
+                             ShowActions="@ShowActions" />
+            }
         }
+    </div>
+
+    @if (TotalPages > 1)
+    {
+        <div class="flex items-center justify-center gap-2 mt-4">
+            <!-- PREV -->
+            <button class="p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:shadow-sm" 
+                    disabled="@(CurrentPage <= 1)"
+                    @onclick="() => OnPageChanged.InvokeAsync(CurrentPage - 1)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+
+            <!-- PAGE NUMBERS -->
+            <div class="flex items-center gap-1">
+                @{
+                    int start = Math.Max(1, CurrentPage - 1);
+                    int end = Math.Min(TotalPages, CurrentPage + 1);
+
+                    if (start > 1)
+                    {
+                        <button class="w-10 h-10 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-all" @onclick="() => OnPageChanged.InvokeAsync(1)">1</button>
+                        if (start > 2)
+                        {
+                            <span class="px-2 text-gray-300">...</span>
+                        }
+                    }
+
+                    for (int i = start; i <= end; i++)
+                    {
+                        var pageNum = i;
+                        <button class="w-10 h-10 rounded-xl font-black transition-all shadow-xs @(CurrentPage == pageNum ? "bg-gray-900 text-white shadow-lg scale-110" : "text-gray-500 hover:bg-gray-50 border border-gray-50")"
+                                @onclick="() => OnPageChanged.InvokeAsync(pageNum)">
+                            @pageNum
+                        </button>
+                    }
+
+                    if (end < TotalPages)
+                    {
+                        if (end < TotalPages - 1)
+                        {
+                            <span class="px-2 text-gray-300">...</span>
+                        }
+                        <button class="w-10 h-10 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-all" @onclick="() => OnPageChanged.InvokeAsync(TotalPages)">@TotalPages</button>
+                    }
+                }
+            </div>
+
+            <!-- NEXT -->
+            <button class="p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:shadow-sm"
+                    disabled="@(CurrentPage >= TotalPages)"
+                    @onclick="() => OnPageChanged.InvokeAsync(CurrentPage + 1)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+        </div>
     }
 </div>
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 
 @code {
     [Parameter] public IEnumerable<ProductDto> Items { get; set; } = Enumerable.Empty<ProductDto>();
     [Parameter] public bool ShowActions { get; set; } = true;
     [Parameter] public string GridClass { get; set; } = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
+    
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
 
     public record ProductDto(string Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors, string Category = "", Guid? CategoryId = null);
 }

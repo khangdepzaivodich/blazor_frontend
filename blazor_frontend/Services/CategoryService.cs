@@ -5,17 +5,20 @@ namespace blazor_frontend.Services
 {
     public interface ICategoryService
     {
-        Task<IEnumerable<DanhMucDto>> GetAllAsync();
-        Task<DanhMucDto?> GetByIdAsync(Guid id);
-        Task<DanhMucDto?> CreateAsync(DanhMucCreateUpdateRequest request);
-        Task<bool> UpdateAsync(Guid id, DanhMucCreateUpdateRequest request);
-        Task<bool> DeleteAsync(Guid id);
-
-        // Loại Danh Mục
+        // Loai Danh Muc
+        Task<IEnumerable<LoaiDanhMucDto>> GetCategoryTypesAsync();
         Task<IEnumerable<LoaiDanhMucDto>> GetAllLoaiDanhMucAsync();
-        Task<LoaiDanhMucDto?> CreateLoaiDanhMucAsync(LoaiDanhMucCreateUpdateRequest request);
+        Task<LoaiDanhMucDto?> GetCategoryTypeByIdAsync(Guid id);
+        Task<bool> CreateLoaiDanhMucAsync(LoaiDanhMucCreateUpdateRequest request);
         Task<bool> UpdateLoaiDanhMucAsync(Guid id, LoaiDanhMucCreateUpdateRequest request);
         Task<bool> DeleteLoaiDanhMucAsync(Guid id);
+
+        // Danh Muc
+        Task<IEnumerable<DanhMucDto>> GetAllAsync();
+        Task<DanhMucDto?> GetByIdAsync(Guid id);
+        Task<bool> CreateAsync(DanhMucCreateUpdateRequest request);
+        Task<bool> UpdateAsync(Guid id, DanhMucCreateUpdateRequest request);
+        Task<bool> DeleteAsync(Guid id);
     }
 
     public class CategoryService : ICategoryService
@@ -27,22 +30,53 @@ namespace blazor_frontend.Services
             _httpClient = factory.CreateClient("CatalogAPI");
         }
 
-        // --- Danh Mục (CHILD) ---
+        // --- LOAI DANH MUC ---
+        public async Task<IEnumerable<LoaiDanhMucDto>> GetCategoryTypesAsync() => await GetAllLoaiDanhMucAsync();
+
+        public async Task<IEnumerable<LoaiDanhMucDto>> GetAllLoaiDanhMucAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetFromJsonAsync<IEnumerable<LoaiDanhMucDto>>("api/LoaiDanhMuc");
+                return response ?? new List<LoaiDanhMucDto>();
+            }
+            catch { return new List<LoaiDanhMucDto>(); }
+        }
+
+        public async Task<LoaiDanhMucDto?> GetCategoryTypeByIdAsync(Guid id)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<LoaiDanhMucDto>($"api/LoaiDanhMuc/{id}");
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> CreateLoaiDanhMucAsync(LoaiDanhMucCreateUpdateRequest request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/LoaiDanhMuc", request);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UpdateLoaiDanhMucAsync(Guid id, LoaiDanhMucCreateUpdateRequest request)
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/LoaiDanhMuc/{id}", request);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteLoaiDanhMucAsync(Guid id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/LoaiDanhMuc/{id}");
+            return response.IsSuccessStatusCode;
+        }
+
+        // --- DANH MUC ---
         public async Task<IEnumerable<DanhMucDto>> GetAllAsync()
         {
             try
             {
-                var children = await _httpClient.GetFromJsonAsync<IEnumerable<DanhMucDto>>("api/danhmuc");
-                var parents = await _httpClient.GetFromJsonAsync<IEnumerable<LoaiDanhMucDto>>("api/loaidanhmuc");
-
-                if (children == null) return new List<DanhMucDto>();
-
-                return children.Select(c => {
-                    var parentName = parents?.FirstOrDefault(p => p.MaLDM == c.MaLDM)?.TenLDM ?? string.Empty;
-                    c.TenLDM = parentName;
-                    c.Slug = GenerateSlug(c.TenDM);
-                    return c;
-                }).ToList();
+                var response = await _httpClient.GetFromJsonAsync<IEnumerable<DanhMucDto>>("api/DanhMuc");
+                return response ?? new List<DanhMucDto>();
             }
             catch { return new List<DanhMucDto>(); }
         }
@@ -51,112 +85,27 @@ namespace blazor_frontend.Services
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<DanhMucDto>($"api/danhmuc/{id}");
+                return await _httpClient.GetFromJsonAsync<DanhMucDto>($"api/DanhMuc/{id}");
             }
             catch { return null; }
         }
 
-        public async Task<DanhMucDto?> CreateAsync(DanhMucCreateUpdateRequest request)
+        public async Task<bool> CreateAsync(DanhMucCreateUpdateRequest request)
         {
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync("api/danhmuc", request);
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<DanhMucDto>();
-                }
-                return null;
-            }
-            catch { return null; }
+            var response = await _httpClient.PostAsJsonAsync("api/DanhMuc", request);
+            return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> UpdateAsync(Guid id, DanhMucCreateUpdateRequest request)
         {
-            try
-            {
-                var response = await _httpClient.PutAsJsonAsync($"api/danhmuc/{id}", request);
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
+            var response = await _httpClient.PutAsJsonAsync($"api/DanhMuc/{id}", request);
+            return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            try
-            {
-                var response = await _httpClient.DeleteAsync($"api/danhmuc/{id}");
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
-        }
-
-        // --- Loại Danh Mục (PARENT) ---
-        public async Task<IEnumerable<LoaiDanhMucDto>> GetAllLoaiDanhMucAsync()
-        {
-            try
-            {
-                return await _httpClient.GetFromJsonAsync<IEnumerable<LoaiDanhMucDto>>("api/loaidanhmuc") ?? new List<LoaiDanhMucDto>();
-            }
-            catch { return new List<LoaiDanhMucDto>(); }
-        }
-
-        public async Task<LoaiDanhMucDto?> CreateLoaiDanhMucAsync(LoaiDanhMucCreateUpdateRequest request)
-        {
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync("api/loaidanhmuc", request);
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<LoaiDanhMucDto>();
-                }
-                return null;
-            }
-            catch { return null; }
-        }
-
-        public async Task<bool> UpdateLoaiDanhMucAsync(Guid id, LoaiDanhMucCreateUpdateRequest request)
-        {
-            try
-            {
-                var response = await _httpClient.PutAsJsonAsync($"api/loaidanhmuc/{id}", request);
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
-        }
-
-        public async Task<bool> DeleteLoaiDanhMucAsync(Guid id)
-        {
-            try
-            {
-                var response = await _httpClient.DeleteAsync($"api/loaidanhmuc/{id}");
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
-        }
-
-        private string GenerateSlug(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return "";
-            text = text.ToLowerInvariant().Trim();
-            
-            var normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
-            var stringBuilder = new System.Text.StringBuilder();
-
-            foreach (var c in normalizedString)
-            {
-                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
-                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
-                {
-                    stringBuilder.Append(c);
-                }
-            }
-
-            text = stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC);
-            text = text.Replace("đ", "d");
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"[^a-z0-9\s-]", "");
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
-            text = text.Replace(" ", "-");
-            return text;
+            var response = await _httpClient.DeleteAsync($"api/DanhMuc/{id}");
+            return response.IsSuccessStatusCode;
         }
     }
 }
