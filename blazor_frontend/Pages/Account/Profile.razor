@@ -7,6 +7,8 @@
 @using blazor_frontend.Models
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject blazor_frontend.Services.IAuthService AuthService
+@inject blazor_frontend.Services.AuthState AuthState
 
 <div class="min-h-[80vh] flex items-center justify-center">
 
@@ -244,13 +246,9 @@
 
     private async Task LogoutAsync()
     {
-        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_token");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_role");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "user_account");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
-        Nav.NavigateTo("/account/signin");
+        await AuthService.LogoutAsync();
+        AuthState.Clear();
+        Nav.NavigateTo("/account/signin", true);
     }
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
