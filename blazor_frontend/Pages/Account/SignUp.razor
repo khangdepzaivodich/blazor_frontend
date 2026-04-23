@@ -89,7 +89,7 @@
                 await JS.InvokeVoidAsync("localStorage.setItem", "auth_user_id", loginRes.UserId.ToString());
                 await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", loginRes.HoTen ?? "");
 
-                AuthState.SetUser(loginRes.Token, loginRes.UserId, loginRes.HoTen ?? string.Empty);
+                AuthState.SetUser(loginRes.Token, loginRes.UserId, loginRes.Email ?? "", loginRes.Role ?? "User", loginRes.HoTen ?? "");
 
                 Nav.NavigateTo("/", true);
                 return;
