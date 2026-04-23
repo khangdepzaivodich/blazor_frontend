@@ -25,7 +25,9 @@
         </div>
     </div>
 
-    <div id="blazor-error-ui" class="fixed bottom-0 left-0 w-full p-4 bg-yellow-100 text-yellow-900 z-50 shadow-lg justify-between items-center" style="display: none;">
+    <div id="blazor-error-ui"
+        class="fixed bottom-0 left-0 w-full p-4 bg-yellow-100 text-yellow-900 z-50 shadow-lg justify-between items-center"
+        style="display: none;">
         <span>An unhandled error has occurred.</span>
         <div>
             <a href="." class="font-bold underline text-blue-600 hover:text-blue-800 mr-4">Reload</a>
@@ -38,11 +40,21 @@
             const element = document.getElementById(elementId);
             if (element) {
                 element.scrollTop = element.scrollHeight;
-                // Retry 2 times to catch slow rendering
                 setTimeout(() => { element.scrollTop = element.scrollHeight; }, 50);
                 setTimeout(() => { element.scrollTop = element.scrollHeight; }, 150);
             }
         };
+
+        // Fix cho việc nhấn Back không bị nhảy lên đầu trang
+        window.addEventListener('popstate', function() {
+            if (window.location.pathname.includes('/category') || 
+                window.location.pathname.includes('/subcategory') || 
+                window.location.pathname.includes('/products')) {
+                history.scrollRestoration = 'manual';
+            } else {
+                history.scrollRestoration = 'auto';
+            }
+        });
     </script>
 </body>
 

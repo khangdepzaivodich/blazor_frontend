@@ -1,0 +1,505 @@
+@page "/category/{CategoryTypeId:guid}"
+@page "/category/{CategoryTypeId:guid}/{CategoryName}"
+@page "/subcategory/{CategoryId:guid}"
+@page "/subcategory/{CategoryId:guid}/{CategoryName}"
+@page "/products"
+@page "/products/{SearchQuery}"
+@using blazor_frontend.Models.BackendDTOs
+@using blazor_frontend.Services
+@using blazor_frontend.Shared
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="min-h-screen bg-white">
+    <!-- Category Header -->
+    <div class="relative h-[250px] bg-gray-900 overflow-hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-linear-to-b from-black/20 to-black/60 z-10"></div>
+        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop" 
+             class="absolute inset-0 w-full h-full object-cover opacity-60 scale-105" alt="Category Banner" />
+        
+        <div class="relative z-20 text-center px-4 w-full max-w-2xl">
+            <h1 class="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase mb-6 animate-fade-in">
+                @(string.IsNullOrEmpty(CategoryName) ? "Sản Phẩm" : CategoryName)
+            </h1>
+            
+            <!-- Search Bar in Header -->
+            <div class="relative group">
+                <input type="text" 
+                       @bind="searchKeyword" 
+                       @bind:event="oninput"
+                       @onkeyup="HandleSearchKey"
+                       placeholder="Tìm kiếm sản phẩm..." 
+                       class="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-4 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all shadow-2xl" />
+                <button @onclick="ApplyFilters" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Grid Section -->
+    <div class="bg-white border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-4 md:px-8 py-4">
+            <nav class="flex items-center text-[11px] font-black tracking-[0.3em]" style="gap: 30px;">
+                <button @onclick='() => NavigateWithHistory("/")' class="breadcrumb-link">Trang chủ</button>
+                <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                
+                @if (CategoryTypeId == Guid.Empty && CategoryId == null)
+                {
+                    <span class="font-black uppercase" style="color: #0F172A;">TẤT CẢ SẢN PHẨM</span>
+                }
+                else
+                {
+                    <button @onclick="HandleAllProductsClick" class="breadcrumb-link uppercase">TẤT CẢ SẢN PHẨM</button>
+                    <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    
+                    @if (CategoryId == null)
+                    {
+                        <span class="font-black uppercase" style="color: #0F172A;">@CategoryName</span>
+                    }
+                    else
+                    {
+                        var parentType = categoryTypes?.FirstOrDefault(t => t.DanhMucs.Any(d => d.MaDM == CategoryId));
+                        if (parentType != null)
+                        {
+                            <button @onclick="() => SelectCategoryType(parentType.MaLDM, parentType.TenLDM)" class="breadcrumb-link uppercase">@parentType.TenLDM</button>
+                            <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        }
+                        <span class="font-black uppercase" style="color: #0F172A;">@CategoryName</span>
+                    }
+                }
+            </nav>
+        </div>
+    </div>
+
+    <div class="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-12">
+            
+            <!-- Filter Sidebar -->
+            <div class="lg:col-span-1 space-y-10">
+                <div class="flex items-center justify-between lg:block">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Bộ lọc</h3>
+                    <button @onclick="ResetFilters" class="text-[10px] font-bold text-red-500 uppercase hover:underline lg:hidden">Xóa lọc</button>
+                </div>
+
+                <div class="space-y-8">
+                    @if (CategoryTypeId == Guid.Empty && CategoryId == null)
+                    {
+                        <div>
+                            <div class="filter-section mb-4">
+                                <h5 class="filter-title text-[11px] font-bold text-gray-900 uppercase tracking-wider mb-4">
+                                    Loại danh mục
+                                </h5>
+                                <div class="category-list flex flex-col gap-2">
+                                    @if (categoryTypes == null || !categoryTypes.Any())
+                                    {
+                                        <p class="text-gray-400 text-xs p-2 italic">Đang tải danh mục...</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var type in categoryTypes)
+                                        {
+                                            <button @onclick="() => SelectCategoryType(type.MaLDM, type.TenLDM)" 
+                                                    class="text-left px-4 py-2 rounded-xl text-sm transition-all hover:bg-gray-100 text-gray-600 font-medium">
+                                                @type.TenLDM
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        // Hiển thị danh mục con của Loại danh mục đang chọn
+                        var selectedType = categoryTypes?.FirstOrDefault(t => t.MaLDM == CategoryTypeId || (CategoryId != null && t.DanhMucs.Any(d => d.MaDM == CategoryId)));
+                        if (selectedType != null)
+                        {
+                            <div>
+                                <div class="filter-section mb-4">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h5 class="filter-title text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                                            @selectedType.TenLDM
+                                        </h5>
+                                        <button @onclick="ResetAllFilters" class="text-[10px] text-blue-600 font-bold hover:underline">Tất cả</button>
+                                    </div>
+                                    <div class="category-list flex flex-col gap-1">
+                                        @foreach (var dm in selectedType.DanhMucs)
+                                        {
+                                            <button @onclick="() => SelectSubCategory(dm.MaDM, dm.TenDM)" 
+                                                    class="text-left px-4 py-2.5 rounded-xl text-sm transition-all @(CategoryId == dm.MaDM ? "bg-gray-900 text-white shadow-md" : "hover:bg-gray-100 text-gray-600 font-medium")">
+                                                @dm.TenDM
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <div>
+                        <h4 class="text-[11px] font-bold text-gray-900 uppercase tracking-wider mb-4">Khoảng giá (₫)</h4>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-bold text-gray-400 uppercase">Tối thiểu</label>
+                                    <input type="number" @bind="minPrice" placeholder="0" class="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-gray-200" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-bold text-gray-400 uppercase">Tối đa</label>
+                                    <input type="number" @bind="maxPrice" placeholder="Max" class="w-full bg-gray-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-gray-200" />
+                                </div>
+                            </div>
+                            <button @onclick="ApplyFilters" class="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95">
+                                Áp dụng lọc
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-[11px] font-bold text-gray-900 uppercase tracking-wider mb-4">Lọc nhanh</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <button @onclick='() => SetPriceRange(0, 200000)' class="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-[11px] font-bold transition-all @(maxPrice == 200000 ? "bg-gray-900 text-white" : "")">Dưới 200k</button>
+                            <button @onclick='() => SetPriceRange(200000, 500000)' class="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-[11px] font-bold transition-all @(minPrice == 200000 && maxPrice == 500000 ? "bg-gray-900 text-white" : "")">200k - 500k</button>
+                            <button @onclick='() => SetPriceRange(500000, null)' class="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-[11px] font-bold transition-all @(minPrice == 500000 ? "bg-gray-900 text-white" : "")">Trên 500k</button>
+                        </div>
+                    </div>
+
+                    <button @onclick="ResetFilters" class="hidden lg:block text-xs font-bold text-red-500 hover:text-red-600 transition-colors">
+                        ✕ XÓA TẤT CẢ BỘ LỌC
+                    </button>
+                </div>
+            </div>
+
+            <!-- Product Grid Area -->
+            <div class="lg:col-span-3">
+                <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
+                    <div class="text-sm font-medium text-gray-500">
+                        @if (!string.IsNullOrEmpty(searchKeyword) || minPrice.HasValue || maxPrice.HasValue) {
+                            <span class="inline-flex items-center gap-2">
+                                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                Đang lọc: 
+                                @if (!string.IsNullOrEmpty(searchKeyword)) { <b class="text-gray-900">"@searchKeyword"</b> }
+                                @if (minPrice.HasValue || maxPrice.HasValue) { <b class="text-gray-900">Giá @(minPrice?.ToString("n0") ?? "0") - @(maxPrice?.ToString("n0") ?? "Max")</b> }
+                            </span>
+                        } else {
+                            <span>Danh mục: <b class="text-gray-900">@(string.IsNullOrEmpty(CategoryName) ? "Tất cả" : CategoryName)</b></span>
+                        }
+                    </div>
+                    <div class="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                        @totalCount SẢN PHẨM
+                    </div>
+                </div>
+
+                <div class="relative min-h-[400px]">
+                    @if (isLoading && (products == null || !products.Any()))
+                    {
+                        <!-- Initial Skeleton Load -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            @for (int i = 0; i < 6; i++)
+                            {
+                                <div class="animate-pulse">
+                                    <div class="bg-gray-100 rounded-2xl h-80 mb-4"></div>
+                                    <div class="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
+                                    <div class="h-4 bg-gray-100 rounded w-1/4"></div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!isLoading && (products == null || !products.Any()))
+                    {
+                        <!-- Empty State -->
+                        <div class="py-24 text-center">
+                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Rất tiếc, không có sản phẩm nào phù hợp</h3>
+                            <p class="text-gray-500 mb-8">Chúng tôi không tìm thấy kết quả nào cho bộ lọc hiện tại của bạn.</p>
+                            <button @onclick="ResetFilters" class="px-8 py-3 bg-gray-900 text-white rounded-full font-bold hover:bg-black transition-all">Xóa tất cả bộ lọc</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Products with Overlay Loading -->
+                        <div @key="filterVersion" class="animate-fade-up transition-all duration-500 @(isLoading ? "opacity-40 grayscale-50 pointer-events-none" : "opacity-100")">
+                            <ProductList Items="DisplayProducts" 
+                                         CurrentPage="currentPage" 
+                                         TotalPages="totalPages" 
+                                         OnPageChanged="HandlePageChanged" />
+                        </div>
+                        
+                        @if (isLoading)
+                        {
+                            <div class="absolute inset-0 flex items-center justify-center z-30">
+                                <div class="w-10 h-10 border-4 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? CategoryTypeId { get; set; }
+    [Parameter] public Guid? CategoryId { get; set; }
+    [Parameter] public string? CategoryName { get; set; }
+    [Parameter] public string? SearchQuery { get; set; }
+
+    private List<SanPhamDto> products = new();
+    private List<ProductList.ProductDto> DisplayProducts => products.Select(p => {
+        var firstDetail = p.ChiTietSanPhams.FirstOrDefault();
+        var displayPriceVal = p.GiaMin > 0 ? p.GiaMin : (firstDetail?.Gia ?? 0);
+        var colors = p.ChiTietSanPhams
+            .Select(x => x.Mau)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new ProductList.ProductDto(
+            Id: p.MaSP.ToString(),
+            ImagePath: firstDetail?.Anh ?? "product1.jpg",
+            Title: p.TenSP,
+            Price: $"{displayPriceVal:n0}₫",
+            BadgeText: displayPriceVal < 500000 ? "New Arrival" : "Premium",
+            Colors: colors,
+            Category: CategoryName ?? "",
+            CategoryId: p.MaDM
+        );
+    }).ToList();
+
+    private List<LoaiDanhMucDto> categoryTypes = new();
+    private LoaiDanhMucDto? currentType;
+    
+    private string searchKeyword = "";
+    private decimal? minPrice;
+    private decimal? maxPrice;
+    private string SortMode = "newest";
+    
+    private bool isLoading = true;
+    private int currentPage = 1;
+    private int pageSize = 12;
+    private int totalPages = 1;
+    private int totalCount = 0;
+    private int filterVersion = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        if (categoryTypes == null || !categoryTypes.Any())
+        {
+            categoryTypes = (await CategoryService.GetCategoryTypesAsync()).ToList();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCategories();
+        
+        // Always reset search if navigating without a SearchQuery parameter
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            searchKeyword = SearchQuery;
+        }
+        else
+        {
+            searchKeyword = "";
+        }
+
+        if (NavigationManager.Uri.EndsWith("/products") || NavigationManager.Uri.EndsWith("/products/"))
+        {
+            CategoryTypeId = Guid.Empty;
+            CategoryId = null;
+            CategoryName = "Tất cả sản phẩm";
+        }
+
+        await LoadProducts();
+    }
+
+    private async Task SelectCategoryType(Guid id, string? name)
+    {
+        CategoryTypeId = id;
+        CategoryId = null;
+        CategoryName = name;
+        searchKeyword = ""; 
+        currentPage = 1;
+        
+        var url = $"/category/{id}/{Uri.EscapeDataString(name ?? "Category")}";
+        await JSRuntime.InvokeVoidAsync("history.pushState", null, "", url);
+        
+        await LoadProducts();
+    }
+
+    private async Task SelectSubCategory(Guid id, string name)
+    {
+        CategoryId = id;
+        CategoryName = name;
+        searchKeyword = ""; 
+        currentPage = 1;
+
+        var url = $"/subcategory/{id}/{Uri.EscapeDataString(name)}";
+        await JSRuntime.InvokeVoidAsync("history.pushState", null, "", url);
+
+        await LoadProducts();
+    }
+
+    private async Task ResetAllFilters()
+    {
+        await JSRuntime.InvokeVoidAsync("history.pushState", null, "", "/products");
+        CategoryTypeId = Guid.Empty;
+        CategoryId = null;
+        CategoryName = "Tất cả sản phẩm";
+        searchKeyword = "";
+        currentPage = 1;
+        await LoadProducts();
+    }
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await ApplyFilters();
+        }
+    }
+
+    private async Task SetPriceRange(decimal? min, decimal? max)
+    {
+        minPrice = min;
+        maxPrice = max;
+        await ApplyFilters();
+    }
+
+    private async Task ResetFilters()
+    {
+        searchKeyword = "";
+        minPrice = null;
+        maxPrice = null;
+        SortMode = "newest";
+        await ApplyFilters();
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        await LoadProducts();
+    }
+
+    private async Task HandleAllProductsClick()
+    {
+        await JSRuntime.InvokeVoidAsync("history.pushState", null, "", "/products");
+        CategoryTypeId = Guid.Empty;
+        CategoryId = null;
+        CategoryName = "Tất cả sản phẩm";
+        searchKeyword = "";
+        currentPage = 1;
+        await LoadProducts();
+    }
+
+    private async Task NavigateWithHistory(string url)
+    {
+        if (url == "/")
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        if (url == "/products")
+        {
+            await HandleAllProductsClick();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("history.pushState", null, "", url);
+            await LoadProducts();
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (!categoryTypes.Any()) await LoadCategories();
+
+            var targetTypeId = (CategoryTypeId == Guid.Empty) ? null : CategoryTypeId;
+            var targetId = (CategoryId == Guid.Empty) ? null : CategoryId;
+            
+            // Breadcrumb removed from here
+
+            var response = await ProductService.GetPagedAsync(currentPage, pageSize, targetTypeId, targetId, searchKeyword, minPrice, maxPrice);
+            if (response != null)
+            {
+                products = response.Data.ToList();
+
+                // Apply Frontend Sorting
+                products = SortMode switch
+                {
+                    "price-asc" => products.OrderBy(p => p.GiaMin).ToList(),
+                    "price-desc" => products.OrderByDescending(p => p.GiaMin).ToList(),
+                    "newest" => products.OrderByDescending(p => p.NgayTao).ToList(),
+                    _ => products
+                };
+
+                totalCount = response.TotalCount;
+                totalPages = response.TotalPages;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading products: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            filterVersion++;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        currentPage = newPage;
+        await LoadProducts();
+    }
+}
+
+<style>
+    .breadcrumb-link {
+        color: #CBD5E1;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-block;
+    }
+
+    .breadcrumb-link:hover {
+        color: #0F172A;
+        transform: translateY(-1px);
+    }
+
+    .animate-fade-up {
+        animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

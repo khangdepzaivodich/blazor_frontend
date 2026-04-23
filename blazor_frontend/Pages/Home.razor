@@ -1,55 +1,199 @@
-﻿@page "/"
+@page "/"
 @using blazor_frontend.Shared
 @inject blazor_frontend.Services.IProductService productService
 
+<div class="bg-white">
+    <!-- 1. Brand Statement Section -->
+    <section class="max-w-[1400px] mx-auto px-4 md:px-8 py-20 md:py-32 text-center">
+        <h2 class="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-6 animate-fade-in-up">The Essence of Style</h2>
+        <h1 class="text-5xl md:text-8xl font-black text-gray-900 tracking-tighter uppercase leading-none mb-8">
+            Define Your <br/> <span class="text-blue-600">Serious</span> Look.
+        </h1>
+        <p class="max-w-2xl mx-auto text-gray-500 text-lg md:text-xl font-medium leading-relaxed">
+            Không chỉ là quần áo, chúng tôi kiến tạo phong cách cho những người thực sự nghiêm túc với bản thân. 
+            Mỗi thiết kế là một sự khẳng định về đẳng cấp và sự tinh tế.
+        </p>
+    </section>
+
+    <!-- 2. Horizontal Scroll Collection (New Arrivals) -->
+    <section class="py-20 bg-gray-50 overflow-hidden">
+        <div class="max-w-[1400px] mx-auto px-4 md:px-8 mb-12 flex items-end justify-between">
+            <div>
+                <h3 class="text-3xl font-black text-gray-900 uppercase tracking-tighter">Bộ sưu tập mới</h3>
+                <p class="text-gray-500 font-medium">Những thiết kế vừa ra mắt trong tuần này</p>
+            </div>
+            <a href="/products" class="group flex items-center gap-2 text-sm font-black uppercase tracking-widest text-gray-900">
+                Xem tất cả 
+                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+        </div>
+
+        <div id="featured-scroll" class="flex gap-8 overflow-x-auto px-4 md:px-[calc((100vw-1400px)/2+2rem)] pb-10 premium-scrollbar">
+            @if (featured == null || !featured.Any())
+            {
+                @for(int i=0; i<4; i++) {
+                    <div class="min-w-[300px] md:min-w-[400px] h-[500px] bg-gray-200 animate-pulse rounded-3xl"></div>
+                }
+            }
+            else
+            {
+                @foreach (var item in featured)
+                {
+                    <div class="min-w-[320px] md:min-w-[380px]">
+                        <ProductCard ProductId="@item.Id" 
+                                     ImagePath="@item.ImagePath" 
+                                     Title="@item.Title" 
+                                     Price="@item.Price" 
+                                     BadgeText="@item.BadgeText" 
+                                     Colors="@item.Colors"
+                                     ShowActions="true" />
+                    </div>
+                }
+            }
+        </div>
+    </section>
+
+    <!-- 3. Category Spotlight Grid -->
+    <section class="max-w-[1400px] mx-auto px-4 md:px-8 py-24 border-t border-gray-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <a href="/category/f641efa0-571c-4876-92d1-19c985968d39/Áo" class="group relative h-[600px] overflow-hidden rounded-3xl bg-gray-100 shadow-2xl">
+                <img src="https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=1888&auto=format&fit=crop" 
+                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt="Áo" />
+                <div class="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-10 left-10 text-white">
+                    <h4 class="text-4xl font-black uppercase tracking-tighter mb-2">Áo Nam</h4>
+                    <p class="text-gray-200 font-medium mb-6">Lịch lãm trong từng chi tiết</p>
+                    <span class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-white text-black transition-transform group-hover:scale-110 shadow-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                </div>
+            </a>
+
+            <a href="/category/4c418a3e-1769-4f39-8379-f39db79ec50f/Quần" class="group relative h-[600px] overflow-hidden rounded-3xl bg-gray-100 shadow-2xl">
+                <img src="https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1887&auto=format&fit=crop" 
+                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt="Quần" />
+                <div class="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-10 left-10 text-white">
+                    <h4 class="text-4xl font-black uppercase tracking-tighter mb-2">Quần Tây</h4>
+                    <p class="text-gray-200 font-medium mb-6">Sự thoải mái tối thượng</p>
+                    <span class="inline-flex items-center justify-center h-12 w-12 rounded-full bg-white text-black transition-transform group-hover:scale-110 shadow-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- 4. Featured Single Item (Full Width Promo) -->
+    <section class="max-w-[1400px] mx-auto px-4 md:px-8 pb-32">
+        <div class="relative h-[500px] md:h-[600px] rounded-[40px] overflow-hidden bg-gray-900 group">
+            <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2070&auto=format&fit=crop" 
+                 class="absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-2000 group-hover:scale-105" alt="Showcase" />
+            <div class="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent"></div>
+            <div class="relative h-full flex flex-col justify-center px-10 md:px-20 max-w-2xl">
+                <span class="text-blue-400 font-bold tracking-[0.2em] uppercase mb-4">Limited Edition</span>
+                <h3 class="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter mb-6">Premium <br/> Leather Series</h3>
+                <p class="text-gray-300 text-lg mb-10">Dòng sản phẩm da cao cấp được chế tác thủ công, dành cho những ai tìm kiếm sự hoàn mỹ tuyệt đối.</p>
+                <a href="/products" class="w-fit px-10 py-4 bg-white text-black rounded-full font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-2xl">
+                    Khám phá ngay
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .premium-scrollbar::-webkit-scrollbar {
+        height: 3px;
+    }
+    .premium-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .premium-scrollbar::-webkit-scrollbar-thumb {
+        background: #d1d1d1;
+        border-radius: 10px;
+        transition: background 0.3s;
+    }
+    .premium-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #999;
+    }
+    
+    @@keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fade-in-up 1s ease-out forwards;
+    }
+</style>
+
 @code {
+    [Inject] private IJSRuntime JS { get; set; }
     private List<ProductList.ProductDto> featured = new();
+    private int pageSize = 8;
 
     protected override async Task OnInitializedAsync()
     {
-        var products = await productService.GetAllAsync();
-        featured = products
-            .Take(6)
-            .Select(sp =>
-            {
-                var firstDetail = sp.ChiTietSanPhams.FirstOrDefault();
-                var colors = sp.ChiTietSanPhams
-                    .Select(x => x.Mau)
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
+        await LoadProducts();
+    }
 
-                return new ProductList.ProductDto(
-                    Id: sp.MaSP.ToString(),
-                    ImagePath: firstDetail?.Anh ?? "product1.jpg",
-                    Title: sp.TenSP,
-                    Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
-                    BadgeText: "HÀNG MỚI",
-                    Colors: colors.Length > 0 ? colors : ["#000000"],
-                    CategoryId: sp.MaDM);
-            })
-            .ToList();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const el = document.getElementById('featured-scroll');
+                    if (!el) return;
+                    let speed = 0.5;
+                    let scrollLeft = el.scrollLeft;
+                    
+                    function step() {
+                        if (!el.matches(':hover')) {
+                            scrollLeft += speed;
+                            el.scrollLeft = scrollLeft;
+                            
+                            // Reset when end reached
+                            if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+                                scrollLeft = 0;
+                            }
+                        } else {
+                            scrollLeft = el.scrollLeft;
+                        }
+                        requestAnimationFrame(step);
+                    }
+                    requestAnimationFrame(step);
+                })()
+            ");
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        var result = await productService.GetPagedAsync(1, pageSize);
+        if (result != null)
+        {
+            featured = result.Data
+                .Select(sp =>
+                {
+                    var firstDetail = sp.ChiTietSanPhams.FirstOrDefault();
+                    var colors = sp.ChiTietSanPhams
+                        .Select(x => x.Mau)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray();
+
+                    return new ProductList.ProductDto(
+                        Id: sp.MaSP.ToString(),
+                        ImagePath: firstDetail?.Anh ?? "product1.jpg",
+                        Title: sp.TenSP,
+                        Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
+                        BadgeText: "NEW",
+                        Colors: colors.Length > 0 ? colors : ["#000000"],
+                        CategoryId: sp.MaDM);
+                })
+                .ToList();
+        }
     }
 }
-
-<div class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        <!-- Left promo banner (tall) -->
-        <div class="lg:col-span-1">
-            <PromoBanner ImagePath="/hero.png" Title="ĐỒ CÔNG SỞ" CtaText="XEM NGAY" Link="/products" />
-        </div>
-
-        <!-- Right: product grid (3 columns) -->
-        <div class="lg:col-span-3">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-800">Đồ Công Sở</h2>
-                <nav class="text-sm text-gray-500">
-                    <a class="mr-6">Hàng mới</a>
-                    <a class="mr-6">Set đồ</a>
-                </nav>
-            </div>
-
-            <ProductList Items="featured" ShowActions="true" />
-        </div>
-    </div>
-</div>

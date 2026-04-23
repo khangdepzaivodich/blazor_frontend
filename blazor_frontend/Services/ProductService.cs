@@ -6,24 +6,25 @@ namespace blazor_frontend.Services
     public interface IProductService
     {
         Task<IEnumerable<SanPhamDto>> GetAllAsync();
+        Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null);
         Task<SanPhamDto?> GetByIdAsync(Guid id);
         Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request);
         Task<bool> UpdateAsync(Guid id, SanPhamCreateRequest request);
         Task<bool> DeleteAsync(Guid id);
     }
 
+    public class PagedSanPhamResponse
+    {
+        public int TotalCount { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public List<SanPhamDto> Data { get; set; } = new();
+    }
+
     public class ProductService : IProductService
     {
         private readonly HttpClient _httpClient;
-
-        private sealed class PagedSanPhamResponse
-        {
-            public int TotalCount { get; set; }
-            public int PageNumber { get; set; }
-            public int PageSize { get; set; }
-            public int TotalPages { get; set; }
-            public List<SanPhamDto> Data { get; set; } = new();
-        }
 
         public ProductService(IHttpClientFactory factory)
         {
@@ -34,6 +35,21 @@ namespace blazor_frontend.Services
         {
             var response = await _httpClient.GetFromJsonAsync<PagedSanPhamResponse>("api/sanpham?pageNumber=1&pageSize=1000");
             return response?.Data ?? new List<SanPhamDto>();
+        }
+
+        public async Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null)
+        {
+            var url = $"api/sanpham?pageNumber={pageNumber}&pageSize={pageSize}";
+            if (categoryTypeId.HasValue) url += $"&maLDM={categoryTypeId.Value}";
+            if (categoryId.HasValue) url += $"&maDM={categoryId.Value}";
+            if (!string.IsNullOrWhiteSpace(keyword)) url += $"&keyword={Uri.EscapeDataString(keyword)}";
+            
+            if (minPrice.HasValue) 
+                url += $"&minPrice={minPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            if (maxPrice.HasValue) 
+                url += $"&maxPrice={maxPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            
+            return await _httpClient.GetFromJsonAsync<PagedSanPhamResponse>(url);
         }
 
         public async Task<SanPhamDto?> GetByIdAsync(Guid id)
