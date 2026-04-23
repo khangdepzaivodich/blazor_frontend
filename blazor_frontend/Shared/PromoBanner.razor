@@ -1,16 +1,23 @@
-﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components
 
-<a href="@Link" class="block group" aria-label="@Title">
-    <div class="h-[520px] md:h-[560px] rounded-lg overflow-hidden relative bg-gray-100">
-        <img src="@ImagePath" alt="@Alt" class="absolute inset-0 w-full h-full object-cover object-top" />
-        <div class="absolute inset-0 bg-black/20"></div>
+<a href="@Link" class="block group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500" aria-label="@Title">
+    <div class="h-[520px] md:h-[560px] lg:h-[600px] bg-gray-100">
+        <!-- Image with hover zoom -->
+        <img src="@ImagePath" alt="@Alt" class="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-1000 ease-out group-hover:scale-110" />
+        
+        <!-- Dark gradient overlay for better text contrast -->
+        <div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent"></div>
 
-        <div class="absolute left-6 bottom-10 text-white z-10">
-            <div class="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight">@Title</div>
+        <div class="absolute left-8 bottom-12 text-white z-10 transition-transform duration-500 group-hover:-translate-y-2">
+            <div class="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-none mb-6">
+                @Title.ToUpper()
+            </div>
+            
             @if (!string.IsNullOrWhiteSpace(CtaText))
             {
-                <div class="mt-4">
-                    <span class="inline-block bg-white text-black px-4 py-2 rounded-full font-semibold">@CtaText</span>
+                <div class="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-full font-bold text-sm uppercase tracking-widest shadow-xl hover:bg-gray-100 transition-colors">
+                    @CtaText
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                 </div>
             }
         </div>

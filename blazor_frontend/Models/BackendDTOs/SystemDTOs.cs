@@ -164,6 +164,7 @@ namespace blazor_frontend.Models.BackendDTOs
     {
         public Guid MaLDM { get; set; }
         public string TenLDM { get; set; } = string.Empty;
+        public List<DanhMucDto> DanhMucs { get; set; } = new();
     }
 
     public class LoaiDanhMucCreateUpdateRequest
@@ -186,24 +187,16 @@ namespace blazor_frontend.Models.BackendDTOs
         public string TenDM { get; set; } = string.Empty;
     }
 
-    public class ChiTietSanPhamDTO
-    {
-        public Guid MaCTSP { get; set; }
-        public Guid MaSP { get; set; }
-        public string Mau { get; set; } = string.Empty;
-        public string KichCo { get; set; } = string.Empty;
-        public decimal Gia { get; set; }
-        public int SoLuong { get; set; }
-        public string? Anh { get; set; }
-    }
-
     public class SanPhamDto
     {
         public Guid MaSP { get; set; }
         public Guid MaDM { get; set; }
         public string TenSP { get; set; } = string.Empty;
         public string? MoTa { get; set; }
-        public List<ChiTietSanPhamDTO> ChiTietSanPhams { get; set; } = new();
+        public decimal GiaMin { get; set; }
+        public decimal GiaMax { get; set; }
+        public DateTime NgayTao { get; set; } = DateTime.UtcNow;
+        public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
 
     public class SanPhamAdminDto

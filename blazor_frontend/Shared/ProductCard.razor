@@ -1,51 +1,62 @@
 @using Microsoft.AspNetCore.Components
 
-<div class="group bg-white rounded-lg shadow-sm overflow-hidden relative flex flex-col h-full">
+<div class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden relative flex flex-col h-full border border-gray-100">
+    <!-- Wishlist Button -->
+    <button class="absolute top-3 left-3 z-10 p-2 bg-white/80 backdrop-blur-md rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-all shadow-sm opacity-0 group-hover:opacity-100" aria-label="Add to wishlist">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </button>
+
     @if (!string.IsNullOrEmpty(BadgeText))
     {
-        <div class="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded">
+        <div class="absolute top-3 right-3 z-10 bg-linear-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md">
             @BadgeText
         </div>
     }
 
-    <a href="/product/@ProductId" class="relative bg-gray-100 flex-1 block">
-        <div tabindex="0" class="h-64 md:h-72 lg:h-80 relative overflow-hidden">
-            <img src="@ImagePath" alt="@Title" class="absolute inset-0 w-full h-full object-cover object-top" />
+    <a href="/product/@ProductId" class="relative bg-gray-50 flex-1 block overflow-hidden">
+        <div class="h-64 md:h-72 lg:h-80 relative overflow-hidden">
+            <img src="@ImagePath" alt="@Title" class="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-110" />
+            
+            <div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
             @if (ShowActions)
             {
-                <div class="absolute left-1/2 -translate-x-1/2 bottom-4 bg-white rounded-md shadow-md flex items-center gap-2 p-2
-                            opacity-0 translate-y-2 pointer-events-none
+                <div class="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 
+                            opacity-0 translate-y-4 pointer-events-none
                             group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
-                            group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto
-                            transition-opacity transition-transform duration-150 ease-in-out">
-                    <button class="p-2 text-gray-800 hover:text-black" aria-label="Add to cart" @onclick="OnAddToCartClicked">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6"/></svg>
+                            transition-all duration-300 ease-out">
+                    <button class="flex-1 bg-white hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm" @onclick="OnAddToCartClicked">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6"/></svg>
+                        THÊM
                     </button>
-                    <button class="p-2 text-gray-800 hover:text-black" aria-label="Quick view" @onclick="OnQuickViewClicked">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <button class="bg-white hover:bg-gray-900 hover:text-white text-gray-900 p-2.5 rounded-xl shadow-lg transition-all" @onclick="OnQuickViewClicked">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </button>
                 </div>
             }
         </div>
     </a>
 
-    <div class="p-3">
-        <a href="/product/@ProductId" class="text-sm text-gray-800 font-medium mb-1 line-clamp-2 hover:text-[#0b3b72] transition-colors" title="@Title">@Title</a>
-
-        <div class="flex items-center justify-between">
-            <div class="text-lg font-bold text-[#0b3b72]">@Price</div>
+    <div class="p-4 flex flex-col gap-2">
+        <a href="/product/@ProductId" class="text-[15px] text-gray-600 font-medium line-clamp-1 hover:text-blue-600 transition-colors" title="@Title">@Title</a>
+        
+        <div class="flex items-center justify-between mt-auto">
+            <div class="text-[17px] font-extrabold text-gray-900">@Price</div>
+            
+            @if (Colors?.Any() == true)
+            {
+                <div class="flex -space-x-1.5">
+                    @foreach (var c in Colors.Take(3))
+                    {
+                        <div class="w-3.5 h-3.5 rounded-full border border-white shadow-xs" style="background:@c"></div>
+                    }
+                    @if (Colors.Length > 3)
+                    {
+                        <span class="text-[10px] text-gray-400 pl-1">+@(Colors.Length - 3)</span>
+                    }
+                </div>
+            }
         </div>
-
-        @if (Colors?.Any() == true)
-        {
-            <div class="mt-3 flex items-center gap-2">
-                @foreach (var c in Colors)
-                {
-                    <button class="w-6 h-6 rounded-full border-2 border-white shadow-sm" style="background:@c" aria-label="Color @c"></button>
-                }
-            </div>
-        }
     </div>
 </div>
 

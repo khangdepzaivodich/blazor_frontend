@@ -10,16 +10,32 @@
 
 <div class="bg-white pb-16 min-h-screen">
     <!-- Breadcrumb -->
-    <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-4">
-        <nav class="text-xs text-gray-500 font-medium">
-            <a href="/" class="text-blue-600 hover:underline">Trang chủ</a>
-            <span class="mx-2 text-gray-400">/</span>
-            <a href="/products" class="text-blue-600 hover:underline">Danh mục</a>
-            <span class="mx-2 text-gray-400">/</span>
-            <a href="/products" class="text-blue-600 hover:underline">Tất cả sản phẩm</a>
-            <span class="mx-2 text-gray-400">/</span>
-            <span class="text-gray-800">@(currentProduct?.TenSP ?? "Sản phẩm")</span>
-        </nav>
+    <div class="border-b border-gray-50 mb-12">
+        <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-6">
+            <nav class="flex items-center text-[11px] font-black tracking-[0.3em]" style="gap: 30px;">
+                <button @onclick='() => NavigateWithHistory("/")' class="breadcrumb-link">Trang chủ</button>
+                <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <button @onclick='() => NavigateWithHistory("/products")' class="breadcrumb-link uppercase">TẤT CẢ SẢN PHẨM</button>
+                
+                @if (currentDanhMuc != null)
+                {
+                    @if (!string.IsNullOrEmpty(currentDanhMuc.TenLDM))
+                    {
+                        <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <button @onclick="NavigateToParentCategory" class="breadcrumb-link uppercase">@currentDanhMuc.TenLDM</button>
+                    }
+                    
+                    <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <button @onclick="NavigateToCategory" class="breadcrumb-link uppercase">@currentDanhMuc.TenDM</button>
+                }
+
+                @if (currentProduct != null)
+                {
+                    <svg class="w-4 h-4" style="color: #E2E8F0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span class="font-black uppercase truncate max-w-[300px]" style="color: #0F172A;">@currentProduct.TenSP</span>
+                }
+            </nav>
+        </div>
     </div>
 
     <!-- Product Top Section -->
@@ -147,10 +163,10 @@
                     }
                 </div>
                 <div class="grid grid-cols-4 gap-2 text-xs text-center text-gray-600">
-                    <div class="border border-gray-900 rounded py-2 py-1 font-semibold text-black bg-gray-50">Ôm<br/><span class="font-normal">(Slim-Fit)</span></div>
-                    <div class="border border-gray-200 rounded py-2 py-1">Linh Hoạt<br/>(Regular)</div>
-                    <div class="border border-gray-200 rounded py-2 py-1">Rộng Vừa<br/>(Relaxed)</div>
-                    <div class="border border-gray-200 rounded py-2 py-1">Rộng<br/>(Oversize)</div>
+                    <div class="border border-gray-900 rounded py-2 font-semibold text-black bg-gray-50">Ôm<br/><span class="font-normal">(Slim-Fit)</span></div>
+                    <div class="border border-gray-200 rounded py-2">Linh Hoạt<br/>(Regular)</div>
+                    <div class="border border-gray-200 rounded py-2">Rộng Vừa<br/>(Relaxed)</div>
+                    <div class="border border-gray-200 rounded py-2">Rộng<br/>(Oversize)</div>
                 </div>
             </div>
 
@@ -259,6 +275,7 @@
     private int activeTab = 1;
     private int Quantity { get; set; } = 1;
     private SanPhamDto? currentProduct;
+    private DanhMucDto? currentDanhMuc;
     private List<ProductList.ProductDto> similarProducts = new();
     private string? selectedColor;
     private string? selectedSize;
@@ -290,7 +307,19 @@
         selectedSize = AvailableSizes.FirstOrDefault();
 
         var danhMucs = (await categoryService.GetAllAsync()).ToList();
-        var currentDanhMuc = danhMucs.FirstOrDefault(x => x.MaDM == currentProduct.MaDM);
+        var categoryTypes = (await categoryService.GetCategoryTypesAsync()).ToList();
+        
+        currentDanhMuc = danhMucs.FirstOrDefault(x => x.MaDM == currentProduct.MaDM);
+        
+        if (currentDanhMuc != null && string.IsNullOrEmpty(currentDanhMuc.TenLDM))
+        {
+            var parentType = categoryTypes.FirstOrDefault(x => x.MaLDM == currentDanhMuc.MaLDM);
+            if (parentType != null)
+            {
+                currentDanhMuc.TenLDM = parentType.TenLDM;
+            }
+        }
+
         var currentTenDM = currentDanhMuc?.TenDM ?? string.Empty;
         var danhMucIdsCungTenDm = danhMucs
             .Where(x => string.Equals(x.TenDM, currentTenDM, StringComparison.OrdinalIgnoreCase))
@@ -304,7 +333,36 @@
             .ToList();
     }
 
-    private string[] thumbnails => (currentProduct?.ChiTietSanPhams ?? new List<ChiTietSanPhamDTO>())
+    private async Task NavigateWithHistory(string url)
+    {
+        if (url == "/")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+        await JSRuntime.InvokeVoidAsync("history.pushState", null, "", url);
+        Navigation.NavigateTo(url);
+    }
+
+    private async Task NavigateToCategory()
+    {
+        if (currentDanhMuc != null)
+        {
+            var url = $"/subcategory/{currentDanhMuc.MaDM}/{Uri.EscapeDataString(currentDanhMuc.TenDM)}";
+            await NavigateWithHistory(url);
+        }
+    }
+
+    private async Task NavigateToParentCategory()
+    {
+        if (currentDanhMuc != null)
+        {
+            var url = $"/category/{currentDanhMuc.MaLDM}/{Uri.EscapeDataString(currentDanhMuc.TenLDM)}";
+            await NavigateWithHistory(url);
+        }
+    }
+
+    private string[] thumbnails => (currentProduct?.ChiTietSanPhams ?? new List<ChiTietSanPhamDto>())
         .Select(x => x.Anh)
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -316,7 +374,7 @@
 
     private string CurrentImage => thumbnails[Math.Clamp(selectedMediaIndex, 0, thumbnails.Length - 1)];
 
-    private IEnumerable<ChiTietSanPhamDTO> Variants => currentProduct?.ChiTietSanPhams ?? new List<ChiTietSanPhamDTO>();
+    private IEnumerable<ChiTietSanPhamDto> Variants => currentProduct?.ChiTietSanPhams ?? new List<ChiTietSanPhamDto>();
     private IEnumerable<string> AvailableColors => Variants.Select(x => x.Mau).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase);
     private IEnumerable<string> AvailableSizes => Variants
         .Where(x => string.IsNullOrWhiteSpace(selectedColor) || string.Equals(x.Mau, selectedColor, StringComparison.OrdinalIgnoreCase))
@@ -324,7 +382,7 @@
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .Distinct(StringComparer.OrdinalIgnoreCase);
 
-    private ChiTietSanPhamDTO? SelectedVariant => Variants.FirstOrDefault(x =>
+    private ChiTietSanPhamDto? SelectedVariant => Variants.FirstOrDefault(x =>
         (string.IsNullOrWhiteSpace(selectedColor) || string.Equals(x.Mau, selectedColor, StringComparison.OrdinalIgnoreCase))
         && (string.IsNullOrWhiteSpace(selectedSize) || string.Equals(x.KichCo, selectedSize, StringComparison.OrdinalIgnoreCase)));
 
@@ -436,7 +494,7 @@
 
     private static ProductList.ProductDto MapToCard(SanPhamDto product)
     {
-        var details = product.ChiTietSanPhams ?? new List<ChiTietSanPhamDTO>();
+        var details = product.ChiTietSanPhams ?? new List<ChiTietSanPhamDto>();
         var firstDetail = details.FirstOrDefault();
         var colors = details
             .Select(x => x.Mau)
@@ -467,3 +525,16 @@
     }
 
 }
+
+<style>
+    .breadcrumb-link {
+        color: #CBD5E1;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-block;
+    }
+
+    .breadcrumb-link:hover {
+        color: #0F172A;
+        transform: translateY(-1px);
+    }
+</style>
