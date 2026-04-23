@@ -1,10 +1,50 @@
 @using Microsoft.AspNetCore.Components
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 @code {
     private bool _mobileOpen;
     private bool _accountOpen;
+    private bool _isLoggedIn;
+    private bool _authStateLoaded;
 
     [Parameter] public int CartCount { get; set; } = 0;
+
+    protected override void OnInitialized()
+    {
+        _isLoggedIn = false;
+        _authStateLoaded = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _authStateLoaded)
+        {
+            return;
+        }
+
+        _authStateLoaded = true;
+
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+        var isLoggedIn = !string.IsNullOrWhiteSpace(token);
+
+        if (isLoggedIn != _isLoggedIn)
+        {
+            _isLoggedIn = isLoggedIn;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LogoutAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_token");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        _isLoggedIn = false;
+        CloseAll();
+        Nav.NavigateTo("/account/signin");
+    }
 
     void ToggleMobile()
     {
@@ -41,7 +81,8 @@
                 </svg>
             </button>
 
-            <a href="/" class="flex items-center gap-2" @onclick="CloseAll">
+            <a href="/" class="flex items-center gap-2" @onclick="CloseAll" aria-label="Về trang chủ">
+                <img src="/serious-logo.png" alt="Serious" class="h-9 w-9 rounded-md object-contain" onerror="this.src='hero.png';" />
                 <div class="hidden md:block leading-tight">
                     <div class="text-xl font-extrabold tracking-tight text-[#0b3b72]">Serious</div>
                     <div class="text-[11px] text-gray-500">Fashion Store</div>
@@ -152,12 +193,19 @@
                         <div class="text-sm font-semibold text-gray-900">Tài khoản</div>
                         <div class="text-xs text-gray-500">Quản lý hồ sơ và đơn hàng</div>
                     </div>
-                    <a href="/account/signin" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đăng nhập</a>
-                    <a href="/account/profile" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Hồ sơ</a>
-                    <a href="/staff/orders" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đơn hàng</a>
-                    <a href="/wishlist" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Yêu thích</a>
-                    <div class="border-t border-gray-100"></div>
-                    <a href="/account/signin" class="block px-4 py-3 text-sm font-medium text-red-500 transition hover:bg-red-50" @onclick="CloseAll">Đăng xuất</a>
+                    @if (_isLoggedIn)
+                    {
+                        <a href="/account/profile" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Hồ sơ</a>
+                        <a href="/account/orders" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đơn hàng của tôi</a>
+                        <a href="/wishlist" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Yêu thích</a>
+                        <div class="border-t border-gray-100"></div>
+                        <button type="button" class="block w-full px-4 py-3 text-left text-sm font-medium text-red-500 transition hover:bg-red-50" @onclick="LogoutAsync">Đăng xuất</button>
+                    }
+                    else
+                    {
+                        <a href="/account/signin" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đăng nhập</a>
+                        <a href="/account/signup" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đăng ký</a>
+                    }
                 </div>
             </div>
 
@@ -191,10 +239,18 @@
 
             <div class="my-2 border-t border-gray-200"></div>
 
-            <a href="/account/signin" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đăng nhập</a>
-            <a href="/account/profile" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Hồ sơ</a>
-            <a href="/staff/orders" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đơn hàng</a>
-            <a href="/wishlist" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Yêu thích</a>
+            @if (_isLoggedIn)
+            {
+                <a href="/account/profile" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Hồ sơ</a>
+                <a href="/account/orders" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đơn hàng của tôi</a>
+                <a href="/wishlist" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Yêu thích</a>
+                <button type="button" class="block w-full rounded-xl px-3 py-3 text-left font-medium text-red-500 transition hover:bg-red-50" @onclick="LogoutAsync">Đăng xuất</button>
+            }
+            else
+            {
+                <a href="/account/signin" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đăng nhập</a>
+                <a href="/account/signup" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">Đăng ký</a>
+            }
             <a href="/cart" class="block rounded-xl px-3 py-3 text-gray-700 transition hover:bg-gray-100" @onclick="CloseAll">
                 Giỏ hàng (@CartCount)
             </a>

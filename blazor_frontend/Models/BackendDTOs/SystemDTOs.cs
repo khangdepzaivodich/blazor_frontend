@@ -77,6 +77,8 @@ namespace blazor_frontend.Models.BackendDTOs
     {
         public Guid MaDH { get; set; }
         public Guid MaTK { get; set; }
+        public string HoTen { get; set; } = string.Empty;
+        public string SoDienThoai { get; set; } = string.Empty;
         public Guid? MaGG { get; set; }
         public DateTime NgayDat { get; set; }
         public decimal TongTien { get; set; }
@@ -107,6 +109,8 @@ namespace blazor_frontend.Models.BackendDTOs
     public class CreateDonHangRequest
     {
         public Guid MaTK { get; set; }
+        public string HoTen { get; set; } = string.Empty;
+        public string SoDienThoai { get; set; } = string.Empty;
         public Guid? MaGG { get; set; }
         public string DiaChiGiaoHang { get; set; } = string.Empty;
         public List<CreateChiTietDonHangRequest> ChiTietDonHangs { get; set; } = new();

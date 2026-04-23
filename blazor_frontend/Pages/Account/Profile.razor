@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using blazor_frontend.Models
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="min-h-[80vh] flex items-center justify-center">
 
@@ -21,6 +22,11 @@
                     <a href="/account/profile"
                        class="px-4 py-3 rounded-xl bg-blue-600 text-white font-medium">
                         Profile
+                    </a>
+
+                    <a href="/account/orders"
+                       class="px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100">
+                        Đơn hàng của tôi
                     </a>
 
                     <a href="/account/messages"
@@ -146,6 +152,14 @@
                                         </button>
                                     </div>
                                 }
+
+                                <div class="mt-6">
+                                    <button type="button"
+                                            class="px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                                            @onclick="LogoutAsync">
+                                        Đăng xuất
+                                    </button>
+                                </div>
                             </EditForm>
 
                             @if (!string.IsNullOrEmpty(message))
@@ -171,6 +185,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Nav.NavigateTo("/account/signin?returnUrl=/account/profile");
+            return;
+        }
+
         var json = await JS.InvokeAsync<string>("localStorage.getItem", "user_account");
         if (!string.IsNullOrEmpty(json))
         {
@@ -219,6 +240,17 @@
 
         isEditing = false;
         message = "Saved";
+    }
+
+    private async Task LogoutAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_token");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "user_account");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
+        Nav.NavigateTo("/account/signin");
     }
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)

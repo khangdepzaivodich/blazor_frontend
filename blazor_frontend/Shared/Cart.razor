@@ -1,5 +1,6 @@
 ﻿@page "/cart"
 @using Microsoft.AspNetCore.Components
+@using blazor_frontend.Models
 @inject IBasketService BasketService
 @inject IDiscountService DiscountService
 @inject IOrderService OrderService
@@ -22,9 +23,33 @@
             <section>
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Thông tin đơn hàng</h2>
                 <div class="space-y-4">
-                    <input type="text" placeholder="Họ và tên" @bind="HoTen" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-                    <input type="tel" placeholder="Số điện thoại" @bind="SoDienThoai" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-                    <input type="text" placeholder="Địa chỉ" @bind="DiaChi" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <div>
+                        <input type="text" placeholder="Họ và tên" @bind="HoTen" class="@GetFieldClass(HoTen)" />
+                        @if (ShowFieldError(HoTen))
+                        {
+                            <div class="mt-1 text-xs text-red-600">Họ và tên là bắt buộc.</div>
+                        }
+                    </div>
+
+                    <div>
+                        <input type="tel" placeholder="Số điện thoại" @bind="SoDienThoai" class="@GetFieldClass(SoDienThoai)" />
+                        @if (ShowFieldError(SoDienThoai))
+                        {
+                            <div class="mt-1 text-xs text-red-600">Số điện thoại là bắt buộc.</div>
+                        }
+                    </div>
+
+                    <div>
+                        <input type="text" placeholder="Địa chỉ" @bind="DiaChi" class="@GetFieldClass(DiaChi)" />
+                        @if (ShowFieldError(DiaChi))
+                        {
+                            <div class="mt-1 text-xs text-red-600">Địa chỉ là bắt buộc.</div>
+                        }
+                    </div>
+
+                    <div>
+                        <textarea placeholder="Ghi chú (không bắt buộc)" @bind="GhiChu" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-24"></textarea>
+                    </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
@@ -98,12 +123,23 @@
                     <div class="space-y-3">
                         @foreach (var item in CartModel.Items)
                         {
-                            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
-                                <div>
-                                    <div class="font-semibold text-sm">@item.ProductName</div>
-                                    <div class="text-xs text-gray-500">SL: @item.Quantity</div>
+                            <div class="flex items-center gap-3 rounded-md border border-gray-200 p-3 bg-white shadow-sm">
+                                <div class="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-gray-100 bg-gray-50">
+                                    <img src="@GetItemImage(item)" alt="@item.ProductName" class="h-full w-full object-cover object-top" onerror="this.src='product1.jpg';" />
                                 </div>
-                                <div class="font-semibold">@FormatMoney(item.Price * item.Quantity)</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-sm text-gray-900 truncate">@item.ProductName</div>
+                                    <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                        <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
+                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(item.Price)</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => DecreaseItemAsync(item.ProductId)">-</button>
+                                    <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => IncreaseItemAsync(item.ProductId)">+</button>
+                                    <button class="h-8 w-8 rounded-full border border-red-200 text-red-600 hover:bg-red-50" @onclick="() => RemoveItemAsync(item.ProductId)">×</button>
+                                </div>
+                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(item.Price * item.Quantity)</div>
                             </div>
                         }
                     </div>
@@ -138,6 +174,20 @@
                     </div>
                 </div>
 
+                @if (!string.IsNullOrWhiteSpace(checkoutError))
+                {
+                    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        @checkoutError
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(CheckoutRequirementMessage) && !checkoutError?.Equals(CheckoutRequirementMessage) == true)
+                {
+                    <div class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        @CheckoutRequirementMessage
+                    </div>
+                }
+
                 <div class="space-y-3 pt-4 text-gray-700">
                     <div class="flex justify-between items-center">
                         <span>Tạm tính:</span>
@@ -166,9 +216,18 @@
             <div class="text-xl font-bold text-[#0b3b72]">@FormatMoney(ThanhTien)</div>
             <div class="text-sm text-gray-600 font-medium">Tiết kiệm: @FormatMoney(VoucherGiamGia)</div>
         </div>
-        <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors" @onclick="CheckoutAsync" disabled="@(CartModel?.Items?.Any() != true)">
-            Thanh toán
-        </button>
+        @if (string.Equals(BuyerId, "guest", StringComparison.OrdinalIgnoreCase))
+        {
+            <button class="bg-gradient-to-r from-blue-700 to-cyan-600 text-white px-10 py-3 rounded-md font-bold text-lg hover:from-blue-800 hover:to-cyan-700 transition-all shadow-lg" @onclick="GoToLogin">
+                Đăng nhập để thanh toán
+            </button>
+        }
+        else
+        {
+                <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors" @onclick="CheckoutAsync" disabled="@(CartModel?.Items?.Any() != true || IsGuest)">
+                Thanh toán
+            </button>
+        }
     </div>
 </div>
 
@@ -179,16 +238,60 @@
     private string HoTen = string.Empty;
     private string SoDienThoai = string.Empty;
     private string DiaChi = string.Empty;
+    private string GhiChu = string.Empty;
     private string DiscountCode = string.Empty;
     private Guid? MaGiamGia;
     private decimal VoucherGiamGia;
+    private string? checkoutError;
+    private bool showFieldErrors;
 
     private decimal TamTinh => CartModel?.TotalPrice ?? 0;
     private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
+    private bool IsGuest => string.Equals(BuyerId, "guest", StringComparison.OrdinalIgnoreCase);
+    private string CheckoutRequirementMessage
+    {
+        get
+        {
+            if (IsGuest)
+            {
+                return "Bạn cần đăng nhập để thanh toán.";
+            }
+
+            var missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(HoTen)) missing.Add("Họ và tên");
+            if (string.IsNullOrWhiteSpace(SoDienThoai)) missing.Add("Số điện thoại");
+            else if (!IsPhoneNumberValid(SoDienThoai)) missing.Add("Số điện thoại đúng định dạng");
+            if (string.IsNullOrWhiteSpace(DiaChi)) missing.Add("Địa chỉ");
+
+            return missing.Count == 0 ? string.Empty : $"Vui lòng nhập: {string.Join(", ", missing)}.";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? "guest";
+        BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id")
+            ?? await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id")
+            ?? "guest";
+
+        if (!IsGuest)
+        {
+            HoTen = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten") ?? string.Empty;
+            var userAccountJson = await JS.InvokeAsync<string?>("localStorage.getItem", "user_account");
+            if (!string.IsNullOrWhiteSpace(userAccountJson))
+            {
+                var account = System.Text.Json.JsonSerializer.Deserialize<TaiKhoan>(userAccountJson);
+                if (account != null)
+                {
+                    SoDienThoai = account.SoDienThoai ?? string.Empty;
+                    DiaChi = account.DiaChi ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(HoTen))
+                    {
+                        HoTen = account.HoTen ?? string.Empty;
+                    }
+                }
+            }
+        }
+
         CartModel = await BasketService.GetBasketAsync(BuyerId) ?? new BasketDto { UserName = BuyerId };
     }
 
@@ -214,14 +317,38 @@
 
     private async Task CheckoutAsync()
     {
+        checkoutError = null;
+        showFieldErrors = true;
+
         if (CartModel?.Items?.Any() != true)
         {
             return;
         }
 
+        if (IsGuest)
+        {
+            await JS.InvokeVoidAsync("alert", "Bạn cần đăng nhập để thanh toán");
+            Navigation.NavigateTo("/account/signin?returnUrl=/cart");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(HoTen) || string.IsNullOrWhiteSpace(SoDienThoai) || string.IsNullOrWhiteSpace(DiaChi))
+        {
+            checkoutError = CheckoutRequirementMessage;
+            return;
+        }
+
+        if (!IsPhoneNumberValid(SoDienThoai))
+        {
+            checkoutError = CheckoutRequirementMessage;
+            return;
+        }
+
         var request = new CreateDonHangRequest
         {
-            MaTK = Guid.NewGuid(),
+            MaTK = Guid.TryParse(BuyerId, out var userId) ? userId : Guid.Empty,
+            HoTen = HoTen,
+            SoDienThoai = SoDienThoai,
             MaGG = MaGiamGia,
             DiaChiGiaoHang = DiaChi,
             ChiTietDonHangs = CartModel.Items.Select(x => new CreateChiTietDonHangRequest
@@ -242,8 +369,90 @@
 
         await BasketService.DeleteBasketAsync(BuyerId);
         await JS.InvokeVoidAsync("alert", "Đặt hàng thành công");
-        Navigation.NavigateTo("/staff/orders");
+        Navigation.NavigateTo("/account/orders");
+    }
+
+    private async Task IncreaseItemAsync(string productId)
+    {
+        var item = CartModel?.Items.FirstOrDefault(x => x.ProductId == productId);
+        if (item == null) return;
+
+        item.Quantity++;
+        await SaveCartAsync();
+    }
+
+    private async Task DecreaseItemAsync(string productId)
+    {
+        var item = CartModel?.Items.FirstOrDefault(x => x.ProductId == productId);
+        if (item == null) return;
+
+        if (item.Quantity > 1)
+        {
+            item.Quantity--;
+            await SaveCartAsync();
+            return;
+        }
+
+        await RemoveItemAsync(productId);
+    }
+
+    private async Task RemoveItemAsync(string productId)
+    {
+        if (CartModel?.Items == null) return;
+
+        var item = CartModel.Items.FirstOrDefault(x => x.ProductId == productId);
+        if (item == null) return;
+
+        CartModel.Items.Remove(item);
+        await SaveCartAsync();
+    }
+
+    private async Task SaveCartAsync()
+    {
+        if (CartModel == null) return;
+
+        if (CartModel.Items.Count == 0)
+        {
+            await BasketService.DeleteBasketAsync(BuyerId);
+            StateHasChanged();
+            return;
+        }
+
+        CartModel.UserName = BuyerId;
+        await BasketService.UpdateBasketAsync(CartModel);
+        StateHasChanged();
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/account/signin?returnUrl=/cart");
+    }
+
+    private static string GetItemImage(BasketItemDto item)
+    {
+        return string.IsNullOrWhiteSpace(item.ImageUrl) ? "product1.jpg" : item.ImageUrl;
     }
 
     private static string FormatMoney(decimal money) => $"{money:n0}đ";
+
+    private bool ShowFieldError(string? value) => showFieldErrors && string.IsNullOrWhiteSpace(value);
+
+    private bool ShowPhoneError => showFieldErrors && !IsPhoneNumberValid(SoDienThoai);
+
+    private static bool IsPhoneNumberValid(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            return false;
+        }
+
+        return System.Text.RegularExpressions.Regex.IsMatch(phone.Trim(), @"^(0|\+84)(3|5|7|8|9)[0-9]{8}$");
+    }
+
+    private string GetFieldClass(string? value)
+    {
+        return ShowFieldError(value)
+            ? "w-full rounded-md px-4 py-2.5 border border-red-400 focus:outline-none focus:ring-1 focus:border-red-500 focus:ring-red-200"
+            : "w-full rounded-md px-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-1 focus:border-blue-500 focus:ring-blue-500";
+    }
 }

@@ -1,56 +1,86 @@
 @page "/staff/orders/{maDH:guid}"
+@page "/account/orders/{maDH:guid}"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService OrderService
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Chi tiết đơn hàng</PageTitle>
 
-<div class="p-6">
-    <button class="text-sm text-blue-600 mb-4" @onclick="GoBack">&larr; Quay lại</button>
-
+<div class="max-w-5xl mx-auto px-4 md:px-6 py-6">
     @if (isLoading)
     {
-        <div>Đang tải...</div>
+        <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">Đang tải...</div>
     }
     else if (order == null)
     {
-        <div class="text-red-500">Đơn hàng không tìm thấy</div>
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">Đơn hàng không tìm thấy</div>
     }
     else
     {
-        <div class="bg-white p-6 rounded shadow">
-            <h2 class="text-xl font-bold mb-2">Đơn hàng: @order.MaDH</h2>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>Khách hàng: @order.MaTK</div>
-                <div>Ngày đặt: @order.NgayDat.ToString("dd/MM/yyyy HH:mm")</div>
-                <div>Địa chỉ giao: @order.DiaChiGiaoHang</div>
-                <div>Trạng thái: @order.TrangThaiDH</div>
+        <div class="space-y-6">
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Đơn hàng #@order.MaDH.ToString()[..8]</h1>
+                        <p class="mt-1 text-sm text-gray-500">Đặt lúc @order.NgayDat.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                    <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)">
+                        @GetStatusText(order.TrangThaiDH)
+                    </span>
+                </div>
+
+                <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
+                    <div class="rounded-xl bg-gray-50 p-4">
+                        <div class="text-gray-500">Khách hàng</div>
+                        <div class="mt-1 font-semibold text-gray-900">@order.HoTen</div>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 p-4">
+                        <div class="text-gray-500">Số điện thoại</div>
+                        <div class="mt-1 font-semibold text-gray-900">@order.SoDienThoai</div>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 p-4 md:col-span-2 xl:col-span-1">
+                        <div class="text-gray-500">Địa chỉ giao</div>
+                        <div class="mt-1 font-semibold text-gray-900">@order.DiaChiGiaoHang</div>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 p-4">
+                        <div class="text-gray-500">Tổng tiền</div>
+                        <div class="mt-1 font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</div>
+                    </div>
+                </div>
             </div>
 
-            <h3 class="font-semibold mt-4 mb-2">Chi tiết</h3>
-            <table class="w-full text-left text-sm border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-600 text-xs uppercase">
-                        <th class="p-2">Sản phẩm</th>
-                        <th class="p-2 text-right">Giá</th>
-                        <th class="p-2 text-center">Số lượng</th>
-                        <th class="p-2 text-right">Thành tiền</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var it in order.ChiTietDonHangs)
-                    {
-                        <tr>
-                            <td class="p-2">@it.TenSP_LuuTru</td>
-                            <td class="p-2 text-right">@it.Gia_LuuTru.ToString("N0")đ</td>
-                            <td class="p-2 text-center">@it.SoLuong</td>
-                            <td class="p-2 text-right">@(it.Gia_LuuTru * it.SoLuong).ToString("N0")đ</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            <div class="text-right mt-4 font-bold">Tổng: @order.TongTien.ToString("N0")đ</div>
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div class="border-b border-gray-100 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Sản phẩm trong đơn</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                            <tr>
+                                <th class="px-6 py-4 font-semibold">Sản phẩm</th>
+                                <th class="px-6 py-4 text-right font-semibold">Đơn giá</th>
+                                <th class="px-6 py-4 text-center font-semibold">Số lượng</th>
+                                <th class="px-6 py-4 text-right font-semibold">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach (var it in order.ChiTietDonHangs)
+                            {
+                                <tr>
+                                    <td class="px-6 py-4">
+                                        <div class="font-semibold text-gray-900">@it.TenSP_LuuTru</div>
+                                        <div class="mt-1 text-xs text-gray-500">@it.Mau_LuuTru • @it.KichCo_LuuTru</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-gray-700">@it.Gia_LuuTru.ToString("N0")đ</td>
+                                    <td class="px-6 py-4 text-center text-gray-700">@it.SoLuong</td>
+                                    <td class="px-6 py-4 text-right font-semibold text-gray-900">@(it.Gia_LuuTru * it.SoLuong).ToString("N0")đ</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -64,16 +94,73 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        if (!Guid.TryParse(userIdText, out _))
+        {
+            Nav.NavigateTo("/account/signin?returnUrl=/account/orders");
+            return;
+        }
+
         try
         {
             order = await OrderService.GetOrderByIdAsync(maDH);
         }
-        catch { order = null; }
-        finally { isLoading = false; }
+        catch
+        {
+            order = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void GoBack()
     {
-        Nav.NavigateTo("/staff/orders");
+        Nav.NavigateTo("/account/orders");
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return status?.Trim().ToLowerInvariant() switch
+        {
+            "choxacnhan" => "pending",
+            "dangxuly" => "processing",
+            "danggiao" => "shipping",
+            "hoantat" => "completed",
+            "dahuy" => "cancelled",
+            "pending" => "pending",
+            "processing" => "processing",
+            "shipping" => "shipping",
+            "completed" => "completed",
+            "cancelled" => "cancelled",
+            _ => "pending"
+        };
+    }
+
+    private static string GetStatusText(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "Chờ xác nhận",
+            "processing" => "Đang xử lý",
+            "shipping" => "Đang giao",
+            "completed" => "Hoàn tất",
+            "cancelled" => "Đã hủy",
+            _ => "Không rõ"
+        };
+    }
+
+    private static string GetStatusClass(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+            "processing" => "border-blue-200 bg-blue-50 text-blue-700",
+            "shipping" => "border-purple-200 bg-purple-50 text-purple-700",
+            "completed" => "border-green-200 bg-green-50 text-green-700",
+            "cancelled" => "border-red-200 bg-red-50 text-red-700",
+            _ => "border-gray-200 bg-gray-50 text-gray-700"
+        };
     }
 }

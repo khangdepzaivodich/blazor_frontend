@@ -323,7 +323,13 @@
 
     private async Task AddToCartAsync()
     {
-        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? "guest";
+        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id")
+            ?? await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id")
+            ?? "guest";
+        var productName = "Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim";
+        var productPrice = 311200m;
+        var productImage = thumbnails.Length > 0 ? thumbnails[0].Url : "product1.jpg";
+
         var basket = await BasketService.GetBasketAsync(buyerId) ?? new BasketDto { UserName = buyerId };
 
         var existing = basket.Items.FirstOrDefault(x => x.ProductId == Id.ToString());
@@ -336,10 +342,10 @@
             basket.Items.Add(new BasketItemDto
             {
                 ProductId = Id.ToString(),
-                ProductName = "Áo Polo Nam Trơn ProCOOL Seam Sealing Form Slim",
-                Price = 311200,
+                ProductName = productName,
+                Price = productPrice,
                 Quantity = Quantity,
-                ImageUrl = "product1.jpg"
+                ImageUrl = productImage
             });
         }
 
@@ -362,4 +368,5 @@
         new ProductList.ProductDto(14, "product1.jpg", "Áo Thun Nam Elevyn Form Boxy", "349,000₫", "HÀNG MỚI", new[] { "#8c574b", "#222222", "#d5c9ba" }),
         new ProductList.ProductDto(15, "product1.jpg", "Áo Thun Nam Endurance League Graphic", "349,000₫", "HÀNG MỚI", new[] { "#252628" })
     };
+
 }
