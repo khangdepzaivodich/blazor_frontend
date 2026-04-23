@@ -1,7 +1,8 @@
 @page "/account/signin"
-@layout blazor_frontend.Layout.AccountLayout
+@using Microsoft.AspNetCore.Components
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IAuthService AuthService
+@inject blazor_frontend.Services.IBasketService BasketService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject blazor_frontend.Services.AuthState AuthState
@@ -59,6 +60,9 @@
     private string? errorMessage;
     private bool isSubmitting;
 
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
     private async Task HandleValidSubmit()
     {
         isSubmitting = true;
@@ -79,17 +83,56 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "auth_user_id", res.UserId.ToString());
             await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", res.HoTen ?? "");
 
-            AuthState.SetUser(res.Token, res.UserId, res.Email ?? "", res.Role ?? "User", res.HoTen ?? "");
+            await MergeGuestCartAsync(res.UserId.ToString());
 
-            Nav.NavigateTo("/", true);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Sign in failed: " + ex.Message;
+            Nav.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
         }
         finally
         {
             isSubmitting = false;
         }
+    }
+
+    private async Task MergeGuestCartAsync(string userId)
+    {
+        var guestBasket = await BasketService.GetBasketAsync("guest");
+        if (guestBasket?.Items?.Any() != true)
+        {
+            return;
+        }
+
+        BasketDto? authBasket = null;
+        try
+        {
+            authBasket = await BasketService.GetBasketAsync(userId);
+        }
+        catch
+        {
+            authBasket = null;
+        }
+
+        authBasket ??= new BasketDto { UserName = userId };
+
+        foreach (var guestItem in guestBasket.Items)
+        {
+            var existing = authBasket.Items.FirstOrDefault(x => x.ProductId == guestItem.ProductId);
+            if (existing != null)
+            {
+                existing.Quantity += guestItem.Quantity;
+                continue;
+            }
+
+            authBasket.Items.Add(new BasketItemDto
+            {
+                ProductId = guestItem.ProductId,
+                ProductName = guestItem.ProductName,
+                Price = guestItem.Price,
+                Quantity = guestItem.Quantity,
+                ImageUrl = guestItem.ImageUrl
+            });
+        }
+
+        await BasketService.UpdateBasketAsync(authBasket);
+        await BasketService.DeleteBasketAsync("guest");
     }
 }

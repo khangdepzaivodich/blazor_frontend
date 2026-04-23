@@ -23,30 +23,30 @@ namespace blazor_frontend.Services
 
         public async Task<IEnumerable<SanPhamDto>> GetAllAsync()
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<SanPhamDto>>("api/SanPham") ?? new List<SanPhamDto>();
+            return await _httpClient.GetFromJsonAsync<IEnumerable<SanPhamDto>>("api/sanpham") ?? new List<SanPhamDto>();
         }
 
         public async Task<SanPhamDto?> GetByIdAsync(Guid id)
         {
-            return await _httpClient.GetFromJsonAsync<SanPhamDto>($"api/SanPham/{id}");
+            return await _httpClient.GetFromJsonAsync<SanPhamDto>($"api/sanpham/{id}");
         }
 
         public async Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request)
         {
-            var res = await _httpClient.PostAsJsonAsync("api/SanPham", request);
+            var res = await _httpClient.PostAsJsonAsync("api/sanpham", request);
             if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<SanPhamDto>();
             return null;
         }
 
         public async Task<bool> UpdateAsync(Guid id, SanPhamCreateRequest request)
         {
-            var res = await _httpClient.PutAsJsonAsync($"api/SanPham/{id}", request);
+            var res = await _httpClient.PutAsJsonAsync($"api/sanpham/{id}", request);
             return res.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            var res = await _httpClient.DeleteAsync($"api/SanPham/{id}");
+            var res = await _httpClient.DeleteAsync($"api/sanpham/{id}");
             return res.IsSuccessStatusCode;
         }
     }

@@ -1,342 +1,235 @@
 ﻿@page "/staff/orders"
-<PageTitle>Quản lý Đơn hàng</PageTitle>
+@page "/account/orders"
+@layout blazor_frontend.Layout.AccountProfileLayout
+@using System.Linq
+@using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService orderService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<div class="p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 class="text-2xl font-bold text-gray-800">Quản lý Đơn hàng</h2>
-        <div class="flex gap-2">
-            <input type="text" placeholder="Tìm kiếm..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition">
-                <i class="ph ph-magnifying-glass text-lg mr-2"></i>
-                Tìm kiếm
-            </button>
-        </div>
-    </div>
+<PageTitle>Đơn hàng của tôi</PageTitle>
 
-@if (showStatusModal && selectedOrder != null)
-{
-    <div class="fixed inset-0 bg-black/30 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-6 w-96">
-            <h3 class="text-lg font-semibold mb-4">Cập nhật trạng thái đơn hàng</h3>
-            <div class="mb-4">
-                <div class="text-sm text-gray-600 mb-2">Đơn: @selectedOrder.Id</div>
-                <select @bind="selectedNewStatus" class="w-full border rounded px-3 py-2">
-                    <option value="pending">Chờ xác nhận</option>
-                    <option value="processing">Đang xử lý</option>
-                    <option value="shipping">Đang giao</option>
-                    <option value="completed">Hoàn tất</option>
-                    <option value="cancelled">Đã hủy</option>
-                </select>
-            </div>
-            <div class="flex justify-end gap-2">
-                <button class="px-3 py-1 rounded border" @onclick="() => showStatusModal = false">Hủy</button>
-                <button class="px-3 py-1 rounded bg-blue-600 text-white" @onclick="ConfirmUpdateStatus">Cập nhật</button>
-            </div>
-        </div>
-    </div>
-}
-
-    <!-- Bộ lọc -->
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
-        <div class="flex items-center gap-2 text-sm text-gray-600 font-medium">
-            <i class="ph ph-faders text-xl"></i>
-            Bộ lọc:
-        </div>
-        <select class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Chờ xác nhận</option>
-            <option value="processing">Đang xử lý</option>
-            <option value="shipping">Đang giao</option>
-            <option value="completed">Hoàn thành</option>
-            <option value="cancelled">Đã hủy</option>
-        </select>
-
-        <input type="date" class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-    </div>
-
-    <!-- Bảng danh sách đơn hàng -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse cursor-default">
-                <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider">
-                        <th class="py-4 px-6 font-semibold">Khách hàng</th>
-                        <th class="py-4 px-6 font-semibold">Ngày đặt</th>
-                        <th class="py-4 px-6 font-semibold text-right">Tổng tiền</th>
-                        <th class="py-4 px-6 font-semibold text-center">Trạng thái</th>
-                        <th class="py-4 px-6 text-center font-semibold">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-700 divide-y divide-gray-100 text-sm">
-                    @if (orders == null)
-                    {
-                        <tr>
-                            <td colspan="5" class="py-12 text-center text-gray-500">
-                                <div class="flex justify-center items-center">
-                                    <i class="ph ph-spinner-gap animate-spin text-2xl mr-3 text-blue-500"></i>
-                                    Đang tải dữ liệu...
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                    else if (!orders.Any())
-                    {
-                        <tr>
-                            <td colspan="5" class="py-12 text-center text-gray-500">Không có đơn hàng nào</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (var order in orders)
-                        {
-                            <tr class="hover:bg-gray-50 transition duration-150">
-                                <td class="py-4 px-6">
-                                    <div class="font-medium text-gray-900">@order.CustomerName</div>
-                                    <div class="text-xs text-gray-500 mt-0.5">@order.PhoneNumber</div>
-                                </td>
-                                <td class="py-4 px-6 text-gray-500">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td class="py-4 px-6 font-semibold text-gray-800 text-right">@order.TotalAmount.ToString("N0")đ</td>
-                                <td class="py-4 px-6 text-center">
-                                    <span class="@GetStatusColor(order.Status) px-3 py-1.5 text-xs font-semibold rounded-full border @GetStatusBorderColor(order.Status)">
-                                        @GetStatusText(order.Status)
-                                    </span>
-                                </td>
-                                <td class="py-4 px-6 text-center flex justify-center gap-2">
-                                    <a class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition" title="Xem chi tiết" href="/staff/orders/@order.Id">
-                                        <i class="ph ph-eye text-xl"></i>
-                                    </a>
-                                    <button class="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition" title="Cập nhật trạng thái" @onclick="() => OpenUpdateStatusModal(order)">
-                                        <i class="ph ph-pencil-simple text-xl"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Phân trang -->
-    <div class="flex flex-col sm:flex-row items-center justify-center mt-6 gap-4">
-        <div class="flex gap-1">
-            <!-- Nút Trước -->
-            <button @onclick="() => GoToPage(CurrentPage - 1)"
-                    class="px-3 py-1 border rounded-md shadow-sm
-                @(CurrentPage == 1 ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
-                    disabled="@(CurrentPage == 1)">
-                Trước
-            </button>
-
-            <!-- Render danh sách số trang -->
-            @if (TotalPages <= 5)
-            {
-                @for (int i = 1; i <= TotalPages; i++)
-                {
-                    var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)"
-                            class="px-3 py-1 border rounded-md shadow-sm
-                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                        @pageNum
-                    </button>
-                }
-            }
-            else
-            {
-                <button @onclick="() => GoToPage(1)" class="px-3 py-1 border rounded-md shadow-sm
-                    @(CurrentPage == 1 ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                    1
-                </button>
-
-                @if (CurrentPage > 3)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                @for (int i = Math.Max(2, CurrentPage - 1); i <= Math.Min(TotalPages - 1, CurrentPage + 1); i++)
-                {
-                    var pageNum = i;
-                    <button @onclick="() => GoToPage(pageNum)" class="px-3 py-1 border rounded-md shadow-sm
-                        @(CurrentPage == pageNum ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                        @pageNum
-                    </button>
-                }
-
-                @if (CurrentPage < TotalPages - 2)
-                {
-                    <span class="px-2 py-1 text-gray-400 font-bold tracking-widest">...</span>
-                }
-
-                <button @onclick="() => GoToPage(TotalPages)" class="px-3 py-1 border rounded-md shadow-sm
-                    @(CurrentPage == TotalPages ? "border-blue-500 text-white bg-blue-600 font-medium" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")">
-                    @TotalPages
-                </button>
-            }
-
-            <button @onclick="() => GoToPage(CurrentPage + 1)"
-                    class="px-3 py-1 border rounded-md shadow-sm
-                @(CurrentPage == TotalPages ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed" : "border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors")"
-                    disabled="@(CurrentPage == TotalPages)">
-                Sau
-            </button>
-        </div>
-    </div>
-</div>
-
-@code {
-    private List<OrderModel> orders = new();
-    private int CurrentPage { get; set; } = 1;
-    private int TotalPages { get; set; } = 50;
-    private bool showStatusModal = false;
-    private OrderModel? selectedOrder;
-    private string selectedNewStatus = "processing";
-
-    private void GoToPage(int page)
+<div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
+    @if (isLoading)
     {
-        if (page >= 1 && page <= TotalPages)
-        {
-            CurrentPage = page;
-        }
+        <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+            Đang tải đơn hàng...
+        </div>
     }
-
-    private void OpenUpdateStatusModal(OrderModel o)
+    else
     {
-        selectedOrder = o;
-        selectedNewStatus = "processing";
-        showStatusModal = true;
-    }
+        <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Đơn hàng của tôi</h1>
+                <p class="mt-1 text-sm text-gray-500">Theo dõi trạng thái và chi tiết đơn hàng đã đặt.</p>
+            </div>
 
-    private async Task ConfirmUpdateStatus()
-    {
-        if (selectedOrder == null) return;
-        var ok = await orderService.UpdateOrderStatusAsync(Guid.Parse(selectedOrder.Id), selectedNewStatus);
-        showStatusModal = false;
-        selectedOrder = null;
-        if (ok)
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="grid grid-cols-3 gap-3 text-sm">
+                    <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                        <div class="text-gray-500">Tổng đơn</div>
+                        <div class="mt-1 text-lg font-bold text-gray-900">@orders.Count</div>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                        <div class="text-gray-500">Chờ xác nhận</div>
+                        <div class="mt-1 text-lg font-bold text-amber-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "pending")</div>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                        <div class="text-gray-500">Đã hoàn tất</div>
+                        <div class="mt-1 text-lg font-bold text-green-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "completed")</div>
+                    </div>
+                </div>
+
+                <button class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
+                        @onclick="LogoutAsync">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                    </svg>
+                    Đăng xuất
+                </button>
+            </div>
+        </div>
+
+        @if (!orders.Any())
         {
-            // refresh list
-            await OnInitializedAsync();
+            <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
+                    </svg>
+                </div>
+                <h2 class="mt-4 text-xl font-semibold text-gray-900">Chưa có đơn hàng nào</h2>
+                <p class="mt-2 text-sm text-gray-500">Hãy mua sắm để tạo đơn hàng đầu tiên.</p>
+                <button class="mt-5 rounded-lg border border-gray-300 px-5 py-2.5 font-semibold text-gray-700 hover:bg-gray-50"
+                        @onclick="GoShopping">
+                    Mua sắm ngay
+                </button>
+            </div>
         }
         else
         {
-            // TODO: show error toast
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                            <tr>
+                                <th class="px-5 py-4 font-semibold">Đơn hàng</th>
+                                <th class="px-5 py-4 font-semibold">Ngày đặt</th>
+                                <th class="px-5 py-4 font-semibold">Địa chỉ</th>
+                                <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
+                                <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
+                                <th class="px-5 py-4 text-center font-semibold">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach (var order in orders)
+                            {
+                                <tr class="hover:bg-gray-50/70">
+                                    <td class="px-5 py-4">
+                                        <div class="font-semibold text-gray-900">@order.MaDH</div>
+                                        <div class="mt-1 text-xs text-gray-500">@order.HoTen • @order.SoDienThoai</div>
+                                        <div class="mt-2 text-xs text-gray-500">@GetItemSummary(order)</div>
+                                    </td>
+                                    <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="px-5 py-4 text-gray-600">@order.DiaChiGiaoHang</td>
+                                    <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
+                                    <td class="px-5 py-4 text-center">
+                                        <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)">
+                                            @GetStatusText(order.TrangThaiDH)
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 text-center">
+                                        <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                @onclick="() => ViewDetail(order.MaDH)">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12H9m12 0c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                            </svg>
+                                            Xem chi tiết
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         }
     }
+
+</div>
+
+@code {
+    private List<DonHangDto> orders = new();
+    private bool isLoading = true;
+    private bool isAuthenticated;
+    private Guid currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load paged orders for staff (calls admin endpoint). Falls back to user orders if not staff.
+        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+        var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        isAuthenticated = !string.IsNullOrWhiteSpace(token) && Guid.TryParse(userIdText, out currentUserId);
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/account/signin?returnUrl=/account/orders");
+            isLoading = false;
+            return;
+        }
+
         try
         {
-            var paged = await orderService.GetAllPagedAsync(CurrentPage, 10);
-            if (paged != null)
-            {
-                orders = paged.Items.Select(d => new OrderModel
-                {
-                    Id = d.MaDH.ToString(),
-                    CustomerName = d.MaTK.ToString(),
-                    PhoneNumber = "N/A",
-                    OrderDate = d.NgayDat,
-                    TotalAmount = d.TongTien,
-                    Status = MapStatus(d.TrangThaiDH)
-                }).ToList();
-
-                TotalPages = (int)Math.Ceiling(paged.TotalCount / (double)paged.PageSize);
-                return;
-            }
-
-            // Fallback: try to load orders by user if identity available in local storage.
-            // Since login is not implemented yet, we attempt to read buyer_id from localStorage via JSInterop.
-            try
-            {
-                var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
-                if (!string.IsNullOrEmpty(buyerId) && Guid.TryParse(buyerId, out var userId))
-                {
-                    var ordersFromApi = await orderService.GetOrdersByUserIdAsync(userId);
-                    orders = ordersFromApi.Select(d => new OrderModel
-                    {
-                        Id = d.MaDH.ToString(),
-                        CustomerName = d.MaTK.ToString(),
-                        PhoneNumber = "N/A",
-                        OrderDate = d.NgayDat,
-                        TotalAmount = d.TongTien,
-                        Status = MapStatus(d.TrangThaiDH)
-                    }).ToList();
-                    return;
-                }
-            }
-            catch { }
-
-            orders = new List<OrderModel>();
+            var result = await orderService.GetOrdersByUserIdAsync(currentUserId);
+            orders = result.OrderByDescending(x => x.NgayDat).ToList();
         }
         catch
         {
-            orders = new List<OrderModel>();
+            orders = new List<DonHangDto>();
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private OrderStatus MapStatus(string status)
+    private void ViewDetail(Guid maDH)
     {
-        return status?.ToLower() switch
+        Navigation.NavigateTo($"/account/orders/{maDH}");
+    }
+
+    private void GoToSignIn()
+    {
+        Navigation.NavigateTo("/account/signin?returnUrl=/account/orders");
+    }
+
+    private void GoShopping()
+    {
+        Navigation.NavigateTo("/products");
+    }
+
+    private async Task LogoutAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        Navigation.NavigateTo("/account/signin");
+    }
+
+    private static string GetItemSummary(DonHangDto order)
+    {
+        if (order.ChiTietDonHangs == null || order.ChiTietDonHangs.Count == 0)
         {
-            "pending" => OrderStatus.Pending,
-            "processing" => OrderStatus.Processing,
-            "shipping" => OrderStatus.Shipping,
-            "completed" => OrderStatus.Completed,
-            "cancelled" => OrderStatus.Cancelled,
-            _ => OrderStatus.Pending
+            return "Chưa có sản phẩm";
+        }
+
+        var first = order.ChiTietDonHangs[0].TenSP_LuuTru;
+        var moreCount = order.ChiTietDonHangs.Count - 1;
+        return moreCount > 0 ? $"{first} và {moreCount} sản phẩm khác" : first;
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return status?.Trim().ToLowerInvariant() switch
+        {
+            "choxacnhan" => "pending",
+            "dangxuly" => "processing",
+            "danggiao" => "shipping",
+            "hoantat" => "completed",
+            "dahuy" => "cancelled",
+            "pending" => "pending",
+            "processing" => "processing",
+            "shipping" => "shipping",
+            "completed" => "completed",
+            "cancelled" => "cancelled",
+            _ => "pending"
         };
     }
 
-    private string GetStatusColor(OrderStatus status) => status switch
+    private static string GetStatusText(string status)
     {
-        OrderStatus.Pending => "bg-yellow-50 text-yellow-700",
-        OrderStatus.Processing => "bg-blue-50 text-blue-700",
-        OrderStatus.Shipping => "bg-purple-50 text-purple-700",
-        OrderStatus.Completed => "bg-green-50 text-green-700",
-        OrderStatus.Cancelled => "bg-red-50 text-red-700",
-        _ => "bg-gray-50 text-gray-700"
-    };
-
-    private string GetStatusBorderColor(OrderStatus status) => status switch
-    {
-        OrderStatus.Pending => "border-yellow-200",
-        OrderStatus.Processing => "border-blue-200",
-        OrderStatus.Shipping => "border-purple-200",
-        OrderStatus.Completed => "border-green-200",
-        OrderStatus.Cancelled => "border-red-200",
-        _ => "border-gray-200"
-    };
-
-    private string GetStatusText(OrderStatus status) => status switch
-    {
-        OrderStatus.Pending => "Chờ xác nhận",
-        OrderStatus.Processing => "Đang xử lý",
-        OrderStatus.Shipping => "Đang giao",
-        OrderStatus.Completed => "Hoàn tất",
-        OrderStatus.Cancelled => "Đã hủy",
-        _ => "Không rõ"
-    };
-
-    public class OrderModel
-    {
-        public string Id { get; set; } = "";
-        public string CustomerName { get; set; } = "";
-        public string PhoneNumber { get; set; } = "";
-        public DateTime OrderDate { get; set; }
-        public decimal TotalAmount { get; set; }
-        public OrderStatus Status { get; set; }
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "Chờ xác nhận",
+            "processing" => "Đang xử lý",
+            "shipping" => "Đang giao",
+            "completed" => "Hoàn tất",
+            "cancelled" => "Đã hủy",
+            _ => "Không rõ"
+        };
     }
 
-    public enum OrderStatus
+    private static string GetStatusClass(string status)
     {
-        Pending,
-        Processing,
-        Shipping,
-        Completed,
-        Cancelled
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+            "processing" => "border-blue-200 bg-blue-50 text-blue-700",
+            "shipping" => "border-purple-200 bg-purple-50 text-purple-700",
+            "completed" => "border-green-200 bg-green-50 text-green-700",
+            "cancelled" => "border-red-200 bg-red-50 text-red-700",
+            _ => "border-gray-200 bg-gray-50 text-gray-700"
+        };
     }
 }
 

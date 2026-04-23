@@ -23,5 +23,5 @@
     [Parameter] public bool ShowActions { get; set; } = true;
     [Parameter] public string GridClass { get; set; } = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
 
-    public record ProductDto(int Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors);
+    public record ProductDto(int Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors, string Category = "");
 }
