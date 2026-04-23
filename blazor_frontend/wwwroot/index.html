@@ -35,7 +35,14 @@
         </div>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="js/vietnam-provinces.umd.js"></script>
     <script>
+        window.vietnamProvincesData = {
+            getProvinces: () => (window.vietnamProvinces?.getProvinces?.() ?? []),
+            getDistricts: (provinceCode) => (window.vietnamProvinces?.getDistricts?.(provinceCode) ?? []),
+            getWards: (districtCode) => (window.vietnamProvinces?.getWards?.(districtCode) ?? [])
+        };
+
         window.scrollToBottomById = (elementId) => {
             const element = document.getElementById(elementId);
             if (element) {

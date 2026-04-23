@@ -1,0 +1,347 @@
+@page "/admin/orders"
+@using System.Linq
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IOrderService orderService
+@inject blazor_frontend.Services.IUserService userService
+@inject blazor_frontend.Services.ICatalogService catalogService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Quản lý đơn hàng</PageTitle>
+
+<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+    @if (!isAuthorized)
+    {
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">Bạn không có quyền truy cập trang này.</div>
+    }
+    else if (isLoading)
+    {
+        <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">Đang tải đơn hàng...</div>
+    }
+    else
+    {
+        <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Quản lý Đơn hàng</h2>
+                <p class="text-sm text-gray-500 mt-1">Đơn hàng lấy từ Ordering Service.</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-sm">
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div class="text-gray-500">Tổng đơn</div>
+                    <div class="mt-1 text-lg font-bold text-gray-900">@orders.Count</div>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div class="text-gray-500">Chờ xác nhận</div>
+                    <div class="mt-1 text-lg font-bold text-amber-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "pending")</div>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div class="text-gray-500">Hoàn tất</div>
+                    <div class="mt-1 text-lg font-bold text-green-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "completed")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <input class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+                   placeholder="Tìm theo tên khách hàng, SĐT, email"
+                   @bind="searchText" />
+        </div>
+
+        @if (!FilteredCustomerGroups.Any())
+        {
+            <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">Không có khách hàng phù hợp.</div>
+        }
+        else
+        {
+            <div class="space-y-4">
+                @foreach (var group in FilteredCustomerGroups)
+                {
+                    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                        <div class="border-b border-gray-100 bg-gray-50 px-5 py-4">
+                            <div class="font-semibold text-gray-900">@group.CustomerName</div>
+                            <div class="mt-1 text-xs text-gray-600">@group.Phone • @group.Email • @group.Orders.Count đơn</div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                                    <tr>
+                                        <th class="px-5 py-4 font-semibold">Ảnh</th>
+                                        <th class="px-5 py-4 font-semibold">Tên món</th>
+                                        <th class="px-5 py-4 font-semibold">Người đặt</th>
+                                        <th class="px-5 py-4 font-semibold">Ghi chú</th>
+                                        <th class="px-5 py-4 text-center font-semibold">Số lượng</th>
+                                        <th class="px-5 py-4 font-semibold">Mã giảm giá</th>
+                                        <th class="px-5 py-4 font-semibold">Ngày đặt</th>
+                                        <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
+                                        <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    @foreach (var order in group.Orders)
+                                    {
+                                        <tr class="hover:bg-gray-50/70">
+                                            <td class="px-5 py-4">
+                                                <img src="@GetOrderImage(order)" alt="@order.HoTen" class="h-12 w-12 rounded object-cover border border-gray-200" onerror="this.src='product1.jpg';" />
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                <div class="font-semibold text-gray-900">@GetItemNames(order)</div>
+                                            </td>
+                                            <td class="px-5 py-4 text-gray-700">
+                                                <div class="font-semibold">@order.HoTen</div>
+                                                <div class="text-xs text-gray-500">@order.SoDienThoai</div>
+                                            </td>
+                                            <td class="px-5 py-4 text-gray-600">-</td>
+                                            <td class="px-5 py-4 text-center text-gray-700">@GetTotalQuantity(order)</td>
+                                            <td class="px-5 py-4 text-gray-700">@GetDiscountCode(order)</td>
+                                            <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
+                                            <td class="px-5 py-4 text-center">
+                                                <select class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)"
+                                                        value="@NormalizeStatus(order.TrangThaiDH)"
+                                                        @onchange="async e => await OnStatusChangedAsync(order, e.Value?.ToString())">
+                                                    @foreach (var status in AllowedStatuses)
+                                                    {
+                                                        <option value="@status">@GetStatusText(status)</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<DonHangDto> orders = new();
+    private bool isLoading = true;
+    private bool isAuthorized;
+    private string searchText = string.Empty;
+    private Dictionary<Guid, string> emailByUserId = new();
+    private Dictionary<Guid, string> imageByOrderId = new();
+
+    private static readonly string[] AllowedStatuses = ["pending", "processing", "shipping", "completed", "cancelled"];
+
+    private IEnumerable<CustomerOrderGroup> CustomerGroups => orders
+        .GroupBy(x => x.MaTK)
+        .Select(g => new CustomerOrderGroup
+        {
+            CustomerId = g.Key,
+            CustomerName = g.First().HoTen,
+            Phone = g.First().SoDienThoai,
+            Email = emailByUserId.TryGetValue(g.Key, out var email) ? email : string.Empty,
+            Orders = g.OrderByDescending(x => x.NgayDat).ToList()
+        })
+        .OrderByDescending(g => g.Orders.FirstOrDefault()?.NgayDat ?? DateTime.MinValue);
+
+    private IEnumerable<CustomerOrderGroup> FilteredCustomerGroups => string.IsNullOrWhiteSpace(searchText)
+        ? CustomerGroups
+        : CustomerGroups.Where(g =>
+            (g.CustomerName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (g.Phone?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (g.Email?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
+        isAuthorized = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "Staff", StringComparison.OrdinalIgnoreCase);
+
+        if (!isAuthorized)
+        {
+            Navigation.NavigateTo("/account/signin?returnUrl=/admin/orders");
+            isLoading = false;
+            return;
+        }
+
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        try
+        {
+            var paged = await orderService.GetAllPagedAsync(1, 1000);
+            orders = (paged?.Items ?? Enumerable.Empty<DonHangDto>())
+                .OrderByDescending(x => x.NgayDat)
+                .ToList();
+
+            await LoadUserEmailsAsync(orders.Select(x => x.MaTK));
+            await LoadOrderImagesAsync(orders);
+        }
+        catch
+        {
+            orders = new List<DonHangDto>();
+            emailByUserId = new Dictionary<Guid, string>();
+            imageByOrderId = new Dictionary<Guid, string>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUserEmailsAsync(IEnumerable<Guid> userIds)
+    {
+        var ids = userIds.Distinct().ToList();
+        var tasks = ids.Select(async id =>
+        {
+            var user = await userService.GetUserByIdAsync(id);
+            return new { id, email = user?.Email ?? string.Empty };
+        });
+
+        var results = await Task.WhenAll(tasks);
+        emailByUserId = results.ToDictionary(x => x.id, x => x.email);
+    }
+
+    private async Task LoadOrderImagesAsync(IEnumerable<DonHangDto> source)
+    {
+        try
+        {
+            var firstDetails = source
+                .Select(x => new { x.MaDH, Detail = x.ChiTietDonHangs?.FirstOrDefault() })
+                .Where(x => x.Detail != null)
+                .ToList();
+
+            var uniqueCtspIds = firstDetails
+                .Select(x => x.Detail!.MaCTSP)
+                .Distinct()
+                .ToList();
+
+            var ctspImageTasks = uniqueCtspIds.Select(async id =>
+            {
+                try
+                {
+                    var ctsp = await catalogService.GetProductByIdAsync(id);
+                    return new { id, image = string.IsNullOrWhiteSpace(ctsp?.Anh) ? "product1.jpg" : ctsp!.Anh! };
+                }
+                catch
+                {
+                    return new { id, image = "product1.jpg" };
+                }
+            });
+
+            var ctspImages = (await Task.WhenAll(ctspImageTasks)).ToDictionary(x => x.id, x => x.image);
+
+            imageByOrderId = firstDetails.ToDictionary(
+                x => x.MaDH,
+                x => ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg");
+        }
+        catch
+        {
+            imageByOrderId = new Dictionary<Guid, string>();
+        }
+    }
+
+    private string GetOrderImage(DonHangDto order)
+        => imageByOrderId.TryGetValue(order.MaDH, out var image) ? image : "product1.jpg";
+
+    private static string GetItemNames(DonHangDto order)
+    {
+        if (order.ChiTietDonHangs == null || order.ChiTietDonHangs.Count == 0)
+        {
+            return "Chưa có sản phẩm";
+        }
+
+        var names = order.ChiTietDonHangs
+            .Select(x => x.TenSP_LuuTru)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .ToList();
+
+        if (names.Count <= 2)
+        {
+            return string.Join(", ", names);
+        }
+
+        return $"{names[0]}, {names[1]} +{names.Count - 2}";
+    }
+
+    private static int GetTotalQuantity(DonHangDto order)
+        => order.ChiTietDonHangs?.Sum(x => x.SoLuong) ?? 0;
+
+    private static string GetDiscountCode(DonHangDto order)
+        => order.MaGG.HasValue ? order.MaGG.Value.ToString()[..8].ToUpperInvariant() : "Không có";
+
+    private async Task OnStatusChangedAsync(DonHangDto order, string? selected)
+    {
+        if (string.IsNullOrWhiteSpace(selected)) return;
+
+        var payload = NormalizeStatus(selected) switch
+        {
+            "pending" => "ChoXacNhan",
+            "processing" => "DangXuLy",
+            "shipping" => "DangGiao",
+            "completed" => "HoanTat",
+            "cancelled" => "DaHuy",
+            _ => "ChoXacNhan"
+        };
+
+        var ok = await orderService.UpdateOrderStatusAsync(order.MaDH, payload);
+        if (ok)
+        {
+            order.TrangThaiDH = payload;
+            StateHasChanged();
+        }
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return status?.Trim().ToLowerInvariant() switch
+        {
+            "choxacnhan" => "pending",
+            "dangxuly" => "processing",
+            "danggiao" => "shipping",
+            "hoantat" => "completed",
+            "dahuy" => "cancelled",
+            "pending" => "pending",
+            "processing" => "processing",
+            "shipping" => "shipping",
+            "completed" => "completed",
+            "cancelled" => "cancelled",
+            _ => "pending"
+        };
+    }
+
+    private static string GetStatusText(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "Chờ xác nhận",
+            "processing" => "Đang xử lý",
+            "shipping" => "Đang giao",
+            "completed" => "Hoàn tất",
+            "cancelled" => "Đã hủy",
+            _ => "Không rõ"
+        };
+    }
+
+    private static string GetStatusClass(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "border-amber-200 bg-amber-50 text-amber-700",
+            "processing" => "border-blue-200 bg-blue-50 text-blue-700",
+            "shipping" => "border-purple-200 bg-purple-50 text-purple-700",
+            "completed" => "border-green-200 bg-green-50 text-green-700",
+            "cancelled" => "border-red-200 bg-red-50 text-red-700",
+            _ => "border-gray-200 bg-gray-50 text-gray-700"
+        };
+    }
+
+    private sealed class CustomerOrderGroup
+    {
+        public Guid CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<DonHangDto> Orders { get; set; } = new();
+    }
+}

@@ -1,9 +1,30 @@
 @page "/admin"
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role");
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            NavigationManager.NavigateTo("/account/signin?returnUrl=/admin", replace: true);
+            return;
+        }
+
+        if (!string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("/account/signin?returnUrl=/admin", replace: true);
+            return;
+        }
+
         NavigationManager.NavigateTo("/admin/dashboard", replace: true);
     }
 }

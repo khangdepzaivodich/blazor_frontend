@@ -1,9 +1,20 @@
 ﻿@page "/admin/dashboard"
 @using ApexCharts
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IOrderService OrderService
+@inject blazor_frontend.Services.IProductService ProductService
+@inject blazor_frontend.Services.IUserService UserService
 <PageTitle>Thống kê</PageTitle>
 
 <div class="bg-white rounded-lg shadow-md p-6">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">Thống kê Tổng quan</h2>
+
+    @if (isLoading)
+    {
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center text-gray-500">Đang tải dữ liệu dashboard...</div>
+    }
+    else
+    {
 
     <!-- Các thẻ thống kê (Cards) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -18,7 +29,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-500">Tổng doanh thu</p>
-                <p class="text-lg font-bold text-gray-700">125,000,000 đ</p>
+                <p class="text-lg font-bold text-gray-700">@totalRevenue.ToString("N0") đ</p>
             </div>
         </div>
 
@@ -33,7 +44,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-500">Sản phẩm bán ra</p>
-                <p class="text-lg font-bold text-gray-700">1,240</p>
+                <p class="text-lg font-bold text-gray-700">@totalSoldProducts.ToString("N0")</p>
             </div>
         </div>
 
@@ -48,7 +59,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-500">Người dùng mới</p>
-                <p class="text-lg font-bold text-gray-700">342</p>
+                <p class="text-lg font-bold text-gray-700">@totalUsers.ToString("N0")</p>
             </div>
         </div>
 
@@ -63,7 +74,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-500">Tỷ lệ chốt đơn</p>
-                <p class="text-lg font-bold text-gray-700">68%</p>
+                <p class="text-lg font-bold text-gray-700">@conversionRate.ToString("N0")%</p>
             </div>
         </div>
     </div>
@@ -106,6 +117,7 @@
         </div>
 
     </div>
+    }
 </div>
 
 @code {
@@ -115,25 +127,95 @@
         public int Value { get; set; }
     }
 
-    private List<ChartData> revenueData = new()
-    {
-        new ChartData { Category = "T2", Value = 40 },
-        new ChartData { Category = "T3", Value = 60 },
-        new ChartData { Category = "T4", Value = 80 },
-        new ChartData { Category = "T5", Value = 45 },
-        new ChartData { Category = "T6", Value = 70 },
-        new ChartData { Category = "T7", Value = 95 },
-        new ChartData { Category = "CN", Value = 35 }
-    };
+    private bool isLoading = true;
+    private decimal totalRevenue;
+    private int totalSoldProducts;
+    private int totalUsers;
+    private decimal conversionRate;
 
-    private List<ChartData> productData = new()
+    private List<ChartData> revenueData = new();
+    private List<ChartData> productData = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        new ChartData { Category = "T2", Value = 120 },
-        new ChartData { Category = "T3", Value = 150 },
-        new ChartData { Category = "T4", Value = 230 },
-        new ChartData { Category = "T5", Value = 140 },
-        new ChartData { Category = "T6", Value = 210 },
-        new ChartData { Category = "T7", Value = 350 },
-        new ChartData { Category = "CN", Value = 160 }
-    };
+        try
+        {
+            var pagedOrders = await OrderService.GetAllPagedAsync(1, 5000);
+            var orders = (pagedOrders?.Items ?? Enumerable.Empty<DonHangDto>()).ToList();
+            var completedOrders = orders
+                .Where(o => NormalizeStatus(o.TrangThaiDH) == "completed")
+                .ToList();
+
+            var products = (await ProductService.GetAllAsync()).ToList();
+            var users = await UserService.GetAllUsersAsync(1, 1);
+
+            totalRevenue = completedOrders.Sum(x => x.TongTien);
+            totalSoldProducts = orders.Sum(x => x.ChiTietDonHangs?.Sum(i => i.SoLuong) ?? 0);
+            totalUsers = users?.Total ?? 0;
+
+            var completedCount = orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "completed");
+            conversionRate = orders.Count == 0 ? 0 : (decimal)completedCount * 100m / orders.Count;
+
+            var last7Days = Enumerable.Range(0, 7)
+                .Select(offset => DateTime.Today.AddDays(-6 + offset))
+                .ToList();
+
+            revenueData = last7Days
+                .Select(day => new ChartData
+                {
+                    Category = DayLabel(day),
+                    Value = (int)Math.Round(completedOrders
+                        .Where(o => o.NgayDat.Date == day.Date)
+                        .Sum(o => o.TongTien) / 1_000_000m)
+                })
+                .ToList();
+
+            productData = last7Days
+                .Select(day => new ChartData
+                {
+                    Category = DayLabel(day),
+                    Value = orders
+                        .Where(o => o.NgayDat.Date == day.Date)
+                        .Sum(o => o.ChiTietDonHangs?.Sum(i => i.SoLuong) ?? 0)
+                })
+                .ToList();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string DayLabel(DateTime date)
+    {
+        return date.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "T2",
+            DayOfWeek.Tuesday => "T3",
+            DayOfWeek.Wednesday => "T4",
+            DayOfWeek.Thursday => "T5",
+            DayOfWeek.Friday => "T6",
+            DayOfWeek.Saturday => "T7",
+            DayOfWeek.Sunday => "CN",
+            _ => date.ToString("dd/MM")
+        };
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return status?.Trim().ToLowerInvariant() switch
+        {
+            "choxacnhan" => "pending",
+            "dangxuly" => "processing",
+            "danggiao" => "shipping",
+            "hoantat" => "completed",
+            "dahuy" => "cancelled",
+            "pending" => "pending",
+            "processing" => "processing",
+            "shipping" => "shipping",
+            "completed" => "completed",
+            "cancelled" => "cancelled",
+            _ => "pending"
+        };
+    }
 }
