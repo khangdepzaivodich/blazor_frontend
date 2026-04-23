@@ -1,28 +1,38 @@
-﻿namespace blazor_frontend.Services
+﻿using System;
+
+namespace blazor_frontend.Services
 {
     public class AuthState
     {
         public event Action? AuthStateChanged;
 
-        public string? Token { get; private set; }
-        public Guid? UserId { get; private set; }
-        public string? HoTen { get; private set; }
+        // non-nullable auth properties requested
+        public string Token { get; private set; } = string.Empty;
+        public Guid UserId { get; private set; } = Guid.Empty;
+        public string Email { get; private set; } = string.Empty;
+        public string Role { get; private set; } = string.Empty;
+        public string HoTen { get; private set; } = string.Empty;
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(Token);
 
-        public void SetUser(string token, Guid userId, string hoTen)
+        // Primary setter with full metadata
+        public void SetUser(string token, Guid userId, string email, string role, string hoTen)
         {
-            Token = token;
+            Token = token ?? string.Empty;
             UserId = userId;
-            HoTen = hoTen;
+            Email = email ?? string.Empty;
+            Role = role ?? string.Empty;
+            HoTen = hoTen ?? string.Empty;
             AuthStateChanged?.Invoke();
         }
 
         public void Clear()
         {
-            Token = null;
-            UserId = null;
-            HoTen = null;
+            Token = string.Empty;
+            UserId = Guid.Empty;
+            Email = string.Empty;
+            Role = string.Empty;
+            HoTen = string.Empty;
             AuthStateChanged?.Invoke();
         }
     }
