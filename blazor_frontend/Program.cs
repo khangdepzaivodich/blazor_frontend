@@ -27,4 +27,7 @@ builder.Services.AddScoped<blazor_frontend.Services.ICategoryService, blazor_fro
 builder.Services.AddScoped<blazor_frontend.Services.IProductService, blazor_frontend.Services.ProductService>();
 builder.Services.AddScoped<blazor_frontend.Services.IUserService, blazor_frontend.Services.UserService>();
 
+// NEW: auth state 
+builder.Services.AddScoped<blazor_frontend.Services.AuthState>();
+
 await builder.Build().RunAsync();

@@ -1,12 +1,14 @@
 @using Microsoft.AspNetCore.Components
-@inject IJSRuntime JS
-@inject NavigationManager Nav
 
 @code {
     private bool _mobileOpen;
     private bool _accountOpen;
     private bool _isLoggedIn;
     private bool _authStateLoaded;
+
+    private IEnumerable<LoaiDanhMucDto> _parents = Enumerable.Empty<LoaiDanhMucDto>();
+    private Dictionary<Guid, List<DanhMucDto>> _childrenByParent = new();
+    private bool _loadingCategories;
 
     [Parameter] public int CartCount { get; set; } = 0;
 
@@ -63,6 +65,33 @@
         _mobileOpen = false;
         _accountOpen = false;
     }
+
+    private async Task SignOutAsync()
+    {
+        // clear local storage and auth state
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_token");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
+        AuthState.Clear();
+        CloseAll();
+        Nav.NavigateTo("/", true);
+    }
+
+    private string Initials
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(AuthState.HoTen)) return "U";
+            var parts = (AuthState.HoTen ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthState.AuthStateChanged -= OnAuthChanged;
+    }
 }
 
 <header class="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm">
@@ -104,53 +133,55 @@
                 <div class="pointer-events-none absolute left-0 top-full w-screen opacity-0 transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
                     <div class="border-t border-gray-200 bg-white shadow-2xl">
                         <div class="mx-auto grid max-w-[1200px] grid-cols-5 gap-6 px-6 py-7">
-                            <div>
-                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">All</h3>
-                                <ul class="space-y-2 text-sm text-gray-600">
-                                    <li><a href="/products/new" class="transition hover:text-black">Sản phẩm mới</a></li>
-                                    <li><a href="/products/best-seller" class="transition hover:text-black">Bán chạy</a></li>
-                                    <li><a href="/products/sale" class="font-semibold text-red-500 transition hover:text-red-600">Sale</a></li>
-                                </ul>
-                            </div>
 
-                            <div>
-                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Áo</h3>
-                                <ul class="space-y-2 text-sm text-gray-600">
-                                    <li><a href="/products/ao-thun" class="transition hover:text-black">Thun</a></li>
-                                    <li><a href="/products/ao-polo" class="transition hover:text-black">Polo</a></li>
-                                    <li><a href="/products/ao-hoodie" class="transition hover:text-black">Hoodie</a></li>
-                                </ul>
-                            </div>
+                            @if (_loadingCategories)
+                            {
+                                <!-- simple placeholders while loading -->
+                                @for (int i = 0; i < 4; i++)
+                                {
+                                    <div>
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">...</h3>
+                                        <ul class="space-y-2 text-sm text-gray-600">
+                                            <li class="h-4 bg-gray-100 rounded w-32"></li>
+                                            <li class="h-4 bg-gray-100 rounded w-24"></li>
+                                            <li class="h-4 bg-gray-100 rounded w-20"></li>
+                                        </ul>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                foreach (var parent in _parents)
+                                {
+                                    <div>
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">@parent.TenLDM</h3>
+                                        <ul class="space-y-2 text-sm text-gray-600">
+                                            @{
+                                                var children = _childrenByParent.TryGetValue(parent.MaLDM, out var list) ? list : new List<DanhMucDto>();
+                                            }
+                                            @foreach (var child in children)
+                                            {
+                                                <li>
+                                                    <a href="@($"/products/{child.Slug}")" class="transition hover:text-black">@child.TenDM</a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
 
-                            <div>
-                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Quần</h3>
-                                <ul class="space-y-2 text-sm text-gray-600">
-                                    <li><a href="/products/quan-jean" class="transition hover:text-black">Jean</a></li>
-                                    <li><a href="/products/quan-kaki" class="transition hover:text-black">Kaki</a></li>
-                                    <li><a href="/products/short" class="transition hover:text-black">Short</a></li>
-                                </ul>
-                            </div>
+                                <!-- promo column (keeps last column as visual) -->
+                                <div class="space-y-3">
+                                    <a href="/products/summer" class="group block overflow-hidden rounded-2xl bg-gray-100">
+                                        <img src="hero.png" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Summer collection" />
+                                        <div class="p-3 text-sm font-bold text-gray-900">Summer</div>
+                                    </a>
 
-                            <div>
-                                <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-900">Phụ kiện</h3>
-                                <ul class="space-y-2 text-sm text-gray-600">
-                                    <li><a href="/products/tui" class="transition hover:text-black">Túi</a></li>
-                                    <li><a href="/products/non" class="transition hover:text-black">Nón</a></li>
-                                    <li><a href="/products/kinh" class="transition hover:text-black">Kính</a></li>
-                                </ul>
-                            </div>
-
-                            <div class="space-y-3">
-                                <a href="/products/summer" class="group block overflow-hidden rounded-2xl bg-gray-100">
-                                    <img src="hero.png" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Summer collection" />
-                                    <div class="p-3 text-sm font-bold text-gray-900">Summer</div>
-                                </a>
-
-                                <a href="/products/sport" class="group block overflow-hidden rounded-2xl bg-gray-100">
-                                    <img src="product1.jpg" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Sport collection" />
-                                    <div class="p-3 text-sm font-bold text-gray-900">Sport</div>
-                                </a>
-                            </div>
+                                    <a href="/products/sport" class="group block overflow-hidden rounded-2xl bg-gray-100">
+                                        <img src="product1.jpg" class="h-28 w-full object-cover transition duration-300 group-hover:scale-110" alt="Sport collection" />
+                                        <div class="p-3 text-sm font-bold text-gray-900">Sport</div>
+                                    </a>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -164,7 +195,6 @@
 
         <!-- RIGHT -->
         <div class="flex items-center gap-1 sm:gap-2">
-
             <!-- SEARCH -->
             <div class="hidden items-center rounded-full bg-gray-100 px-3 py-2 transition focus-within:ring-2 focus-within:ring-[#0b3b72]/20 md:flex">
                 <svg class="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -182,29 +212,39 @@
                         class="inline-flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-gray-100 active:scale-95"
                         @onclick="ToggleAccount"
                         aria-label="Account">
-                    <svg class="h-5 w-5 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21a8 8 0 0 0-16 0" />
-                        <circle cx="12" cy="8" r="4" />
-                    </svg>
-                </button>
-
-                <div class="@(_accountOpen ? "block" : "hidden") absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-                    <div class="border-b border-gray-100 px-4 py-3">
-                        <div class="text-sm font-semibold text-gray-900">Tài khoản</div>
-                        <div class="text-xs text-gray-500">Quản lý hồ sơ và đơn hàng</div>
-                    </div>
-                    @if (_isLoggedIn)
+                    @if (AuthState.IsAuthenticated)
                     {
-                        <a href="/account/profile" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Hồ sơ</a>
-                        <a href="/account/orders" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đơn hàng của tôi</a>
-                        <a href="/wishlist" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Yêu thích</a>
-                        <div class="border-t border-gray-100"></div>
-                        <button type="button" class="block w-full px-4 py-3 text-left text-sm font-medium text-red-500 transition hover:bg-red-50" @onclick="LogoutAsync">Đăng xuất</button>
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">@Initials</div>
                     }
                     else
                     {
-                        <a href="/account/signin" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đăng nhập</a>
-                        <a href="/account/signup" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Đăng ký</a>
+                        <svg class="h-5 w-5 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21a8 8 0 0 0-16 0" />
+                            <circle cx="12" cy="8" r="4" />
+                        </svg>
+                    }
+                </button>
+
+                <div class="@(_accountOpen ? "block" : "hidden") absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+                    @if (AuthState.IsAuthenticated)
+                    {
+                        <div class="border-b border-gray-100 px-4 py-3">
+                            <div class="text-sm font-semibold text-gray-900">@AuthState.HoTen</div>
+                            <div class="text-xs text-gray-500">Signed in</div>
+                        </div>
+                        <a href="/account/profile" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Profile</a>
+                        <a href="/orders" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Orders</a>
+                        <div class="border-t border-gray-100"></div>
+                        <button class="w-full text-left px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50" @onclick="SignOutAsync">Sign out</button>
+                    }
+                    else
+                    {
+                        <div class="border-b border-gray-100 px-4 py-3">
+                            <div class="text-sm font-semibold text-gray-900">Guest</div>
+                            <div class="text-xs text-gray-500">Sign in to access your account</div>
+                        </div>
+                        <a href="/account/signin" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Sign in</a>
+                        <a href="/account/signup" class="block px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50" @onclick="CloseAll">Create account</a>
                     }
                 </div>
             </div>

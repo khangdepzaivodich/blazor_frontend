@@ -1,67 +1,54 @@
 ﻿@page "/account/signup"
+@layout blazor_frontend.Layout.AccountLayout
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IAuthService AuthService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject blazor_frontend.Services.AuthState AuthState
 
 <div class="space-y-4">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-900">Create account</h1>
-        <p class="text-sm text-gray-600">
-            Join Serious — manage orders, save favorites, and checkout faster.
-        </p>
-    </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
-            @errorMessage
-        </div>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">@errorMessage</div>
     }
 
-    <EditForm Model="model" OnValidSubmit="HandleValidSubmit" class="space-y-4">
+    <EditForm Model="model" OnValidSubmit="HandleValidSubmit" class="max-w-md mx-auto bg-white rounded-xl shadow-md p-6 space-y-3">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full name</label>
-            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.HoTen" />
-            <ValidationMessage For="@(() => model.HoTen)" />
+            <label class="block text-sm text-gray-600">Full name</label>
+            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.HoTen" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.Email" />
-            <ValidationMessage For="@(() => model.Email)" />
+            <label class="block text-sm text-gray-600">Email</label>
+            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.Email" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.SoDienThoai" />
-            <ValidationMessage For="@(() => model.SoDienThoai)" />
+            <label class="block text-sm text-gray-600">Phone</label>
+            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.SoDienThoai" />
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <InputText class="w-full border rounded px-3 py-2" @bind-Value="model.DiaChi" />
+            <label class="block text-sm text-gray-600">Password</label>
+            <InputText class="w-full border px-3 py-2 rounded" type="password" @bind-Value="model.MatKhau" />
         </div>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <InputText class="w-full border rounded px-3 py-2" type="password" @bind-Value="model.MatKhau" />
-            <ValidationMessage For="@(() => model.MatKhau)" />
-        </div>
-
-        <button class="w-full bg-blue-800 text-white py-2 rounded font-semibold"
-                type="submit"
-                disabled="@isLoading">
+        <button class="w-full bg-blue-800 text-white py-2 rounded" disabled="@isLoading">
             @(isLoading ? "Creating..." : "Create account")
         </button>
+
+        <div class="text-center text-sm text-gray-600">
+            <a href="/account/signin" class="text-blue-700 hover:underline">Already have an account? Sign in</a>
+        </div>
     </EditForm>
 </div>
 
 @code {
     private RegisterRequest model = new();
-
     private string? errorMessage;
     private bool isLoading = false;
 
@@ -76,22 +63,44 @@
 
             if (result == null)
             {
-                errorMessage = "Không thể kết nối đến server. Vui lòng thử lại.";
+                errorMessage = "Unable to contact server. Please try again.";
                 return;
             }
 
-            if (result.Success)
+            if (!result.Success)
             {
-                Nav.NavigateTo("/account/signin");
+                errorMessage = result.Message ?? "Registration failed.";
+                return;
             }
-            else
+
+            // Registration succeeded. Attempt explicit login with the same credentials.
+            var loginReq = new LoginRequest
             {
-                errorMessage = result.Message ?? "Đăng ký thất bại.";
+                Email = model.Email,
+                MatKhau = model.MatKhau
+            };  
+
+            var loginRes = await AuthService.LoginAsync(loginReq);
+
+            if (loginRes != null && !string.IsNullOrEmpty(loginRes.Token))
+            {
+                // persist token/user info (localStorage) and update in-memory state
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", loginRes.Token);
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_user_id", loginRes.UserId.ToString());
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", loginRes.HoTen ?? "");
+
+                AuthState.SetUser(loginRes.Token, loginRes.UserId, loginRes.Email ?? "", loginRes.Role ?? "User", loginRes.HoTen ?? "");
+
+                Nav.NavigateTo("/", true);
+                return;
             }
+
+            // If login didn't succeed, send user to sign-in page
+            Nav.NavigateTo("/account/signin");
         }
         catch (Exception ex)
         {
-            errorMessage = "Đã xảy ra lỗi hệ thống: " + ex.Message;
+            errorMessage = "An error occurred: " + ex.Message;
         }
         finally
         {
