@@ -9,12 +9,12 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 // Add Named HttpClients for Microservices
-builder.Services.AddHttpClient("IdentityAPI", client => client.BaseAddress = new Uri("http://localhost:7093/"));
-builder.Services.AddHttpClient("OrderingAPI", client => client.BaseAddress = new Uri("http://localhost:7076/"));
-builder.Services.AddHttpClient("DiscountAPI", client => client.BaseAddress = new Uri("http://localhost:7002/"));
-builder.Services.AddHttpClient("BasketAPI", client => client.BaseAddress = new Uri("http://localhost:7021/"));
-builder.Services.AddHttpClient("CatalogAPI", client => client.BaseAddress = new Uri("http://localhost:7103/"));
-builder.Services.AddHttpClient("ChatAPI", client => client.BaseAddress = new Uri("http://localhost:7229/"));
+builder.Services.AddHttpClient("IdentityAPI", client => client.BaseAddress = new Uri("https://localhost:7093/"));
+builder.Services.AddHttpClient("OrderingAPI", client => client.BaseAddress = new Uri("https://localhost:7076/"));
+builder.Services.AddHttpClient("DiscountAPI", client => client.BaseAddress = new Uri("https://localhost:7002/"));
+builder.Services.AddHttpClient("BasketAPI", client => client.BaseAddress = new Uri("https://localhost:7021/"));
+builder.Services.AddHttpClient("CatalogAPI", client => client.BaseAddress = new Uri("https://localhost:7103/"));
+builder.Services.AddHttpClient("ChatAPI", client => client.BaseAddress = new Uri("https://localhost:7229/"));
 
 // Register Frontend Services
 builder.Services.AddScoped<blazor_frontend.Services.IAuthService, blazor_frontend.Services.AuthService>();

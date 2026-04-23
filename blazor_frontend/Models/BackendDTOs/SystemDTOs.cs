@@ -205,7 +205,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public Guid MaDM { get; set; }
         public string TenSP { get; set; } = string.Empty;
         public string? MoTa { get; set; }
-        public List<ChiTietSanPhamDTO> ChiTietSanPhams { get; set; } = new();
+        public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
 
     public class SanPhamCreateRequest
