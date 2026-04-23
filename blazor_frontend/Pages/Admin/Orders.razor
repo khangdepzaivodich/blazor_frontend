@@ -211,6 +211,7 @@
                 .ToList();
 
             var uniqueCtspIds = firstDetails
+                .Where(x => string.IsNullOrWhiteSpace(x.Detail!.Anh_LuuTru))
                 .Select(x => x.Detail!.MaCTSP)
                 .Distinct()
                 .ToList();
@@ -232,7 +233,9 @@
 
             imageByOrderId = firstDetails.ToDictionary(
                 x => x.MaDH,
-                x => ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg");
+                x => !string.IsNullOrWhiteSpace(x.Detail!.Anh_LuuTru)
+                    ? x.Detail!.Anh_LuuTru!
+                    : (ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg"));
         }
         catch
         {

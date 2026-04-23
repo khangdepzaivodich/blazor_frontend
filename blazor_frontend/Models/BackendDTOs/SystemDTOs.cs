@@ -107,6 +107,11 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? Anh_LuuTru { get; set; }
     }
 
+    public class ChiTietDonHangAdminDto : ChiTietDonHangDto
+    {
+        public string? Anh_HienThi { get; set; }
+    }
+
     public class CreateDonHangRequest
     {
         public Guid MaTK { get; set; }

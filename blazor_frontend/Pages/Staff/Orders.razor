@@ -409,6 +409,7 @@
                 .ToList();
 
             var uniqueCtspIds = firstDetails
+                .Where(x => string.IsNullOrWhiteSpace(x.Detail!.Anh_LuuTru))
                 .Select(x => x.Detail!.MaCTSP)
                 .Distinct()
                 .ToList();
@@ -430,7 +431,9 @@
 
             imageByOrderId = firstDetails.ToDictionary(
                 x => x.MaDH,
-                x => ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg");
+                x => !string.IsNullOrWhiteSpace(x.Detail!.Anh_LuuTru)
+                    ? x.Detail!.Anh_LuuTru!
+                    : (ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg"));
         }
         catch
         {
@@ -485,15 +488,16 @@
 
     private string GetVariantImage(Guid maCTSP)
     {
-        var order = orders.FirstOrDefault(o => o.ChiTietDonHangs.Any(d => d.MaCTSP == maCTSP));        
-        var detail = order?.ChiTietDonHangs.FirstOrDefault(d => d.MaCTSP == maCTSP);        
+        var detail = orders
+            .SelectMany(o => o.ChiTietDonHangs)
+            .FirstOrDefault(d => d.MaCTSP == maCTSP);
 
-        if (!string.IsNullOrWhiteSpace(detail?.Anh_LuuTru))        
-        {        
-            return detail.Anh_LuuTru!;        
+        if (!string.IsNullOrWhiteSpace(detail?.Anh_LuuTru))
+        {
+            return detail.Anh_LuuTru!;
         }
 
-        return "product1.jpg";        
+        return "product1.jpg";
     }
 
     private void GoToSignIn()
