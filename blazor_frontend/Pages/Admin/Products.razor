@@ -17,10 +17,12 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Quản lý Sản phẩm</h2>
-                <p class="text-sm text-gray-500 mt-1">Tạo, cập nhật và xóa sản phẩm trong Catalog Service.</p>
+                <p class="text-sm text-gray-500 mt-1">CRUD sản phẩm và CRUD biến thể sản phẩm trong Catalog Service.</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-                <input class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Tìm theo tên sản phẩm" @bind="searchText" />
+                <input class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                       placeholder="Tìm theo tên sản phẩm"
+                       @bind="searchText" />
                 <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="New">
                     <i class="ph ph-plus-circle text-xl"></i>
                     Thêm sản phẩm
@@ -43,6 +45,7 @@
                         <th class="p-4 font-semibold border-b border-gray-200">Danh mục</th>
                         <th class="p-4 font-semibold border-b border-gray-200">Mô tả</th>
                         <th class="p-4 font-semibold border-b border-gray-200 text-center">Biến thể</th>
+                        <th class="p-4 font-semibold border-b border-gray-200 text-center">Tồn kho</th>
                         <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
                         <th class="p-4 font-semibold border-b border-gray-200 text-right">Ảnh</th>
                     </tr>
@@ -50,18 +53,19 @@
                 <tbody class="text-gray-700 text-sm">
                     @if (isLoading)
                     {
-                        <tr><td colspan="6" class="p-4">Đang tải...</td></tr>
+                        <tr><td colspan="7" class="p-4">Đang tải...</td></tr>
                     }
                     else if (!FilteredItems.Any())
                     {
-                        <tr><td colspan="6" class="p-4">Chưa có sản phẩm nào</td></tr>
+                        <tr><td colspan="7" class="p-4">Chưa có sản phẩm nào</td></tr>
                     }
                     else
                     {
                         @foreach (var sp in FilteredItems)
                         {
-                            var catName = categories.FirstOrDefault(c => c.MaDM == sp.MaDM)?.TenDM ?? sp.MaDM.ToString();
+                            var catName = GetCategoryName(sp.MaDM);
                             var previewImage = sp.ChiTietSanPhams?.FirstOrDefault()?.Anh ?? "product1.jpg";
+                            var totalStock = sp.ChiTietSanPhams?.Sum(x => x.SoLuong) ?? 0;
                             <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
                                 <td class="p-4 align-top">
                                     <p class="font-bold text-gray-800">@sp.TenSP</p>
@@ -70,7 +74,7 @@
                                 <td class="p-4 align-top">
                                     <div class="flex flex-col gap-1">
                                         <span class="inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">@catName</span>
-                                        <span class="text-xs text-gray-500">@categories.FirstOrDefault(c => c.MaDM == sp.MaDM)?.TenLDM</span>
+                                        <span class="text-xs text-gray-500">@GetLoaiDanhMucName(sp.MaDM)</span>
                                     </div>
                                 </td>
 
@@ -82,12 +86,22 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">@((sp.ChiTietSanPhams?.Count ?? 0)) biến thể</span>
                                 </td>
 
+                                <td class="p-4 text-center align-top">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">@totalStock</span>
+                                </td>
+
                                 <td class="p-4 text-right space-x-2 align-top">
-                                    <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Chỉnh sửa" @onclick="() => Edit(sp)">
-                                        <i class="ph ph-pencil-simple text-xl"></i>
+                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-emerald-600 hover:bg-emerald-50" title="Quản lý biến thể" @onclick="() => OpenVariantManager(sp)">
+                                        <i class="ph ph-tshirt text-lg"></i>
+                                        <span class="text-xs font-medium">Biến thể</span>
                                     </button>
-                                    <button class="p-1.5 text-red-500 hover:bg-red-100 rounded transition-colors" title="Xóa" @onclick="() => Delete(sp.MaSP)">
-                                        <i class="ph ph-trash text-xl"></i>
+                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" @onclick="() => Edit(sp)">
+                                        <i class="ph ph-pencil-simple text-lg"></i>
+                                        <span class="text-xs font-medium">Sửa</span>
+                                    </button>
+                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-red-600 hover:bg-red-50" title="Xóa" @onclick="() => Delete(sp.MaSP)">
+                                        <i class="ph ph-trash text-lg"></i>
+                                        <span class="text-xs font-medium">Xóa</span>
                                     </button>
                                 </td>
 
@@ -140,7 +154,101 @@
 
             <div class="mt-6 flex items-center justify-end gap-3">
                 <button class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @onclick="CloseEditor">Hủy</button>
-                <button class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700" @onclick="Save">Lưu</button>
+                <button class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700" @onclick="SaveProduct">Lưu</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showVariantManager)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" @onclick="CloseVariantManager">
+        <div class="w-full max-w-5xl rounded-2xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+            <div class="mb-6 flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Quản lý biến thể</h3>
+                    <p class="text-sm text-gray-500">@selectedProductName</p>
+                </div>
+                <button class="rounded-full p-2 text-gray-500 hover:bg-gray-100" @onclick="CloseVariantManager">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div>
+                    <div class="mb-3 flex items-center justify-between">
+                        <h4 class="font-semibold text-gray-800">Danh sách biến thể</h4>
+                        <button class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700" @onclick="NewVariant">Thêm biến thể</button>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-100 text-gray-600">
+                                <tr>
+                                    <th class="p-3">Màu</th>
+                                    <th class="p-3">Size</th>
+                                    <th class="p-3 text-right">Giá</th>
+                                    <th class="p-3 text-center">SL</th>
+                                    <th class="p-3 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (variantsLoading)
+                                {
+                                    <tr><td colspan="5" class="p-3">Đang tải...</td></tr>
+                                }
+                                else if (!variants.Any())
+                                {
+                                    <tr><td colspan="5" class="p-3">Chưa có biến thể</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var variant in variants)
+                                    {
+                                        <tr class="border-t">
+                                            <td class="p-3">@variant.Mau</td>
+                                            <td class="p-3">@variant.KichCo</td>
+                                            <td class="p-3 text-right">@variant.Gia.ToString("N0")</td>
+                                            <td class="p-3 text-center">@variant.SoLuong</td>
+                                            <td class="p-3 text-right space-x-2">
+                                                <button class="rounded-md px-2 py-1 text-blue-600 hover:bg-blue-50" @onclick="() => EditVariant(variant)">Sửa</button>
+                                                <button class="rounded-md px-2 py-1 text-red-600 hover:bg-red-50" @onclick="() => DeleteVariant(variant.MaCTSP)">Xóa</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <h4 class="mb-4 font-semibold text-gray-800">@(variantEditingId == Guid.Empty ? "Thêm biến thể" : "Chỉnh sửa biến thể")</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Màu</label>
+                            <input class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="variantEditor.Mau" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Kích cỡ</label>
+                            <input class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="variantEditor.KichCo" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Giá</label>
+                            <input type="number" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="variantEditor.Gia" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Số lượng</label>
+                            <input type="number" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="variantEditor.SoLuong" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Ảnh</label>
+                            <input class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="variantEditor.Anh" />
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center justify-end gap-3">
+                        <button class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @onclick="CancelVariantEdit">Hủy</button>
+                        <button class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700" @onclick="SaveVariant">Lưu biến thể</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -148,17 +256,23 @@
 
 @code {
     private bool isLoading = true;
-    private int CurrentPage { get; set; } = 1;
-    private int TotalPages { get; set; } = 1;
     private List<SanPhamDto> items = new();
     private List<DanhMucDto> categories = new();
-    private bool showEditor = false;
+    private bool showEditor;
     private SanPhamCreateRequest editor = new();
     private Guid editingId = Guid.Empty;
     private bool isAuthorized;
     private string searchText = string.Empty;
     private string? message;
     private bool isError;
+
+    private bool showVariantManager;
+    private bool variantsLoading;
+    private Guid selectedProductId;
+    private string selectedProductName = string.Empty;
+    private List<ChiTietSanPhamDto> variants = new();
+    private Guid variantEditingId = Guid.Empty;
+    private ChiTietSanPhamCreateRequest variantEditor = new();
 
     private IEnumerable<SanPhamDto> FilteredItems
         => string.IsNullOrWhiteSpace(searchText)
@@ -201,6 +315,10 @@
         }
     }
 
+    private string GetCategoryName(Guid maDM) => categories.FirstOrDefault(c => c.MaDM == maDM)?.TenDM ?? maDM.ToString();
+
+    private string GetLoaiDanhMucName(Guid maDM) => categories.FirstOrDefault(c => c.MaDM == maDM)?.TenLDM ?? string.Empty;
+
     private void New()
     {
         editingId = Guid.Empty;
@@ -215,12 +333,9 @@
         showEditor = true;
     }
 
-    private void CloseEditor()
-    {
-        showEditor = false;
-    }
+    private void CloseEditor() => showEditor = false;
 
-    private async Task Save()
+    private async Task SaveProduct()
     {
         if (editor.MaDM == Guid.Empty || string.IsNullOrWhiteSpace(editor.TenSP))
         {
@@ -295,30 +410,141 @@
         }
     }
 
-    private void GoToPage(int page)
+    private async Task OpenVariantManager(SanPhamDto product)
     {
-        if (page >= 1 && page <= TotalPages)
+        selectedProductId = product.MaSP;
+        selectedProductName = product.TenSP;
+        showVariantManager = true;
+        variantEditingId = Guid.Empty;
+        variantEditor = new ChiTietSanPhamCreateRequest { MaSP = selectedProductId };
+        await LoadVariants();
+    }
+
+    private void CloseVariantManager() => showVariantManager = false;
+
+    private async Task LoadVariants()
+    {
+        variantsLoading = true;
+        try
         {
-            CurrentPage = page;
+            variants = (await productService.GetVariantsAsync(selectedProductId)).ToList();
+        }
+        finally
+        {
+            variantsLoading = false;
         }
     }
 
-    private string GetColorClass(string mau)
+    private void NewVariant()
     {
-        return mau.ToLower() switch
+        variantEditingId = Guid.Empty;
+        variantEditor = new ChiTietSanPhamCreateRequest { MaSP = selectedProductId };
+    }
+
+    private void EditVariant(ChiTietSanPhamDto variant)
+    {
+        variantEditingId = variant.MaCTSP;
+        variantEditor = new ChiTietSanPhamCreateRequest
         {
-            "đỏ" => "bg-red-500 text-white",
-            "xanh" => "bg-blue-500 text-white",
-            "xanh dương" => "bg-blue-600 text-white",
-            "xanh lá" => "bg-green-500 text-white",
-            "đen" => "bg-gray-800 text-white",
-            "trắng" => "bg-white text-gray-800 border border-gray-300",
-            "xám" => "bg-gray-500 text-white",
-            "vàng" => "bg-yellow-400 text-gray-800",
-            "hồng" => "bg-pink-400 text-white",
-            "tím" => "bg-purple-500 text-white",
-            "cam" => "bg-orange-500 text-white",
-            _ => "bg-gray-300 text-gray-800"
+            MaSP = selectedProductId,
+            Mau = variant.Mau,
+            KichCo = variant.KichCo,
+            Gia = variant.Gia,
+            SoLuong = variant.SoLuong,
+            Anh = variant.Anh
         };
+    }
+
+    private void CancelVariantEdit()
+    {
+        variantEditingId = Guid.Empty;
+        variantEditor = new ChiTietSanPhamCreateRequest { MaSP = selectedProductId };
+    }
+
+    private async Task SaveVariant()
+    {
+        if (selectedProductId == Guid.Empty || string.IsNullOrWhiteSpace(variantEditor.Mau) || string.IsNullOrWhiteSpace(variantEditor.KichCo))
+        {
+            message = "Vui lòng nhập màu và kích cỡ cho biến thể.";
+            isError = true;
+            return;
+        }
+
+        variantEditor.MaSP = selectedProductId;
+
+        try
+        {
+            if (variantEditingId == Guid.Empty)
+            {
+                var created = await productService.CreateVariantAsync(variantEditor);
+                if (created != null)
+                {
+                    message = "Đã tạo biến thể.";
+                    isError = false;
+                }
+                else
+                {
+                    message = "Tạo biến thể thất bại.";
+                    isError = true;
+                }
+            }
+            else
+            {
+                var ok = await productService.UpdateVariantAsync(variantEditingId, new ChiTietSanPhamUpdateRequest
+                {
+                    Mau = variantEditor.Mau,
+                    KichCo = variantEditor.KichCo,
+                    Gia = variantEditor.Gia,
+                    SoLuong = variantEditor.SoLuong,
+                    Anh = variantEditor.Anh
+                });
+
+                if (ok)
+                {
+                    message = "Đã cập nhật biến thể.";
+                    isError = false;
+                }
+                else
+                {
+                    message = "Cập nhật biến thể thất bại.";
+                    isError = true;
+                }
+            }
+
+            if (!isError)
+            {
+                await LoadVariants();
+                await Load();
+                CancelVariantEdit();
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Lưu biến thể thất bại: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task DeleteVariant(Guid id)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn chắc chắn muốn xóa biến thể này?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var ok = await productService.DeleteVariantAsync(id);
+        if (ok)
+        {
+            message = "Đã xóa biến thể.";
+            isError = false;
+            await LoadVariants();
+            await Load();
+        }
+        else
+        {
+            message = "Xóa biến thể thất bại.";
+            isError = true;
+        }
     }
 }

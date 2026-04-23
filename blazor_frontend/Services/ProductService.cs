@@ -10,6 +10,11 @@ namespace blazor_frontend.Services
         Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request);
         Task<bool> UpdateAsync(Guid id, SanPhamCreateRequest request);
         Task<bool> DeleteAsync(Guid id);
+        Task<IEnumerable<ChiTietSanPhamDto>> GetVariantsAsync(Guid productId);
+        Task<ChiTietSanPhamDto?> GetVariantByIdAsync(Guid id);
+        Task<ChiTietSanPhamDto?> CreateVariantAsync(ChiTietSanPhamCreateRequest request);
+        Task<bool> UpdateVariantAsync(Guid id, ChiTietSanPhamUpdateRequest request);
+        Task<bool> DeleteVariantAsync(Guid id);
     }
 
     public class ProductService : IProductService
@@ -57,6 +62,36 @@ namespace blazor_frontend.Services
         public async Task<bool> DeleteAsync(Guid id)
         {
             var res = await _httpClient.DeleteAsync($"api/sanpham/{id}");
+            return res.IsSuccessStatusCode;
+        }
+
+        public async Task<IEnumerable<ChiTietSanPhamDto>> GetVariantsAsync(Guid productId)
+        {
+            var response = await _httpClient.GetFromJsonAsync<List<ChiTietSanPhamDto>>($"api/sanpham/{productId}/variants");
+            return response ?? new List<ChiTietSanPhamDto>();
+        }
+
+        public async Task<ChiTietSanPhamDto?> GetVariantByIdAsync(Guid id)
+        {
+            return await _httpClient.GetFromJsonAsync<ChiTietSanPhamDto>($"api/sanpham/variants/{id}");
+        }
+
+        public async Task<ChiTietSanPhamDto?> CreateVariantAsync(ChiTietSanPhamCreateRequest request)
+        {
+            var res = await _httpClient.PostAsJsonAsync("api/sanpham/variants", request);
+            if (res.IsSuccessStatusCode) return await res.Content.ReadFromJsonAsync<ChiTietSanPhamDto>();
+            return null;
+        }
+
+        public async Task<bool> UpdateVariantAsync(Guid id, ChiTietSanPhamUpdateRequest request)
+        {
+            var res = await _httpClient.PutAsJsonAsync($"api/sanpham/variants/{id}", request);
+            return res.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteVariantAsync(Guid id)
+        {
+            var res = await _httpClient.DeleteAsync($"api/sanpham/variants/{id}");
             return res.IsSuccessStatusCode;
         }
     }

@@ -44,8 +44,6 @@
 
                 @if (IsStaffOrAdmin)
                 {
-                @if (IsStaffOrAdmin)
-                {
                     <button class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
                             @onclick="LogoutAsync">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +51,6 @@
                         </svg>
                         Đăng xuất
                     </button>
-                }
                 }
             </div>
         </div>
@@ -209,8 +206,99 @@
             }
         }
     }
-
 </div>
+
+@if (showDetailModal && selectedOrder != null)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" @onclick="CloseModal">
+                <div class="absolute inset-0 bg-gray-500 opacity-75 backdrop-blur-sm"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full relative z-50">
+                <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl leading-6 font-bold text-gray-900" id="modal-title">
+                            Chi tiết đơn hàng #@selectedOrder.MaDH.ToString().Substring(0,8)
+                        </h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-500" @onclick="CloseModal">
+                            <span class="sr-only">Đóng</span>
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 max-h-[60vh] overflow-y-auto">
+                    <!-- Customer Info -->
+                    <div class="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Thông tin người nhận</h4>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Họ tên:</span> @selectedOrder.HoTen</p>
+                            <p class="text-sm text-gray-800"><span class="font-medium">SĐT:</span> @selectedOrder.SoDienThoai</p>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Địa chỉ:</span> @selectedOrder.DiaChiGiaoHang</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Thông tin giao dịch</h4>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Ngày đặt:</span> @selectedOrder.NgayDat.ToString("dd/MM/yyyy HH:mm")</p>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-800">Trạng thái:</span>
+                                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold @GetStatusClass(selectedOrder.TrangThaiDH)">
+                                    @GetStatusText(selectedOrder.TrangThaiDH)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products List -->
+                    <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Sản phẩm</h4>
+                    <ul class="divide-y divide-gray-200 border-t border-gray-200">
+                        @if (selectedOrder.ChiTietDonHangs != null)
+                        {
+                            @foreach (var detail in selectedOrder.ChiTietDonHangs)
+                            {
+                                <li class="py-4 flex">
+                                    <div class="flex-shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
+                                        <img src="@GetVariantImage(detail.MaCTSP)" alt="@detail.TenSP_LuuTru" class="w-full h-full object-center object-cover" onerror="this.src='product1.jpg';" />
+                                    </div>
+                                    <div class="ml-4 flex-1 flex flex-col">
+                                        <div>
+                                            <div class="flex justify-between text-base font-medium text-gray-900">
+                                                <h3 class="text-sm">@detail.TenSP_LuuTru</h3>
+                                                <p class="ml-4 text-sm font-bold text-red-600">@detail.Gia_LuuTru.ToString("N0")đ</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 flex items-end justify-between text-sm">
+                                            <p class="text-gray-500">Số lượng: @detail.SoLuong</p>
+                                            <p class="font-medium text-gray-900">Thành tiền: @((detail.Gia_LuuTru * detail.SoLuong).ToString("N0"))đ</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-center sm:items-end rounded-b-xl border-t border-gray-200">
+                    <div class="mb-4 sm:mb-0 text-left">
+                        @if (selectedOrder.MaGG.HasValue)
+                        {
+                            <p class="text-sm text-gray-500">Mã giảm giá áp dụng: <span class="font-semibold text-gray-900">@GetDiscountCode(selectedOrder)</span></p>
+                        }
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">Tổng tiền thanh toán</p>
+                        <p class="text-2xl font-bold text-red-600">@selectedOrder.TongTien.ToString("N0")đ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private List<DonHangDto> orders = new();
@@ -221,6 +309,9 @@
     private string searchText = string.Empty;
     private Dictionary<Guid, string> emailByUserId = new();
     private Dictionary<Guid, string> imageByOrderId = new();
+
+    private bool showDetailModal = false;
+    private DonHangDto? selectedOrder = null;
 
     private bool IsStaffOrAdmin => string.Equals(currentRole, "Staff", StringComparison.OrdinalIgnoreCase)
         || string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase);
@@ -377,9 +468,32 @@
     private static string GetDiscountCode(DonHangDto order)
         => order.MaGG.HasValue ? order.MaGG.Value.ToString()[..8].ToUpperInvariant() : "Không có";
 
-    private void ViewDetail(Guid maDH)
+    private async Task ViewDetail(Guid maDH)
     {
-        Navigation.NavigateTo($"/account/orders/{maDH}");
+        selectedOrder = orders.FirstOrDefault(o => o.MaDH == maDH);
+        if (selectedOrder != null)
+        {
+            showDetailModal = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showDetailModal = false;
+        selectedOrder = null;
+    }
+
+    private string GetVariantImage(Guid maCTSP)
+    {
+        var order = orders.FirstOrDefault(o => o.ChiTietDonHangs.Any(d => d.MaCTSP == maCTSP));        
+        var detail = order?.ChiTietDonHangs.FirstOrDefault(d => d.MaCTSP == maCTSP);        
+
+        if (!string.IsNullOrWhiteSpace(detail?.Anh_LuuTru))        
+        {        
+            return detail.Anh_LuuTru!;        
+        }
+
+        return "product1.jpg";        
     }
 
     private void GoToSignIn()

@@ -24,13 +24,13 @@ namespace blazor_frontend.Services
 
         public async Task<IEnumerable<ChiTietSanPhamDto>> GetProductsAsync(Guid maSP)
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<ChiTietSanPhamDto>>($"api/chitietsanpham/by-sanpham/{maSP}")
+            return await _httpClient.GetFromJsonAsync<IEnumerable<ChiTietSanPhamDto>>($"api/ChiTietSanPham/by-sanpham/{maSP}")
                    ?? new List<ChiTietSanPhamDto>();
         }
 
         public async Task<ChiTietSanPhamDto?> GetProductByIdAsync(Guid id)
         {
-            return await _httpClient.GetFromJsonAsync<ChiTietSanPhamDto>($"api/chitietsanpham/{id}");
+            return await _httpClient.GetFromJsonAsync<ChiTietSanPhamDto>($"api/ChiTietSanPham/{id}");
         }
     }
 }

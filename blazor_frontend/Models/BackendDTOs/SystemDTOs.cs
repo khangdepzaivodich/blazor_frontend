@@ -104,6 +104,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? KichCo_LuuTru { get; set; }
         public decimal Gia_LuuTru { get; set; }
         public int SoLuong { get; set; }
+        public string? Anh_LuuTru { get; set; }
     }
 
     public class CreateDonHangRequest
@@ -124,6 +125,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? KichCo_LuuTru { get; set; }
         public decimal Gia_LuuTru { get; set; }
         public int SoLuong { get; set; }
+        public string? Anh_LuuTru { get; set; }
     }
 
     // DISCOUNT
@@ -204,11 +206,39 @@ namespace blazor_frontend.Models.BackendDTOs
         public List<ChiTietSanPhamDTO> ChiTietSanPhams { get; set; } = new();
     }
 
+    public class SanPhamAdminDto
+    {
+        public Guid MaSP { get; set; }
+        public Guid MaDM { get; set; }
+        public string TenSP { get; set; } = string.Empty;
+        public string? MoTa { get; set; }
+        public List<ChiTietSanPhamDTO> ChiTietSanPhams { get; set; } = new();
+    }
+
     public class SanPhamCreateRequest
     {
         public Guid MaDM { get; set; }
         public string TenSP { get; set; } = string.Empty;
         public string? MoTa { get; set; }
+    }
+
+    public class ChiTietSanPhamCreateRequest
+    {
+        public Guid MaSP { get; set; }
+        public string Mau { get; set; } = string.Empty;
+        public string KichCo { get; set; } = string.Empty;
+        public decimal Gia { get; set; }
+        public int SoLuong { get; set; }
+        public string? Anh { get; set; }
+    }
+
+    public class ChiTietSanPhamUpdateRequest
+    {
+        public string Mau { get; set; } = string.Empty;
+        public string KichCo { get; set; } = string.Empty;
+        public decimal Gia { get; set; }
+        public int SoLuong { get; set; }
+        public string? Anh { get; set; }
     }
 
     // BASKET

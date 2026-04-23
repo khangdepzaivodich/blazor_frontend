@@ -30,6 +30,15 @@
                     </span>
                 </div>
 
+                <div class="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                    <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @onclick="GoBack">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Quay lại danh sách đơn hàng
+                    </button>
+                </div>
+
                 <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm">
                     <div class="rounded-xl bg-gray-50 p-4">
                         <div class="text-gray-500">Khách hàng</div>
@@ -94,8 +103,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
         var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-        if (!Guid.TryParse(userIdText, out _))
+        if (string.IsNullOrWhiteSpace(token) || !Guid.TryParse(userIdText, out _))
         {
             Nav.NavigateTo("/account/signin?returnUrl=/account/orders");
             return;

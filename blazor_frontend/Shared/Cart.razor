@@ -522,7 +522,8 @@
                 MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
                 TenSP_LuuTru = x.ProductName,
                 Gia_LuuTru = x.Price,
-                SoLuong = x.Quantity
+                SoLuong = x.Quantity,
+                Anh_LuuTru = x.ImageUrl
             }).ToList()
         };
 
