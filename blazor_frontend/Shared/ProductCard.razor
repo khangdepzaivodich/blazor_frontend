@@ -56,10 +56,10 @@
     [Parameter] public string BadgeText { get; set; } = "HÀNG MỚI";
     [Parameter] public string[] Colors { get; set; } = new[] { "#000", "#fff", "#f00" };
     [Parameter] public bool ShowActions { get; set; } = true;
-    [Parameter] public int ProductId { get; set; }
+    [Parameter] public string ProductId { get; set; } = string.Empty;
 
-    [Parameter] public EventCallback<int> OnAddToCart { get; set; }
-    [Parameter] public EventCallback<int> OnQuickView { get; set; }
+    [Parameter] public EventCallback<string> OnAddToCart { get; set; }
+    [Parameter] public EventCallback<string> OnQuickView { get; set; }
 
     private Task OnAddToCartClicked() => OnAddToCart.InvokeAsync(ProductId);
     private Task OnQuickViewClicked() => OnQuickView.InvokeAsync(ProductId);
