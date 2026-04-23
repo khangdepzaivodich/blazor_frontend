@@ -4,6 +4,8 @@
 @using System.Linq
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService orderService
+@inject blazor_frontend.Services.IUserService userService
+@inject blazor_frontend.Services.ICatalogService catalogService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
@@ -40,17 +42,32 @@
                     </div>
                 </div>
 
-                <button class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
-                        @onclick="LogoutAsync">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-                    </svg>
-                    Đăng xuất
-                </button>
+                @if (IsStaffOrAdmin)
+                {
+                @if (IsStaffOrAdmin)
+                {
+                    <button class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
+                            @onclick="LogoutAsync">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                        </svg>
+                        Đăng xuất
+                    </button>
+                }
+                }
             </div>
         </div>
 
-        @if (!orders.Any())
+        @if (IsStaffOrAdmin)
+        {
+            <div class="mb-4">
+                <input class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+                       placeholder="Tìm theo tên khách hàng, SĐT, email"
+                       @bind="searchText" />
+            </div>
+        }
+
+        @if (!DisplayOrders.Any() && !FilteredCustomerGroups.Any())
         {
             <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
                 <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-500">
@@ -68,51 +85,128 @@
         }
         else
         {
-            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
-                            <tr>
-                                <th class="px-5 py-4 font-semibold">Đơn hàng</th>
-                                <th class="px-5 py-4 font-semibold">Ngày đặt</th>
-                                <th class="px-5 py-4 font-semibold">Địa chỉ</th>
-                                <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
-                                <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
-                                <th class="px-5 py-4 text-center font-semibold">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @foreach (var order in orders)
-                            {
-                                <tr class="hover:bg-gray-50/70">
-                                    <td class="px-5 py-4">
-                                        <div class="font-semibold text-gray-900">@order.MaDH</div>
-                                        <div class="mt-1 text-xs text-gray-500">@order.HoTen • @order.SoDienThoai</div>
-                                        <div class="mt-2 text-xs text-gray-500">@GetItemSummary(order)</div>
-                                    </td>
-                                    <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td class="px-5 py-4 text-gray-600">@order.DiaChiGiaoHang</td>
-                                    <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
-                                    <td class="px-5 py-4 text-center">
-                                        <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)">
-                                            @GetStatusText(order.TrangThaiDH)
-                                        </span>
-                                    </td>
-                                    <td class="px-5 py-4 text-center">
-                                        <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                                @onclick="() => ViewDetail(order.MaDH)">
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12H9m12 0c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
-                                            </svg>
-                                            Xem chi tiết
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+            @if (IsStaffOrAdmin)
+            {
+                <div class="space-y-4">
+                    @foreach (var group in FilteredCustomerGroups)
+                    {
+                        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                            <div class="border-b border-gray-100 bg-gray-50 px-5 py-4">
+                                <div class="font-semibold text-gray-900">@group.CustomerName</div>
+                                <div class="mt-1 text-xs text-gray-600">@group.Phone • @group.Email • @group.Orders.Count đơn</div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                                        <tr>
+                                            <th class="px-5 py-4 font-semibold">Ảnh</th>
+                                            <th class="px-5 py-4 font-semibold">Tên món</th>
+                                            <th class="px-5 py-4 font-semibold">Người đặt</th>
+                                            <th class="px-5 py-4 font-semibold">Ghi chú</th>
+                                            <th class="px-5 py-4 text-center font-semibold">Số lượng</th>
+                                            <th class="px-5 py-4 font-semibold">Mã giảm giá</th>
+                                            <th class="px-5 py-4 font-semibold">Ngày đặt</th>
+                                            <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
+                                            <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
+                                            <th class="px-5 py-4 text-center font-semibold">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        @foreach (var order in group.Orders)
+                                        {
+                                            <tr class="hover:bg-gray-50/70">
+                                                <td class="px-5 py-4">
+                                                    <img src="@GetOrderImage(order)" alt="@order.HoTen" class="h-12 w-12 rounded object-cover border border-gray-200" onerror="this.src='product1.jpg';" />
+                                                </td>
+                                                <td class="px-5 py-4">
+                                                    <div class="font-semibold text-gray-900">@GetItemNames(order)</div>
+                                                </td>
+                                                <td class="px-5 py-4 text-gray-700">
+                                                    <div class="font-semibold">@order.HoTen</div>
+                                                    <div class="text-xs text-gray-500">@order.SoDienThoai</div>
+                                                </td>
+                                                <td class="px-5 py-4 text-gray-600">-</td>
+                                                <td class="px-5 py-4 text-center text-gray-700">@GetTotalQuantity(order)</td>
+                                                <td class="px-5 py-4 text-gray-700">@GetDiscountCode(order)</td>
+                                                <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
+                                                <td class="px-5 py-4 text-center">
+                                                    <select class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)"
+                                                            value="@NormalizeStatus(order.TrangThaiDH)"
+                                                            @onchange="async e => await OnStatusChangedAsync(order, e.Value?.ToString())">
+                                                        @foreach (var status in GetAllowedStatuses())
+                                                        {
+                                                            <option value="@status">@GetStatusText(status)</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td class="px-5 py-4 text-center">
+                                                    <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                            @onclick="() => ViewDetail(order.MaDH)">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12H9m12 0c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                                        </svg>
+                                                        Xem chi tiết
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
                 </div>
-            </div>
+            }
+            else
+            {
+                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+                                <tr>
+                                    <th class="px-5 py-4 font-semibold">Đơn hàng</th>
+                                    <th class="px-5 py-4 font-semibold">Ngày đặt</th>
+                                    <th class="px-5 py-4 font-semibold">Địa chỉ</th>
+                                    <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
+                                    <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
+                                    <th class="px-5 py-4 text-center font-semibold">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach (var order in DisplayOrders)
+                                {
+                                    <tr class="hover:bg-gray-50/70">
+                                        <td class="px-5 py-4">
+                                            <div class="font-semibold text-gray-900">@order.MaDH</div>
+                                            <div class="mt-1 text-xs text-gray-500">@order.HoTen • @order.SoDienThoai</div>
+                                            <div class="mt-2 text-xs text-gray-500">@GetItemSummary(order)</div>
+                                        </td>
+                                        <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="px-5 py-4 text-gray-600">@order.DiaChiGiaoHang</td>
+                                        <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
+                                        <td class="px-5 py-4 text-center">
+                                            <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)">
+                                                @GetStatusText(order.TrangThaiDH)
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-4 text-center">
+                                            <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                    @onclick="() => ViewDetail(order.MaDH)">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12H9m12 0c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                                </svg>
+                                                Xem chi tiết
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
         }
     }
 
@@ -123,11 +217,43 @@
     private bool isLoading = true;
     private bool isAuthenticated;
     private Guid currentUserId;
+    private string currentRole = string.Empty;
+    private string searchText = string.Empty;
+    private Dictionary<Guid, string> emailByUserId = new();
+    private Dictionary<Guid, string> imageByOrderId = new();
+
+    private bool IsStaffOrAdmin => string.Equals(currentRole, "Staff", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsAdmin => string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase);
+
+    private bool CanUpdateStatus => IsStaffOrAdmin;
+    private IEnumerable<DonHangDto> DisplayOrders => orders;
+
+    private IEnumerable<CustomerOrderGroup> CustomerGroups => orders
+        .GroupBy(x => x.MaTK)
+        .Select(g => new CustomerOrderGroup
+        {
+            CustomerId = g.Key,
+            CustomerName = g.First().HoTen,
+            Phone = g.First().SoDienThoai,
+            Email = emailByUserId.TryGetValue(g.Key, out var email) ? email : string.Empty,
+            Orders = g.OrderByDescending(x => x.NgayDat).ToList()
+        })
+        .OrderByDescending(g => g.Orders.FirstOrDefault()?.NgayDat ?? DateTime.MinValue);
+
+    private IEnumerable<CustomerOrderGroup> FilteredCustomerGroups => string.IsNullOrWhiteSpace(searchText)
+        ? CustomerGroups
+        : CustomerGroups.Where(g =>
+            (g.CustomerName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (g.Phone?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (g.Email?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
 
     protected override async Task OnInitializedAsync()
     {
         var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
         var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        currentRole = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
         isAuthenticated = !string.IsNullOrWhiteSpace(token) && Guid.TryParse(userIdText, out currentUserId);
 
         if (!isAuthenticated)
@@ -139,18 +265,117 @@
 
         try
         {
-            var result = await orderService.GetOrdersByUserIdAsync(currentUserId);
-            orders = result.OrderByDescending(x => x.NgayDat).ToList();
+            if (IsStaffOrAdmin)
+            {
+                var paged = await orderService.GetAllPagedAsync(1, 500);
+                orders = (paged?.Items ?? Enumerable.Empty<DonHangDto>())
+                    .OrderByDescending(x => x.NgayDat)
+                    .ToList();
+
+                await LoadUserEmailsAsync(orders.Select(x => x.MaTK));
+                await LoadOrderImagesAsync(orders);
+            }
+            else
+            {
+                var result = await orderService.GetOrdersByUserIdAsync(currentUserId);
+                orders = result.OrderByDescending(x => x.NgayDat).ToList();
+                emailByUserId = new Dictionary<Guid, string>();
+                await LoadOrderImagesAsync(orders);
+            }
         }
         catch
         {
             orders = new List<DonHangDto>();
+            emailByUserId = new Dictionary<Guid, string>();
+            imageByOrderId = new Dictionary<Guid, string>();
         }
         finally
         {
             isLoading = false;
         }
     }
+
+    private async Task LoadUserEmailsAsync(IEnumerable<Guid> userIds)
+    {
+        var ids = userIds.Distinct().ToList();
+        var tasks = ids.Select(async id =>
+        {
+            var user = await userService.GetUserByIdAsync(id);
+            return new { id, email = user?.Email ?? string.Empty };
+        });
+
+        var results = await Task.WhenAll(tasks);
+        emailByUserId = results.ToDictionary(x => x.id, x => x.email);
+    }
+
+    private async Task LoadOrderImagesAsync(IEnumerable<DonHangDto> source)
+    {
+        try
+        {
+            var firstDetails = source
+                .Select(x => new { x.MaDH, Detail = x.ChiTietDonHangs?.FirstOrDefault() })
+                .Where(x => x.Detail != null)
+                .ToList();
+
+            var uniqueCtspIds = firstDetails
+                .Select(x => x.Detail!.MaCTSP)
+                .Distinct()
+                .ToList();
+
+            var ctspImageTasks = uniqueCtspIds.Select(async id =>
+            {
+                try
+                {
+                    var ctsp = await catalogService.GetProductByIdAsync(id);
+                    return new { id, image = string.IsNullOrWhiteSpace(ctsp?.Anh) ? "product1.jpg" : ctsp!.Anh! };
+                }
+                catch
+                {
+                    return new { id, image = "product1.jpg" };
+                }
+            });
+
+            var ctspImages = (await Task.WhenAll(ctspImageTasks)).ToDictionary(x => x.id, x => x.image);
+
+            imageByOrderId = firstDetails.ToDictionary(
+                x => x.MaDH,
+                x => ctspImages.TryGetValue(x.Detail!.MaCTSP, out var img) ? img : "product1.jpg");
+        }
+        catch
+        {
+            imageByOrderId = new Dictionary<Guid, string>();
+        }
+    }
+
+    private string GetOrderImage(DonHangDto order)
+        => imageByOrderId.TryGetValue(order.MaDH, out var image) ? image : "product1.jpg";
+
+    private static string GetItemNames(DonHangDto order)
+    {
+        if (order.ChiTietDonHangs == null || order.ChiTietDonHangs.Count == 0)
+        {
+            return "Chưa có sản phẩm";
+        }
+
+        var names = order.ChiTietDonHangs
+            .Select(x => x.TenSP_LuuTru)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .ToList();
+
+        if (names.Count <= 2)
+        {
+            return string.Join(", ", names);
+        }
+
+        return $"{names[0]}, {names[1]} +{names.Count - 2}";
+    }
+
+    private static int GetTotalQuantity(DonHangDto order)
+        => order.ChiTietDonHangs?.Sum(x => x.SoLuong) ?? 0;
+
+    private static string GetDiscountCode(DonHangDto order)
+        => order.MaGG.HasValue ? order.MaGG.Value.ToString()[..8].ToUpperInvariant() : "Không có";
 
     private void ViewDetail(Guid maDH)
     {
@@ -206,6 +431,44 @@
         };
     }
 
+    private IEnumerable<string> GetAllowedStatuses()
+    {
+        if (IsAdmin)
+        {
+            return new[] { "pending", "processing", "shipping", "completed", "cancelled" };
+        }
+
+        return new[] { "pending", "processing", "shipping", "completed" };
+    }
+
+    private async Task OnStatusChangedAsync(DonHangDto order, string? selected)
+    {
+        if (!CanUpdateStatus || string.IsNullOrWhiteSpace(selected))
+        {
+            return;
+        }
+
+        var normalized = NormalizeStatus(selected);
+        var payload = normalized switch
+        {
+            "pending" => "ChoXacNhan",
+            "processing" => "DangXuLy",
+            "shipping" => "DangGiao",
+            "completed" => "HoanTat",
+            "cancelled" => "DaHuy",
+            _ => "ChoXacNhan"
+        };
+
+        var ok = await orderService.UpdateOrderStatusAsync(order.MaDH, payload);
+        if (!ok)
+        {
+            return;
+        }
+
+        order.TrangThaiDH = payload;
+        StateHasChanged();
+    }
+
     private static string GetStatusText(string status)
     {
         return NormalizeStatus(status) switch
@@ -230,6 +493,15 @@
             "cancelled" => "border-red-200 bg-red-50 text-red-700",
             _ => "border-gray-200 bg-gray-50 text-gray-700"
         };
+    }
+
+    private sealed class CustomerOrderGroup
+    {
+        public Guid CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<DonHangDto> Orders { get; set; } = new();
     }
 }
 

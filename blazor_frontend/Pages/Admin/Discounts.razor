@@ -1,0 +1,327 @@
+@page "/admin/discounts"
+@using System.Linq
+@using blazor_frontend.Models.BackendDTOs
+@inject blazor_frontend.Services.IDiscountService DiscountService
+@inject blazor_frontend.Services.ICategoryService CategoryService
+@inject blazor_frontend.Services.IProductService ProductService
+
+<PageTitle>Mã giảm giá</PageTitle>
+
+<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Quản lý Mã giảm giá</h2>
+            <p class="text-sm text-gray-500 mt-1">Tạo mã theo TENLDM, TENDM hoặc 1 món cụ thể.</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors" @onclick="ToggleForm">
+            @(showForm ? "Đóng form" : "Tạo mã mới")
+        </button>
+    </div>
+
+    @if (showForm)
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mã code</label>
+                    <input class="w-full rounded border px-3 py-2" @bind="model.MaCode" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Loại giảm giá</label>
+                    <select class="w-full rounded border px-3 py-2" @bind="model.Loai">
+                        <option value="PhanTram">Phần trăm</option>
+                        <option value="Tien">Số tiền cố định</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Giá trị</label>
+                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.SoTien" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Giảm tối đa</label>
+                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.GiaTriGiamToiDa" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
+                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.SoLuong" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hạn sử dụng</label>
+                    <input type="datetime-local" class="w-full rounded border px-3 py-2" value="@expireText" @onchange="OnExpireChanged" />
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Áp dụng cho</label>
+                    <select class="w-full rounded border px-3 py-2" @bind="model.ApDungCho" @bind:after="OnScopeChanged">
+                        <option value="TatCa">Tất cả sản phẩm</option>
+                        <option value="TenLDM">Loại danh mục</option>
+                        <option value="TenDM">Danh mục</option>
+                        <option value="SanPham">Sản phẩm cụ thể</option>
+                    </select>
+                </div>
+
+                @if (model.ApDungCho == "TenLDM")
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">TENLDM</label>
+                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                            <option value="">-- Chọn loại danh mục --</option>
+                            @foreach (var ldm in loaiDanhMucs)
+                            {
+                                <option value="@ldm.MaLDM.ToString()">@ldm.TenLDM</option>
+                            }
+                        </select>
+                    </div>
+                }
+                else if (model.ApDungCho == "TenDM")
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại danh mục</label>
+                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                            <option value="">-- Chọn loại danh mục --</option>
+                            @foreach (var ldm in loaiDanhMucs)
+                            {
+                                <option value="@ldm.MaLDM.ToString()">@ldm.TenLDM</option>
+                            }
+                        </select>
+
+                        @if (!string.IsNullOrWhiteSpace(selectedLoaiDanhMucId))
+                        {
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+                                <select class="w-full rounded border px-3 py-2" @bind="selectedDanhMucId">
+                                    <option value="">-- Chọn danh mục --</option>
+                                    @foreach (var dm in DanhMucsOfSelectedLoaiDanhMuc)
+                                    {
+                                        <option value="@dm.MaDM.ToString()">@dm.TenDM</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (model.ApDungCho == "SanPham")
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại danh mục</label>
+                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                            <option value="">-- Chọn loại danh mục --</option>
+                            @foreach (var ldm in loaiDanhMucs)
+                            {
+                                <option value="@ldm.MaLDM.ToString()">@ldm.TenLDM</option>
+                            }
+                        </select>
+
+                        @if (!string.IsNullOrWhiteSpace(selectedLoaiDanhMucId))
+                        {
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+                                <select class="w-full rounded border px-3 py-2" @bind="selectedDanhMucInProductScopeId" @bind:after="OnDanhMucChanged">
+                                    <option value="">-- Chọn danh mục --</option>
+                                    @foreach (var dm in DanhMucsOfSelectedLoaiDanhMuc)
+                                    {
+                                        <option value="@dm.MaDM.ToString()">@dm.TenDM</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(selectedDanhMucInProductScopeId))
+                        {
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Chọn nhiều sản phẩm trong danh mục</label>
+                                <div class="max-h-64 overflow-y-auto rounded border bg-white p-3 space-y-2">
+                                    @foreach (var sp in SanPhamsOfSelectedDanhMuc)
+                                    {
+                                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" checked="@selectedProductIds.Contains(sp.MaSP.ToString())" @onchange="(ChangeEventArgs e) => ToggleSelectedProduct(sp.MaSP.ToString(), e)" />
+                                            <span>@sp.TenSP</span>
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="pt-4">
+                    <button class="rounded bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700" @onclick="CreateAsync">
+                        Lưu mã giảm giá
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-left">
+            <thead class="bg-gray-100 text-gray-600 text-sm uppercase">
+                <tr>
+                    <th class="p-4">Code</th>
+                    <th class="p-4">Loại</th>
+                    <th class="p-4">Áp dụng cho</th>
+                    <th class="p-4">Giá trị</th>
+                    <th class="p-4">Số lượng</th>
+                    <th class="p-4">Hạn</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in discounts)
+                {
+                    <tr class="border-t">
+                        <td class="p-4 font-semibold">@item.MaCode</td>
+                        <td class="p-4">@item.Loai</td>
+                        <td class="p-4">@DiscountPricingHelper.GetScopeDisplayText(item, loaiDanhMucs, danhMucs, sanPhams)</td>
+                        <td class="p-4">@item.SoTien</td>
+                        <td class="p-4">@item.SoLuong</td>
+                        <td class="p-4">@item.HanSuDung.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<MaGiamGiaDto> discounts = new();
+    private List<LoaiDanhMucDto> loaiDanhMucs = new();
+    private List<DanhMucDto> danhMucs = new();
+    private List<SanPhamDto> sanPhams = new();
+    private bool showForm;
+    private string expireText = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+    private string? selectedLoaiDanhMucId;
+    private string? selectedDanhMucId;
+    private string? selectedSanPhamId;
+    private string? selectedDanhMucInProductScopeId;
+    private HashSet<string> selectedProductIds = new(StringComparer.OrdinalIgnoreCase);
+
+    private CreateMaGiamGiaRequest model = new()
+    {
+        Loai = "PhanTram",
+        SoTien = 10,
+        SoLuong = 1,
+        HanSuDung = DateTime.UtcNow.AddDays(7),
+        ApDungCho = "TatCa"
+    };
+
+    private Dictionary<Guid, string> loaiDanhMucNames = new();
+    private Dictionary<Guid, string> danhMucNames = new();
+    private Dictionary<Guid, string> sanPhamNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            discounts = (await DiscountService.GetDiscountsAsync()).ToList();
+        }
+        catch
+        {
+            discounts = new List<MaGiamGiaDto>();
+        }
+
+        loaiDanhMucs = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
+        danhMucs = (await CategoryService.GetAllAsync()).ToList();
+        sanPhams = (await ProductService.GetAllAsync()).ToList();
+
+        loaiDanhMucNames = loaiDanhMucs.ToDictionary(x => x.MaLDM, x => x.TenLDM);
+        danhMucNames = danhMucs.ToDictionary(x => x.MaDM, x => x.TenDM);
+        sanPhamNames = sanPhams.ToDictionary(x => x.MaSP, x => x.TenSP);
+    }
+
+    private void ToggleForm() => showForm = !showForm;
+
+    private void OnScopeChanged()
+    {
+        selectedLoaiDanhMucId = null;
+        selectedDanhMucId = null;
+        selectedSanPhamId = null;
+        selectedDanhMucInProductScopeId = null;
+        selectedProductIds.Clear();
+    }
+
+    private void OnLoaiDanhMucChanged()
+    {
+        selectedDanhMucInProductScopeId = null;
+        selectedProductIds.Clear();
+    }
+
+    private void OnDanhMucChanged()
+    {
+        selectedProductIds.Clear();
+    }
+
+    private void OnExpireChanged(ChangeEventArgs e)
+    {
+        expireText = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (!DateTime.TryParse(expireText, out var parsedExpire))
+        {
+            return;
+        }
+
+        model.HanSuDung = parsedExpire;
+        model.MaLDM = Guid.TryParse(selectedLoaiDanhMucId, out var ldm) ? ldm : null;
+        model.MaDM = Guid.TryParse(selectedDanhMucId, out var dm) ? dm : null;
+        model.MaSP = Guid.TryParse(selectedSanPhamId, out var sp) ? sp : null;
+        model.MaSPs = selectedProductIds.Select(Guid.Parse).ToList();
+
+        if (model.ApDungCho == "TenLDM" && model.MaLDM == null) return;
+        if (model.ApDungCho == "TenDM" && model.MaDM == null) return;
+        if (model.ApDungCho == "SanPham" && model.MaSPs.Count == 0) return;
+
+        var created = await DiscountService.CreateDiscountAsync(model);
+        if (created != null)
+        {
+            await LoadAsync();
+            model = new CreateMaGiamGiaRequest
+            {
+                Loai = "PhanTram",
+                SoTien = 10,
+                SoLuong = 1,
+                HanSuDung = DateTime.UtcNow.AddDays(7),
+                ApDungCho = "TatCa"
+            };
+            selectedLoaiDanhMucId = null;
+            selectedDanhMucId = null;
+            selectedSanPhamId = null;
+            selectedDanhMucInProductScopeId = null;
+            selectedProductIds.Clear();
+            expireText = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+            showForm = false;
+        }
+    }
+
+    private IEnumerable<SanPhamDto> SanPhamsOfSelectedDanhMuc
+        => Guid.TryParse(selectedDanhMucInProductScopeId, out var dmId)
+            ? sanPhams.Where(x => x.MaDM == dmId)
+            : Enumerable.Empty<SanPhamDto>();
+
+    private IEnumerable<DanhMucDto> DanhMucsOfSelectedLoaiDanhMuc
+        => Guid.TryParse(selectedLoaiDanhMucId, out var ldmId)
+            ? danhMucs.Where(x => x.MaLDM == ldmId)
+            : Enumerable.Empty<DanhMucDto>();
+
+    private void ToggleSelectedProduct(string productId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value as bool? ?? bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
+        if (isChecked)
+        {
+            selectedProductIds.Add(productId);
+        }
+        else
+        {
+            selectedProductIds.Remove(productId);
+        }
+    }
+
+}

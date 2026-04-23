@@ -3,6 +3,8 @@
 @using blazor_frontend.Models
 @inject IBasketService BasketService
 @inject IDiscountService DiscountService
+@inject blazor_frontend.Services.IProductService ProductService
+@inject blazor_frontend.Services.ICategoryService CategoryService
 @inject IOrderService OrderService
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -17,9 +19,7 @@
     </div>
 
     <div class="flex flex-col lg:flex-row gap-8">
-        
         <div class="w-full lg:w-3/5 space-y-8">
-            
             <section>
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Thông tin đơn hàng</h2>
                 <div class="space-y-4">
@@ -50,27 +50,38 @@
                     <div>
                         <textarea placeholder="Ghi chú (không bắt buộc)" @bind="GhiChu" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-24"></textarea>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600" value="@SelectedProvinceCode" @onchange="OnProvinceChangedAsync">
                             <option value="">Chọn tỉnh/thành phố</option>
+                            @foreach (var province in Provinces)
+                            {
+                                <option value="@province.Code">@province.Name</option>
+                            }
                         </select>
-                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600" value="@SelectedDistrictCode" @onchange="OnDistrictChangedAsync" disabled="@(!Districts.Any())">
                             <option value="">Chọn Quận/huyện</option>
+                            @foreach (var district in Districts)
+                            {
+                                <option value="@district.Code">@district.Name</option>
+                            }
                         </select>
-                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600">
+                        <select class="w-full border border-gray-300 rounded-md px-4 py-2.5 bg-white focus:outline-none focus:border-blue-500 text-gray-600" value="@SelectedWardCode" @onchange="OnWardChanged" disabled="@(!Wards.Any())">
                             <option value="">Chọn Phường/xã</option>
+                            @foreach (var ward in Wards)
+                            {
+                                <option value="@ward.Code">@ward.Name</option>
+                            }
                         </select>
                     </div>
 
-                    <input type="text" placeholder="Ví dụ: giao hàng giờ hành chính" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <input type="text" placeholder="Ví dụ: số nhà, tên đường" class="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" @bind="StreetAddress" />
                 </div>
             </section>
 
             <section>
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Hình thức thanh toán</h2>
                 <div class="space-y-3">
-                    
                     <div class="border @(PaymentMethod == 1 ? "border-[#0b3b72]" : "border-gray-200") rounded-md overflow-hidden cursor-pointer" @onclick="() => PaymentMethod = 1">
                         <div class="flex items-center gap-3 p-4">
                             <input type="radio" name="payment" checked="@(PaymentMethod == 1)" class="w-4 h-4 text-[#0b3b72] focus:ring-[#0b3b72]" />
@@ -97,14 +108,12 @@
                         <div class="bg-[#a50064] text-white text-xs font-bold px-2 py-1 rounded">MoMo</div>
                         <span class="text-gray-800">Thanh toán MoMo</span>
                     </div>
-
                 </div>
             </section>
         </div>
 
         <div class="w-full lg:w-2/5">
             <div class="lg:sticky lg:top-6 space-y-6">
-                
                 <div class="flex items-center justify-between border-b pb-2">
                     <div class="flex items-center gap-2">
                         <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" /></svg>
@@ -113,10 +122,24 @@
                     <a href="/products" class="text-gray-500 underline text-sm">Sản phẩm</a>
                 </div>
 
-                <div class="bg-[#4669a8] text-white p-3 rounded-md flex items-center justify-between cursor-pointer hover:bg-[#3b598f] transition-colors">
-                    <span class="text-sm font-medium">GIẢM NGAY 20K khi bạn mua thêm 399,000đ nữa!</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                </div>
+                @if (ApplicableCartDiscounts.Any())
+                {
+                    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">
+                        <div class="text-sm font-semibold mb-2">Mã giảm giá áp dụng cho giỏ hàng</div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (var discount in ApplicableCartDiscounts)
+                            {
+                                var isSelectedVoucher = string.Equals(DiscountCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
+                                <div class="flex items-center gap-2 rounded-full px-3 py-1 @(isSelectedVoucher ? "border-2 border-red-600 bg-red-100" : "border border-red-300 bg-white")">
+                                    <span class="text-xs font-semibold text-red-700">@discount.MaCode - @FormatDiscountText(discount)</span>
+                                    <button class="rounded-full @(isSelectedVoucher ? "bg-red-800" : "bg-red-600") px-2 py-1 text-[11px] font-bold text-white hover:bg-red-700" @onclick="() => ApplyVoucherCodeAsync(discount.MaCode)">
+                                        @(isSelectedVoucher ? "Đã áp dụng" : "Áp dụng")
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
 
                 @if (CartModel?.Items?.Any() == true)
                 {
@@ -131,15 +154,21 @@
                                     <div class="font-semibold text-sm text-gray-900 truncate">@item.ProductName</div>
                                     <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
                                         <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
-                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(item.Price)</span>
+                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(GetItemEffectivePrice(item))</span>
                                     </div>
+                                    @if (GetItemBestDiscount(item) != null)
+                                    {
+                                        <div class="mt-1 text-xs text-red-600 font-medium">
+                                            Áp dụng: @GetItemBestDiscount(item)!.MaCode - @FormatDiscountText(GetItemBestDiscount(item)!)
+                                        </div>
+                                    }
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => DecreaseItemAsync(item.ProductId)">-</button>
                                     <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => IncreaseItemAsync(item.ProductId)">+</button>
                                     <button class="h-8 w-8 rounded-full border border-red-200 text-red-600 hover:bg-red-50" @onclick="() => RemoveItemAsync(item.ProductId)">×</button>
                                 </div>
-                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(item.Price * item.Quantity)</div>
+                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(GetItemEffectivePrice(item) * item.Quantity)</div>
                             </div>
                         }
                     </div>
@@ -165,13 +194,62 @@
                 }
 
                 <div>
-                    <h3 class="font-bold text-lg mb-3">Ưu Đãi Dành Cho Bạn</h3>
-                    <div class="flex gap-2">
-                        <input type="text" @bind="DiscountCode" placeholder="Nhập mã giảm giá" class="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#0b3b72]" />
-                        <button class="bg-[#0b3b72] text-white px-6 py-2 rounded-md font-medium hover:bg-blue-900 transition-colors whitespace-nowrap" @onclick="ApplyVoucherAsync">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Ưu Đãi Dành Cho Bạn</h3>
+
+                    <div class="flex gap-3 mb-4">
+                        <input type="text"
+                               @bind="DiscountCode"
+                               placeholder="Nhập mã giảm giá"
+                               class="flex-1 rounded-md border border-gray-300 px-4 py-3 focus:outline-none focus:border-[#0b3b72] focus:ring-1 focus:ring-[#0b3b72]" />
+                        <button class="rounded-md bg-[#0b2b73] px-8 py-3 font-bold text-white hover:bg-[#071d4f] transition-colors whitespace-nowrap"
+                                @onclick="ApplyVoucherAsync">
                             Áp dụng Voucher
                         </button>
                     </div>
+
+                    @if (ApplicableCartDiscounts.Any())
+                    {
+                        <div class="overflow-x-auto pb-2">
+                            <div class="flex gap-4 min-w-max">
+                                @foreach (var discount in ApplicableCartDiscounts)
+                                {
+                                    var isSelectedVoucher = string.Equals(DiscountCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
+                                    var isBestVoucher = BestApplicableCartDiscount?.MaGG == discount.MaGG;
+
+                                    <div class="relative w-[360px] shrink-0 rounded-xl border bg-white p-4 shadow-sm @(isSelectedVoucher ? "border-[#0b2b73] ring-2 ring-[#0b2b73]" : "border-gray-200")">
+                                        @if (isBestVoucher)
+                                        {
+                                            <div class="absolute right-0 top-0 rounded-bl-lg rounded-tr-xl bg-[#ff4d2d] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white">
+                                                Lựa chọn tốt nhất
+                                            </div>
+                                        }
+
+                                        <div class="mb-3 pr-28 text-2xl font-extrabold text-gray-900">
+                                            @discount.MaCode
+                                        </div>
+
+                                        <label class="flex cursor-pointer items-start gap-3">
+                                            <input type="radio"
+                                                   name="cart-voucher"
+                                                   class="mt-1 h-5 w-5 text-[#0b2b73] focus:ring-[#0b2b73]"
+                                                   checked="@isSelectedVoucher"
+                                                   @onchange="() => ApplyVoucherCodeAsync(discount.MaCode)" />
+                                            <div class="space-y-2 text-sm text-gray-700">
+                                                <div>Giảm @FormatDiscountText(discount) đơn từ @(discount.GiaTriGiamToiDa.HasValue ? FormatMoney(discount.GiaTriGiamToiDa.Value) : "không giới hạn")</div>
+                                                <div>HSD : @discount.HanSuDung.ToString("dd/MM/yyyy")</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                            Chưa có mã giảm giá hợp lệ cho giỏ hàng hiện tại.
+                        </div>
+                    }
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(checkoutError))
@@ -224,7 +302,7 @@
         }
         else
         {
-                <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors" @onclick="CheckoutAsync" disabled="@(CartModel?.Items?.Any() != true || IsGuest)">
+            <button class="bg-[#0b3b72] text-white px-10 py-3 rounded-md font-bold text-lg hover:bg-blue-900 transition-colors" @onclick="CheckoutAsync" disabled="@(CartModel?.Items?.Any() != true || IsGuest)">
                 Thanh toán
             </button>
         }
@@ -244,8 +322,20 @@
     private decimal VoucherGiamGia;
     private string? checkoutError;
     private bool showFieldErrors;
+    private List<MaGiamGiaDto> allDiscounts = new();
+    private List<DanhMucDto> allCategories = new();
+    private List<LoaiDanhMucDto> allCategoryGroups = new();
+    private Dictionary<string, SanPhamDto> productById = new();
 
-    private decimal TamTinh => CartModel?.TotalPrice ?? 0;
+    private List<VietnamProvince> Provinces = new();
+    private List<VietnamDistrict> Districts = new();
+    private List<VietnamWard> Wards = new();
+    private string SelectedProvinceCode = string.Empty;
+    private string SelectedDistrictCode = string.Empty;
+    private string SelectedWardCode = string.Empty;
+    private string StreetAddress = string.Empty;
+
+    private decimal TamTinh => CartModel?.Items?.Sum(item => GetItemEffectivePrice(item) * item.Quantity) ?? 0;
     private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
     private bool IsGuest => string.Equals(BuyerId, "guest", StringComparison.OrdinalIgnoreCase);
     private string CheckoutRequirementMessage
@@ -261,7 +351,7 @@
             if (string.IsNullOrWhiteSpace(HoTen)) missing.Add("Họ và tên");
             if (string.IsNullOrWhiteSpace(SoDienThoai)) missing.Add("Số điện thoại");
             else if (!IsPhoneNumberValid(SoDienThoai)) missing.Add("Số điện thoại đúng định dạng");
-            if (string.IsNullOrWhiteSpace(DiaChi)) missing.Add("Địa chỉ");
+            if (string.IsNullOrWhiteSpace(GetFullAddress())) missing.Add("Địa chỉ");
 
             return missing.Count == 0 ? string.Empty : $"Vui lòng nhập: {string.Join(", ", missing)}.";
         }
@@ -293,6 +383,59 @@
         }
 
         CartModel = await BasketService.GetBasketAsync(BuyerId) ?? new BasketDto { UserName = BuyerId };
+        allDiscounts = (await DiscountService.GetDiscountsAsync()).ToList();
+        allCategories = (await CategoryService.GetAllAsync()).ToList();
+        allCategoryGroups = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
+        productById = (await ProductService.GetAllAsync()).ToDictionary(x => x.MaSP.ToString(), x => x);
+        DiscountCode = await JS.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code") ?? string.Empty;
+        await LoadVietnamProvincesAsync();
+
+        if (CartModel?.Items?.Any() == true)
+        {
+            foreach (var item in CartModel.Items)
+            {
+                item.Price = GetItemEffectivePrice(item);
+            }
+
+            await BasketService.UpdateBasketAsync(CartModel);
+        }
+    }
+
+    private async Task LoadVietnamProvincesAsync()
+    {
+        try
+        {
+            Provinces = await JS.InvokeAsync<List<VietnamProvince>>("vietnamProvincesData.getProvinces");
+        }
+        catch
+        {
+            Provinces = new List<VietnamProvince>();
+        }
+    }
+
+    private async Task OnProvinceChangedAsync(ChangeEventArgs e)
+    {
+        SelectedProvinceCode = e.Value?.ToString() ?? string.Empty;
+        SelectedDistrictCode = string.Empty;
+        SelectedWardCode = string.Empty;
+        Districts = string.IsNullOrWhiteSpace(SelectedProvinceCode)
+            ? new List<VietnamDistrict>()
+            : await JS.InvokeAsync<List<VietnamDistrict>>("vietnamProvincesData.getDistricts", SelectedProvinceCode);
+        Wards = new List<VietnamWard>();
+    }
+
+    private async Task OnDistrictChangedAsync(ChangeEventArgs e)
+    {
+        SelectedDistrictCode = e.Value?.ToString() ?? string.Empty;
+        SelectedWardCode = string.Empty;
+        Wards = string.IsNullOrWhiteSpace(SelectedDistrictCode)
+            ? new List<VietnamWard>()
+            : await JS.InvokeAsync<List<VietnamWard>>("vietnamProvincesData.getWards", SelectedDistrictCode);
+    }
+
+    private void OnWardChanged(ChangeEventArgs e)
+    {
+        SelectedWardCode = e.Value?.ToString() ?? string.Empty;
     }
 
     private async Task ApplyVoucherAsync()
@@ -309,11 +452,33 @@
             return;
         }
 
+        if (CartModel?.Items?.Any() != true)
+        {
+            return;
+        }
+
+        if (!IsVoucherApplicableToCart(voucher))
+        {
+            await JS.InvokeVoidAsync("alert", "Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng");
+            return;
+        }
+
         MaGiamGia = voucher.MaGG;
-        VoucherGiamGia = voucher.Loai == "PhanTram"
-            ? Math.Min(TamTinh * voucher.SoTien / 100m, voucher.GiaTriGiamToiDa ?? decimal.MaxValue)
-            : voucher.SoTien;
+        VoucherGiamGia = CalculateCartDiscount(voucher);
     }
+
+    private async Task ApplyVoucherCodeAsync(string code)
+    {
+        DiscountCode = code;
+        await JS.InvokeVoidAsync("localStorage.setItem", "pending_discount_code", code);
+        await ApplyVoucherAsync();
+    }
+
+    private IEnumerable<MaGiamGiaDto> ApplicableCartDiscounts => CartModel?.Items?.Any() == true
+        ? DiscountPricingHelper.GetApplicableDiscountsForCart(CartModel.Items, productById, allCategoryGroups, allCategories, allDiscounts)
+        : Enumerable.Empty<MaGiamGiaDto>();
+
+    private MaGiamGiaDto? BestApplicableCartDiscount => ApplicableCartDiscounts.FirstOrDefault();
 
     private async Task CheckoutAsync()
     {
@@ -325,6 +490,7 @@
             return;
         }
 
+        var fullAddress = GetFullAddress();
         if (IsGuest)
         {
             await JS.InvokeVoidAsync("alert", "Bạn cần đăng nhập để thanh toán");
@@ -332,7 +498,7 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(HoTen) || string.IsNullOrWhiteSpace(SoDienThoai) || string.IsNullOrWhiteSpace(DiaChi))
+        if (string.IsNullOrWhiteSpace(HoTen) || string.IsNullOrWhiteSpace(SoDienThoai) || string.IsNullOrWhiteSpace(fullAddress))
         {
             checkoutError = CheckoutRequirementMessage;
             return;
@@ -350,7 +516,7 @@
             HoTen = HoTen,
             SoDienThoai = SoDienThoai,
             MaGG = MaGiamGia,
-            DiaChiGiaoHang = DiaChi,
+            DiaChiGiaoHang = fullAddress,
             ChiTietDonHangs = CartModel.Items.Select(x => new CreateChiTietDonHangRequest
             {
                 MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
@@ -433,6 +599,100 @@
         return string.IsNullOrWhiteSpace(item.ImageUrl) ? "product1.jpg" : item.ImageUrl;
     }
 
+    private decimal GetItemEffectivePrice(BasketItemDto item)
+    {
+        if (!Guid.TryParse(item.ProductId, out var productId))
+        {
+            return item.Price;
+        }
+
+        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
+        if (product == null)
+        {
+            return item.Price;
+        }
+
+        var discount = DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+        return DiscountPricingHelper.GetFinalPrice(discount, item.Price);
+    }
+
+    private MaGiamGiaDto? GetItemBestDiscount(BasketItemDto item)
+    {
+        if (!Guid.TryParse(item.ProductId, out var productId))
+        {
+            return null;
+        }
+
+        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
+        if (product == null)
+        {
+            return null;
+        }
+
+        return DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+    }
+
+    private decimal CalculateCartDiscount(MaGiamGiaDto discount)
+    {
+        if (CartModel?.Items?.Any() != true)
+        {
+            return 0;
+        }
+
+        return CartModel.Items.Sum(item =>
+        {
+            if (!Guid.TryParse(item.ProductId, out var productId))
+            {
+                return 0m;
+            }
+
+            var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
+            if (product == null)
+            {
+                return 0m;
+            }
+
+            return DiscountPricingHelper.IsApplicable(discount, product, allCategories.FirstOrDefault(c => c.MaDM == product.MaDM)?.MaLDM)
+                ? DiscountPricingHelper.GetDiscountAmount(discount, item.Price) * item.Quantity
+                : 0m;
+        });
+    }
+
+    private bool IsVoucherApplicableToCart(MaGiamGiaDto discount)
+    {
+        if (CartModel?.Items?.Any() != true)
+        {
+            return false;
+        }
+
+        foreach (var item in CartModel.Items)
+        {
+            if (!Guid.TryParse(item.ProductId, out var productId))
+            {
+                continue;
+            }
+
+            var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
+            if (product == null)
+            {
+                continue;
+            }
+
+            var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
+            if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string FormatDiscountText(MaGiamGiaDto discount)
+        => discount.Loai == "PhanTram"
+            ? discount.SoTien.ToString("0") + "%"
+            : discount.SoTien.ToString("N0") + "đ";
+
     private static string FormatMoney(decimal money) => $"{money:n0}đ";
 
     private bool ShowFieldError(string? value) => showFieldErrors && string.IsNullOrWhiteSpace(value);
@@ -454,5 +714,47 @@
         return ShowFieldError(value)
             ? "w-full rounded-md px-4 py-2.5 border border-red-400 focus:outline-none focus:ring-1 focus:border-red-500 focus:ring-red-200"
             : "w-full rounded-md px-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-1 focus:border-blue-500 focus:ring-blue-500";
+    }
+
+    private string GetFullAddress()
+    {
+        var parts = new[]
+        {
+            StreetAddress,
+            Wards.FirstOrDefault(x => x.Code == SelectedWardCode)?.Name,
+            Districts.FirstOrDefault(x => x.Code == SelectedDistrictCode)?.Name,
+            Provinces.FirstOrDefault(x => x.Code == SelectedProvinceCode)?.Name
+        }.Where(x => !string.IsNullOrWhiteSpace(x));
+
+        return string.Join(", ", parts);
+    }
+
+    private sealed class VietnamProvince
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Unit { get; set; }
+    }
+
+    private sealed class VietnamDistrict
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Unit { get; set; }
+        public string? province_code { get; set; }
+        public string? province_name { get; set; }
+        public string? full_name { get; set; }
+    }
+
+    private sealed class VietnamWard
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Unit { get; set; }
+        public string? district_code { get; set; }
+        public string? district_name { get; set; }
+        public string? province_code { get; set; }
+        public string? province_name { get; set; }
+        public string? full_name { get; set; }
     }
 }

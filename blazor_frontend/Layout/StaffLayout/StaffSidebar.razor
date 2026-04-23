@@ -1,4 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components.Routing
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 <div class="h-full flex flex-col bg-white border-r border-gray-200 text-gray-800">
     <!-- Header của Sidebar -->
@@ -25,7 +27,8 @@
     <!-- Nút Đăng xuất ở cuối -->
     <div class="p-4 border-t border-gray-200 bg-gray-50">
         <button class="flex items-center justify-center gap-3 px-4 py-3 w-full rounded-lg text-red-500 bg-white border border-red-200 
-                       hover:bg-red-50 hover:text-red-700 hover:border-red-300 hover:shadow-sm transition-all duration-200 group">
+                       hover:bg-red-50 hover:text-red-700 hover:border-red-300 hover:shadow-sm transition-all duration-200 group"
+                @onclick="LogoutAsync">
             <i class="ph ph-sign-out text-2xl group-hover:-translate-x-1 transition-transform duration-200"></i>
             <span class="font-semibold group-hover:-translate-x-1 transition-transform duration-200">Đăng xuất</span>
         </button>
@@ -44,6 +47,8 @@
             MenuItems = new List<MenuOption>
             {
                 new("Thống kê", "/admin/dashboard", "ph ph-chart-bar"),
+                new("Đơn hàng", "/admin/orders", "ph ph-shopping-cart"),
+                new("Mã giảm giá", "/admin/discounts", "ph ph-ticket"),
                 new("Sản phẩm", "/admin/products", "ph ph-t-shirt"),
                 new("Danh mục", "/admin/categories", "ph ph-tag"),
                 new("Người dùng", "/admin/users", "ph ph-users")
@@ -57,6 +62,15 @@
                 new("Tư vấn khách hàng", "/staff/messages", "ph ph-chat")
             };
         }
+    }
+
+    private async Task LogoutAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
+        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        Navigation.NavigateTo("/account/signin", forceLoad: true);
     }
 
     // Một class / record nhỏ để chứa thông tin của mỗi Menu
