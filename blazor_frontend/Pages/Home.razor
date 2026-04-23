@@ -1,16 +1,35 @@
 ﻿@page "/"
 @using blazor_frontend.Shared
+@inject blazor_frontend.Services.IProductService productService
 
 @code {
-    private ProductList.ProductDto[] featured = new[]
+    private List<ProductList.ProductDto> featured = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        new ProductList.ProductDto(1, "product1.jpg", "Áo Polo Nam Urban Accent For Men - Comfortable Fit", "349,000₫", "HÀNG MỚI", new[] { "#ffffff", "#d1cbbd", "#000000" }),
-        new ProductList.ProductDto(2, "product1.jpg", "Áo Polo Nam Raglan Dominus - Casual", "379,000₫", "HÀNG MỚI", new[] { "#ffffff", "#000000" }),
-        new ProductList.ProductDto(3, "product1.jpg", "Quần Kaki Nam Essential Baggy - Soft Fabric", "449,000₫", "HÀNG MỚI", new[] { "#dddddd", "#000000", "#b0926f" }),
-        new ProductList.ProductDto(4, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Rogner - Classic", "349,000₫", "HÀNG MỚI", new[] { "#e9eef6", "#dcdcdc" }),
-        new ProductList.ProductDto(3, "product1.jpg", "Quần Kaki Nam Essential Baggy - Soft Fabric", "449,000₫", "HÀNG MỚI", new[] { "#dddddd", "#000000", "#b0926f" }),
-        new ProductList.ProductDto(4, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Rogner - Classic", "349,000₫", "HÀNG MỚI", new[] { "#e9eef6", "#dcdcdc" }),
-    };
+        var products = await productService.GetAllAsync();
+        featured = products
+            .Take(6)
+            .Select(sp =>
+            {
+                var firstDetail = sp.ChiTietSanPhams.FirstOrDefault();
+                var colors = sp.ChiTietSanPhams
+                    .Select(x => x.Mau)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                return new ProductList.ProductDto(
+                    Id: sp.MaSP.ToString(),
+                    ImagePath: firstDetail?.Anh ?? "product1.jpg",
+                    Title: sp.TenSP,
+                    Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
+                    BadgeText: "HÀNG MỚI",
+                    Colors: colors.Length > 0 ? colors : ["#000000"],
+                    CategoryId: sp.MaDM);
+            })
+            .ToList();
+    }
 }
 
 <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-8">

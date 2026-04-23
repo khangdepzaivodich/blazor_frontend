@@ -1,5 +1,8 @@
 @page "/products"
+@using System.Globalization
 @using blazor_frontend.Shared
+@inject blazor_frontend.Services.IProductService productService
+@inject blazor_frontend.Services.ICategoryService categoryService
 
 <div class="bg-gray-50 pb-12 min-h-screen">
     <!-- Breadcrumb -->
@@ -43,18 +46,12 @@
                 <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 Tất cả
             </button>
-            <button class='flex items-center gap-2 px-6 py-2 border @(SelectedCategory == "Áo" ? "border-black" : "border-gray-300") rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800' @onclick="SelectAo">
-                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                Áo
-            </button>
-            <button class='flex items-center gap-2 px-6 py-2 border @(SelectedCategory == "Quần" ? "border-black" : "border-gray-300") rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800' @onclick="SelectQuan">
-                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l1.29-1.29A2 2 0 0111.71 4h.58a2 2 0 011.41.59L15 6v13m-6 0h6m-6 0H6m9 0h3" /></svg>
-                Quần
-            </button>
-            <button class='flex items-center gap-2 px-6 py-2 border @(SelectedCategory == "Phụ Kiện" ? "border-black" : "border-gray-300") rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800' @onclick="SelectPhuKien">
-                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v8l9-11h-7z" /></svg>
-                Phụ Kiện
-            </button>
+            @foreach (var ldm in AvailableLoaiDanhMucNames)
+            {
+                <button class='flex items-center gap-2 px-6 py-2 border @(SelectedCategory == ldm ? "border-black" : "border-gray-300") rounded hover:border-black transition-colors bg-white hover:bg-gray-50 font-medium text-sm text-gray-800' @onclick="() => SelectCategory(ldm)">
+                    @ldm
+                </button>
+            }
         </div>
 
         <div class="flex items-center justify-end mb-6 border-b border-gray-200 pb-4">
@@ -66,28 +63,34 @@
             </select>
         </div>
 
-        <!-- Product Grid (5 columns per image requirement) -->
-        <ProductList Items="FilteredProducts" GridClass="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ShowActions="true" />
+        <!-- Product Grid -->
+        @if (isLoading)
+        {
+            <div class="py-12 text-center text-gray-500">Đang tải sản phẩm...</div>
+        }
+        else if (!FilteredProducts.Any())
+        {
+            <div class="py-12 text-center text-gray-500">Chưa có sản phẩm nào.</div>
+        }
+        else
+        {
+            <ProductList Items="FilteredProducts" GridClass="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ShowActions="true" />
+        }
     </div>
 </div>
 
 @code {
+    private bool isLoading = true;
     private string SelectedCategory = string.Empty;
     private string SortMode = "Sản phẩm nổi bật";
+    private Dictionary<Guid, DanhMucDto> danhMucById = new();
 
-    private ProductList.ProductDto[] allProducts = new[]
-    {
-        new ProductList.ProductDto(1, "product1.jpg", "Áo Thun Nam Insignia ID Form Oversize", "329,000₫", "HÀNG MỚI", new[] { "#000000" }, "Áo"),
-        new ProductList.ProductDto(2, "product1.jpg", "Quần Short Nam Minimal Luxe Form", "349,000₫", "HÀNG MỚI", new[] { "#e0ded1", "#545759", "#000000" }, "Quần"),
-        new ProductList.ProductDto(3, "product1.jpg", "Áo Polo Nam Gentle Form Boxy", "429,000₫", "HÀNG MỚI", new[] { "#0a1f44" }, "Áo"),
-        new ProductList.ProductDto(4, "product1.jpg", "Quần Short Nam Speckled Form Loose", "329,000₫", "HÀNG MỚI", new[] { "#a8a9a0", "#dcdbd1", "#362f2d" }, "Quần"),
-        new ProductList.ProductDto(5, "product1.jpg", "Thắt Lưng Nam Đầu Xoay Họa Tiết Đúc", "399,000₫", "HÀNG MỚI", new[] { "#4d4d4d", "#000000" }, "Phụ Kiện"),
-        new ProductList.ProductDto(6, "product1.jpg", "Áo Thun Nam Básico", "229,000₫", "", new[] { "#ffffff", "#000000", "#ff0000" }, "Áo"),
-        new ProductList.ProductDto(7, "product1.jpg", "Quần Jean Dài Ống Suông", "449,000₫", "HÀNG MỚI", new[] { "#34558b" }, "Quần"),
-        new ProductList.ProductDto(8, "product1.jpg", "Áo Sơ Mi Nam Tay Dài Premium", "499,000₫", "HÀNG TỐT", new[] { "#ffffff", "#e0ded1" }, "Áo"),
-        new ProductList.ProductDto(9, "product1.jpg", "Giày Classic Nam Bền Đẹp", "699,000₫", "OUTLET", new[] { "#000000", "#ffffff" }, "Phụ Kiện"),
-        new ProductList.ProductDto(10, "product1.jpg", "Mũ Lưỡi Trai Sports", "129,000₫", "", new[] { "#000000", "#545759" }, "Phụ Kiện")
-    };
+    private List<ProductList.ProductDto> allProducts = new();
+    private IEnumerable<string> AvailableLoaiDanhMucNames => allProducts
+        .Select(p => p.Category)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(x => x);
 
     private IEnumerable<ProductList.ProductDto> FilteredProducts
     {
@@ -112,18 +115,49 @@
         }
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        var danhMucs = (await categoryService.GetAllAsync()).ToList();
+        danhMucById = danhMucs.ToDictionary(x => x.MaDM, x => x);
+
+        var products = await productService.GetAllAsync();
+        allProducts = products.SelectMany(MapToCards).ToList();
+        isLoading = false;
+    }
+
     private void SelectCategory(string category)
     {
         SelectedCategory = category;
     }
 
-    private void SelectAo() => SelectCategory("Áo");
-    private void SelectQuan() => SelectCategory("Quần");
-    private void SelectPhuKien() => SelectCategory("Phụ Kiện");
-
     private static decimal ParsePrice(string price)
     {
         var digits = new string(price.Where(char.IsDigit).ToArray());
-        return decimal.TryParse(digits, out var value) ? value : 0;
+        return decimal.TryParse(digits, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : 0;
+    }
+
+    private IEnumerable<ProductList.ProductDto> MapToCards(SanPhamDto product)
+    {
+        var details = product.ChiTietSanPhams ?? [];
+        var colors = details
+            .Select(x => x.Mau)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var price = details.FirstOrDefault()?.Gia ?? 0;
+        var badgeText = details.Any() ? "HÀNG MỚI" : string.Empty;
+
+        var tenLdm = danhMucById.TryGetValue(product.MaDM, out var dm) ? dm.TenLDM : string.Empty;
+
+        yield return new ProductList.ProductDto(
+            Id: product.MaSP.ToString(),
+            ImagePath: details.FirstOrDefault()?.Anh ?? "product1.jpg",
+            Title: product.TenSP,
+            Price: $"{price:n0}₫",
+            BadgeText: badgeText,
+            Colors: colors.Length > 0 ? colors : ["#000000"],
+            Category: tenLdm,
+            CategoryId: product.MaDM);
     }
 }

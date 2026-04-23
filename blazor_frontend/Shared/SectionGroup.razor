@@ -36,7 +36,7 @@
 
     private IEnumerable<blazor_frontend.Shared.ProductList.ProductDto> DtoItems =>
         Items?.Select(p => new blazor_frontend.Shared.ProductList.ProductDto(
-            p.MaSP.GetHashCode(),
+            p.MaSP.ToString(),
             p.AnhDaiDien,
             p.TenSP,
             (p.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0).ToString("N0") + "đ",

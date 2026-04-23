@@ -16,6 +16,15 @@ namespace blazor_frontend.Services
     {
         private readonly HttpClient _httpClient;
 
+        private sealed class PagedSanPhamResponse
+        {
+            public int TotalCount { get; set; }
+            public int PageNumber { get; set; }
+            public int PageSize { get; set; }
+            public int TotalPages { get; set; }
+            public List<SanPhamDto> Data { get; set; } = new();
+        }
+
         public ProductService(IHttpClientFactory factory)
         {
             _httpClient = factory.CreateClient("CatalogAPI");
@@ -23,7 +32,8 @@ namespace blazor_frontend.Services
 
         public async Task<IEnumerable<SanPhamDto>> GetAllAsync()
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<SanPhamDto>>("api/sanpham") ?? new List<SanPhamDto>();
+            var response = await _httpClient.GetFromJsonAsync<PagedSanPhamResponse>("api/sanpham?pageNumber=1&pageSize=1000");
+            return response?.Data ?? new List<SanPhamDto>();
         }
 
         public async Task<SanPhamDto?> GetByIdAsync(Guid id)
