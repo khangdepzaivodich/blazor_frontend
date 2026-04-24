@@ -90,17 +90,20 @@
                                 </div>
                             }
 
-                            <div class="flex gap-2">
-                                <button class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                        @onclick="TriggerFileInput">
-                                    Upload
-                                </button>
+                            @if (isEditing)
+                            {
+                                <div class="flex gap-2">
+                                    <button type="button" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                            @onclick="TriggerFileInput">
+                                        Upload
+                                    </button>
 
-                                <button class="px-3 py-1.5 text-xs text-red-500 border border-gray-200 rounded-lg hover:bg-red-50"
-                                        @onclick="DeleteAvatar">
-                                    Delete
-                                </button>
-                            </div>
+                                    <button type="button" class="px-3 py-1.5 text-xs text-red-500 border border-gray-200 rounded-lg hover:bg-red-50"
+                                            @onclick="DeleteAvatar">
+                                        Delete
+                                    </button>
+                                </div>
+                            }
 
                             <InputFile id="avatarInput" class="hidden" OnChange="OnInputFileChange" accept="image/*" />
                         </div>
@@ -200,6 +203,9 @@
     private bool isEditing;
     private bool _isLoaded;
     private string? avatarDataUrl;
+    private string? currentAvatarUrl;
+    private byte[]? pendingAvatarBytes;
+    private string? pendingAvatarFileName;
     private string? message;
 
     protected override async Task OnInitializedAsync()
@@ -234,6 +240,7 @@
                 LastActiveAt = user.LastActiveAt
             };
             avatarDataUrl = user.Avatar;
+            currentAvatarUrl = user.Avatar;
 
             // Sync with AuthState and localStorage so Header updates
             if (!string.IsNullOrEmpty(user.Avatar))
@@ -293,13 +300,25 @@
         message = "Saving...";
         StateHasChanged();
 
+        string? avatarUrlToSave = null;
+
+        if (pendingAvatarBytes is not null && pendingAvatarBytes.Length > 0)
+        {
+            using var stream = new MemoryStream(pendingAvatarBytes);
+            avatarUrlToSave = await UserService.UploadAvatarAsync(stream, pendingAvatarFileName ?? "avatar.png");
+        }
+        else if (avatarDataUrl == null && currentAvatarUrl != null)
+        {
+            avatarUrlToSave = string.Empty;
+        }
+
         var request = new UpdateMeRequest
         {
             HoTen = account.HoTen,
             SoDienThoai = account.SoDienThoai,
             DiaChi = account.DiaChi,
             NgaySinh = account.NgaySinh,
-            Avatar = avatarDataUrl
+            Avatar = avatarUrlToSave
         };
 
         var ok = await UserService.UpdateMeAsync(request);
@@ -312,10 +331,14 @@
                 // Sync to localStorage & AuthState
                 await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", user.HoTen);
                 
-                var avatarUrl = user.Avatar ?? "";
+                var avatarUrl = avatarUrlToSave ?? user.Avatar ?? currentAvatarUrl ?? "";
                 if (!string.IsNullOrEmpty(avatarUrl))
                 {
                     await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", avatarUrl);
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
                 }
                 
                 AuthState.SetUser(
@@ -327,7 +350,10 @@
                     avatarUrl
                 );
                 
+                currentAvatarUrl = avatarUrl;
                 avatarDataUrl = avatarUrl;
+                pendingAvatarBytes = null;
+                pendingAvatarFileName = null;
             }
 
             isEditing = false;
@@ -353,32 +379,26 @@
 
         try 
         {
-            message = "Đang tải ảnh...";
+            message = "Ảnh đã chọn. Bấm Save để lưu lên Cloudinary.";
             StateHasChanged();
 
             using var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
-            var url = await UserService.UploadAvatarAsync(stream, file.Name);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
 
-            if (!string.IsNullOrEmpty(url))
+            pendingAvatarBytes = ms.ToArray();
+            pendingAvatarFileName = file.Name;
+
+            var base64 = Convert.ToBase64String(pendingAvatarBytes);
+            avatarDataUrl = $"data:{file.ContentType};base64,{base64}";
+
+            if (!string.IsNullOrEmpty(avatarDataUrl))
             {
-                avatarDataUrl = url;
-                await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", url);
-                
-                // Update AuthState so Header reflects change
-                AuthState.SetUser(
-                    AuthState.Token,
-                    AuthState.UserId,
-                    AuthState.Email,
-                    AuthState.Role,
-                    AuthState.HoTen,
-                    url
-                );
-                
-                message = "Tải ảnh đại diện thành công!";
+                message = "Ảnh đã chọn. Nhấn Save để cập nhật ảnh đại diện.";
             }
             else
             {
-                message = "Tải ảnh đại diện thất bại.";
+                message = "Không thể xem trước ảnh.";
             }
         }
         catch (Exception ex)
@@ -390,7 +410,10 @@
     private async Task DeleteAvatar()
     {
         avatarDataUrl = null;
-        await JS.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
+        pendingAvatarBytes = null;
+        pendingAvatarFileName = null;
+        currentAvatarUrl = null;
+        message = "Ảnh sẽ được xóa khi bấm Save.";
     }
 
     private async Task TriggerFileInput()
