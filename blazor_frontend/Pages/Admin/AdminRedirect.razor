@@ -1,6 +1,7 @@
 @page "/admin"
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject IHttpClientFactory HttpClientFactory
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -11,7 +12,6 @@
         }
 
         var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
-        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role");
 
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -19,12 +19,26 @@
             return;
         }
 
-        if (!string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            NavigationManager.NavigateTo("/account/signin?returnUrl=/admin", replace: true);
-            return;
-        }
+            var httpClient = HttpClientFactory.CreateClient("IdentityAPI");
+            var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/admin");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        NavigationManager.NavigateTo("/admin/dashboard", replace: true);
+            var response = await httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/admin/dashboard", replace: true);
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/unauthorized", replace: true);
+            }
+        }
+        catch
+        {
+            NavigationManager.NavigateTo("/unauthorized", replace: true);
+        }
     }
 }
