@@ -1,8 +1,9 @@
 @inject IJSRuntime JS
+@inject blazor_frontend.Services.IChatService ChatService
 @using System.Text.Json
 @using blazor_frontend.Models
-@using Microsoft.AspNetCore.SignalR.Client
-@implements IAsyncDisposable
+@using blazor_frontend.Services
+@implements IDisposable
 
 @if (isOpen)
 {
@@ -21,6 +22,14 @@
         </div>
         <!-- Chat messages -->
         <div id="widgetChatContainer" class="flex-1 p-3 overflow-y-auto bg-gray-50 flex flex-col gap-2 relative">
+            @if (isWaiting)
+            {
+                <div class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center p-4 text-center z-10">
+                    <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p class="text-sm font-medium text-gray-700">Tất cả tư vấn viên đang bận</p>
+                    <p class="text-xs text-gray-500">Vui lòng chờ trong giây lát...</p>
+                </div>
+            }
             @if (messages != null && messages.Any())
             {
                 @foreach (var msg in messages)
@@ -47,14 +56,12 @@
 
 @code {
     private bool isOpen = false;
+    private bool isWaiting = false;
     private string currentSessionId = "";
     private string guestId = ""; // UUID định danh thiết bị
     private string newMessage = "";
     private List<ChatMessage> messages = new();
     
-    private HubConnection? hubConnection;
-    private bool _hubConnected;
-
     protected override async Task OnInitializedAsync()
     {
         // 1. Phân biệt Guest hay User
@@ -65,83 +72,108 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "chat_guest_id", guestId);
         }
 
-        // 2. Chờ kết nối SignalR...
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5041/chat-hub")
-            .WithAutomaticReconnect()
-            .Build();
-
-        hubConnection.On<TinNhanDto>("ReceiveNewMessage", async (tinNhan) =>
-        {
-            // Chỉ thêm tin nhắn nếu người gửi không phải là khách này (tránh duplicate tin tự gửi)
-            if (tinNhan.SenderType != "GUEST")
-            {
-                messages.Add(new ChatMessage { Text = tinNhan.NoiDung, IsMine = false, Timestamp = tinNhan.ThoiGianGui });
-                await SaveMessages();
-                await InvokeAsync(async () => {
-                    StateHasChanged();
-                    await Task.Delay(100);
-                    await ScrollToBottom();
-                });
-            }
-        });
-
-        try
-        {
-            await hubConnection.StartAsync();
-            _hubConnected = hubConnection.State == HubConnectionState.Connected;
-        }
-        catch (Exception ex)
-        {
-            _hubConnected = false;
-            Console.WriteLine("Lỗi khi kết nối SignalR Backend Chat: " + ex.Message);
-        }
+        // 2. Đăng ký sự kiện và khởi tạo Service
+        ChatService.OnMessageReceived += HandleMessageReceived;
+        ChatService.OnSessionQueued += HandleSessionQueued;
+        ChatService.OnSessionAssigned += HandleSessionAssigned;
+        await ChatService.InitializeAsync();
 
         // 3. Xử lý Session ID
         var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
+        var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
+
+        if (string.IsNullOrEmpty(session) && !string.IsNullOrEmpty(userId))
+        {
+            session = await ChatService.CreateNewChatSessionAsync(userId, "USER");
+            if (!string.IsNullOrEmpty(session))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
+            }
+        }
 
         if (string.IsNullOrEmpty(session))
         {
-            // Chưa có phiên, chờ user mở chat widget để tạo
             currentSessionId = "";
         }
         else
         {
-            // tải phiên chat cũ từ localStorage
             currentSessionId = session;
+            
+            // Lấy lịch sử từ server nếu local trống (để đồng bộ giữa các thiết bị)
             var history = await JS.InvokeAsync<string>("localStorage.getItem", $"chat_history_{currentSessionId}");
 
-            if (!string.IsNullOrEmpty(history))
+            if (string.IsNullOrEmpty(history))
+            {
+                var serverMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(currentSessionId));
+                if (serverMsgs != null && serverMsgs.Any())
+                {
+                    messages = serverMsgs.Select(m => new ChatMessage { 
+                        Text = m.NoiDung, 
+                        IsMine = m.SenderType == "USER" || m.SenderType == "GUEST",
+                        Timestamp = m.ThoiGianGui 
+                    }).ToList();
+                    await SaveMessages();
+                }
+            }
+            else
             {
                 try { messages = JsonSerializer.Deserialize<List<ChatMessage>>(history) ?? new(); }
                 catch { messages = new(); }
             }
 
-            // Gọi Hub để join vào room cũ
-            if (_hubConnected)
-            {
-                await hubConnection.SendAsync("JoinChatSession", currentSessionId);
-            }
+            // Join vào room cũ
+            await ChatService.JoinChatSessionAsync(currentSessionId);
 
-            // Nếu đã login → nâng cấp phiên GUEST thành USER
+            // Nâng cấp phiên nếu đã login
             await TryUpgradeSession();
             
-            await Task.Delay(300); // Chờ UI mở ra ổn định
+            await Task.Delay(300);
             await ScrollToBottom();
         }
     }
 
-    // Kiểm tra nếu user đã login → nâng cấp phiên chat
+    private void HandleMessageReceived(ChatMessageDto tinNhan)
+    {
+        // Chỉ thêm tin nhắn nếu người gửi không phải là khách này (tránh duplicate tin tự gửi)
+        if (tinNhan.SenderType != "GUEST")
+        {
+            messages.Add(new ChatMessage { Text = tinNhan.NoiDung, IsMine = false, Timestamp = tinNhan.ThoiGianGui });
+            _ = SaveMessages();
+            InvokeAsync(async () => {
+                StateHasChanged();
+                await Task.Delay(100);
+                await ScrollToBottom();
+            });
+        }
+    }
+
+    private void HandleSessionQueued()
+    {
+        InvokeAsync(() => {
+            isWaiting = true;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleSessionAssigned(string staffId, string staffName)
+    {
+        InvokeAsync(() => {
+            isWaiting = false;
+            messages.Add(new ChatMessage { Text = "Một tư vấn viên đã tham gia cuộc trò chuyện.", IsMine = false, Timestamp = DateTime.Now });
+            StateHasChanged();
+        });
+    }
+
     private async Task TryUpgradeSession()
     {
-        if (string.IsNullOrEmpty(currentSessionId) || !_hubConnected) return;
+        if (string.IsNullOrEmpty(currentSessionId) || ChatService.ConnectionState != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected) return;
 
         var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
         var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
 
         if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(hoTen))
         {
-            await hubConnection!.SendAsync("UpgradeSession", currentSessionId, userId, hoTen);
+            await ChatService.UpgradeSessionAsync(currentSessionId, userId, hoTen);
         }
     }
 
@@ -149,15 +181,13 @@
     {
         isOpen = !isOpen;
 
-        // Khi mở chat lần đầu mà chưa có phiên → tạo phiên mới
-        if (isOpen && string.IsNullOrEmpty(currentSessionId) && _hubConnected)
+        if (isOpen && string.IsNullOrEmpty(currentSessionId))
         {
-            currentSessionId = await hubConnection!.InvokeAsync<string>("CreateNewChatSession", guestId, "GUEST");
+            currentSessionId = await ChatService.CreateNewChatSessionAsync(guestId, "GUEST");
             await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", currentSessionId);
             messages.Add(new ChatMessage { Text = "Chào bạn! Chúng tôi có thể giúp gì cho bạn hôm nay?", IsMine = false, Timestamp = DateTime.Now });
             await SaveMessages();
 
-            // update ngay nếu đã login
             await TryUpgradeSession();
         }
 
@@ -183,7 +213,6 @@
         var textToSend = newMessage.Trim();
         newMessage = "";
 
-        // Hiện tin nhắn
         messages.Add(new ChatMessage { Text = textToSend, IsMine = true, Timestamp = DateTime.Now });
         await SaveMessages();
         
@@ -191,18 +220,21 @@
         await Task.Delay(50);
         await ScrollToBottom();
 
-        // Đẩy xuống Backend qua SignalR
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
+        if (ChatService.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
         {
-            var tn = new TinNhanDto
+            var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
+            bool isUser = !string.IsNullOrEmpty(userId);
+
+            var tn = new ChatMessageDto
             {
                 MaPhien = Guid.Parse(currentSessionId),
-                SenderType = "GUEST",
+                SenderType = isUser ? "USER" : "GUEST",
+                SenderID = isUser ? Guid.Parse(userId) : Guid.Empty,
                 NoiDung = textToSend,
                 TrangThai = "sent"
             };
 
-            await hubConnection.SendAsync("SendMessage", tn);
+            await ChatService.SendMessageAsync(tn);
         }
     }
 
@@ -218,22 +250,11 @@
         catch { }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
-    }
-
-    // --- CÁC MODELS MAP TỪ API ---
-    public class TinNhanDto
-    {
-        public Guid MaPhien { get; set; }
-        public string SenderType { get; set; } = string.Empty;
-        public string NoiDung { get; set; } = string.Empty;
-        public DateTime ThoiGianGui { get; set; } = DateTime.UtcNow;
-        public string TrangThai { get; set; } = string.Empty;
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+        ChatService.OnSessionQueued -= HandleSessionQueued;
+        ChatService.OnSessionAssigned -= HandleSessionAssigned;
     }
 
     public class ChatMessage

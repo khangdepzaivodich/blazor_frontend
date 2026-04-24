@@ -1,4 +1,4 @@
-﻿@page "/admin/products"
+@page "/admin/products"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IProductService productService
 @inject blazor_frontend.Services.ICategoryService categoryService
@@ -7,23 +7,54 @@
 
 <PageTitle>Quản lý Sản phẩm</PageTitle>
 
-<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+<div class="bg-white rounded-xl shadow-sm w-full p-6 pb-12 min-h-[600px] flex flex-col">
     @if (!isAuthorized)
     {
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">Bạn không có quyền truy cập trang này.</div>
     }
     else
     {
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-8">
             <div>
-                <h2 class="text-2xl font-bold text-gray-800">Quản lý Sản phẩm</h2>
-                <p class="text-sm text-gray-500 mt-1">CRUD sản phẩm và CRUD biến thể sản phẩm trong Catalog Service.</p>
+                <h2 class="text-2xl font-bold text-gray-900">Quản lý Sản phẩm</h2>
+                <p class="text-sm text-gray-500 mt-1">Danh sách sản phẩm trong hệ thống Catalog.</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-                <input class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                       placeholder="Tìm theo tên sản phẩm"
-                       @bind="searchText" />
-                <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm" @onclick="New">
+                <div class="relative group">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500"></i>
+                    <input class="rounded-xl border border-gray-200 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all w-64 shadow-sm"
+                           placeholder="Tìm tên sản phẩm..."
+                           @bind="searchText" @bind:event="oninput" />
+                </div>
+                <div class="relative w-48">
+                    <i class="ph ph-folders absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <select @bind="filterMaLDM" class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white cursor-pointer shadow-sm text-sm text-gray-600 font-medium appearance-none">
+                        <option value="@Guid.Empty">Tất cả loại</option>
+                        @if (loaiDanhMucs != null)
+                        {
+                            @foreach (var ldm in loaiDanhMucs)
+                            {
+                                <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                            }
+                        }
+                    </select>
+                    <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                <div class="relative w-48">
+                    <i class="ph ph-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <select @bind="filterMaDM" class="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white cursor-pointer shadow-sm text-sm text-gray-600 font-medium appearance-none">
+                        <option value="@Guid.Empty">Tất cả danh mục</option>
+                        @if (categories != null)
+                        {
+                            @foreach (var cat in categories.Where(c => filterMaLDM == Guid.Empty || c.MaLDM == filterMaLDM))
+                            {
+                                <option value="@cat.MaDM">@cat.TenDM</option>
+                            }
+                        }
+                    </select>
+                    <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-blue-200 active:scale-95" @onclick="New">
                     <i class="ph ph-plus-circle text-xl"></i>
                     Thêm sản phẩm
                 </button>
@@ -32,88 +63,136 @@
 
         @if (!string.IsNullOrWhiteSpace(message))
         {
-            <div class="mb-4 rounded-lg border @(isError ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700") px-4 py-3 text-sm">
+            <div class="mb-6 rounded-xl border @(isError ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700") px-4 py-3 text-sm flex items-center gap-2">
+                <i class="ph @(isError ? "ph-warning-circle" : "ph-check-circle") text-lg"></i>
                 @message
             </div>
         }
 
-        <div class="overflow-x-auto border border-gray-200 rounded-lg">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                        <th class="p-4 font-semibold border-b border-gray-200">Tên sản phẩm</th>
-                        <th class="p-4 font-semibold border-b border-gray-200">Danh mục</th>
-                        <th class="p-4 font-semibold border-b border-gray-200">Mô tả</th>
-                        <th class="p-4 font-semibold border-b border-gray-200 text-center">Biến thể</th>
-                        <th class="p-4 font-semibold border-b border-gray-200 text-center">Tồn kho</th>
-                        <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
-                        <th class="p-4 font-semibold border-b border-gray-200 text-right">Ảnh</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-700 text-sm">
-                    @if (isLoading)
-                    {
-                        <tr><td colspan="7" class="p-4">Đang tải...</td></tr>
-                    }
-                    else if (!FilteredItems.Any())
-                    {
-                        <tr><td colspan="7" class="p-4">Chưa có sản phẩm nào</td></tr>
-                    }
-                    else
-                    {
-                        @foreach (var sp in FilteredItems)
+        <div class="flex-1 overflow-hidden border border-gray-100 rounded-xl shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse bg-white">
+                    <thead>
+                        <tr class="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold">
+                            <th class="p-4 border-b border-gray-100">Sản phẩm</th>
+                            <th class="p-4 border-b border-gray-100">Phân loại</th>
+                            <th class="p-4 border-b border-gray-100">Mô tả</th>
+                            <th class="p-4 border-b border-gray-100 text-center">Biến thể</th>
+                            <th class="p-4 border-b border-gray-100 text-center">Kho</th>
+                            <th class="p-4 border-b border-gray-100 text-right">Thao tác</th>
+                            <th class="p-4 border-b border-gray-100 text-right">Ảnh</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700 text-sm">
+                        @if (isLoading)
                         {
-                            var catName = GetCategoryName(sp.MaDM);
-                            var previewImage = sp.ChiTietSanPhams?.FirstOrDefault()?.Anh ?? "product1.jpg";
-                            var totalStock = sp.ChiTietSanPhams?.Sum(x => x.SoLuong) ?? 0;
-                            <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
-                                <td class="p-4 align-top">
-                                    <p class="font-bold text-gray-800">@sp.TenSP</p>
-                                </td>
-
-                                <td class="p-4 align-top">
-                                    <div class="flex flex-col gap-1">
-                                        <span class="inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">@catName</span>
-                                        <span class="text-xs text-gray-500">@GetLoaiDanhMucName(sp.MaDM)</span>
-                                    </div>
-                                </td>
-
-                                <td class="p-4 align-top">
-                                    <div class="text-sm text-gray-600 line-clamp-2">@(!string.IsNullOrWhiteSpace(sp.MoTa) ? sp.MoTa : "-")</div>
-                                </td>
-
-                                <td class="p-4 text-center align-top">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">@((sp.ChiTietSanPhams?.Count ?? 0)) biến thể</span>
-                                </td>
-
-                                <td class="p-4 text-center align-top">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">@totalStock</span>
-                                </td>
-
-                                <td class="p-4 text-right space-x-2 align-top">
-                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-emerald-600 hover:bg-emerald-50" title="Quản lý biến thể" @onclick="() => OpenVariantManager(sp)">
-                                        <i class="ph ph-tshirt text-lg"></i>
-                                        <span class="text-xs font-medium">Biến thể</span>
-                                    </button>
-                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" @onclick="() => Edit(sp)">
-                                        <i class="ph ph-pencil-simple text-lg"></i>
-                                        <span class="text-xs font-medium">Sửa</span>
-                                    </button>
-                                    <button class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-red-600 hover:bg-red-50" title="Xóa" @onclick="() => Delete(sp.MaSP)">
-                                        <i class="ph ph-trash text-lg"></i>
-                                        <span class="text-xs font-medium">Xóa</span>
-                                    </button>
-                                </td>
-
-                                <td class="p-4 text-right align-top">
-                                    <img src="@previewImage" alt="@sp.TenSP" class="inline-block h-12 w-12 rounded object-cover border border-gray-200" onerror="this.src='product1.jpg';" />
-                                </td>
-                            </tr>
+                            <tr><td colspan="7" class="p-4 text-center py-20">
+                                <div class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em]"></div>
+                                <p class="mt-4 text-gray-500 font-medium">Đang tải dữ liệu...</p>
+                            </td></tr>
                         }
-                    }
-                </tbody>
-            </table>
+                        else if (!PaginatedItems.Any())
+                        {
+                            <tr><td colspan="7" class="p-4 text-center py-20 text-gray-400 italic">Không có sản phẩm nào được tìm thấy</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var sp in PaginatedItems)
+                            {
+                                var catName = GetCategoryName(sp.MaDM);
+                                var previewImage = sp.ChiTietSanPhams?.FirstOrDefault()?.Anh ?? "product1.jpg";
+                                var totalStock = sp.ChiTietSanPhams?.Sum(x => x.SoLuong) ?? 0;
+                                <tr class="border-b border-gray-50 hover:bg-gray-50/80 transition-colors">
+                                    <td class="p-4 align-top">
+                                        <p class="font-bold text-gray-900 leading-tight">@sp.TenSP</p>
+                                    </td>
+
+                                    <td class="p-4 align-top">
+                                        <div class="flex flex-col gap-1.5">
+                                            <span class="inline-flex items-center w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 uppercase tracking-wider">@catName</span>
+                                            <span class="text-xs text-gray-400">@GetLoaiDanhMucName(sp.MaDM)</span>
+                                        </div>
+                                    </td>
+
+                                    <td class="p-4 align-top">
+                                        <div class="text-xs text-gray-500 line-clamp-2 max-w-xs">@(!string.IsNullOrWhiteSpace(sp.MoTa) ? sp.MoTa : "Chưa có mô tả")</div>
+                                    </td>
+
+                                    <td class="p-4 text-center align-top">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700">@((sp.ChiTietSanPhams?.Count ?? 0))</span>
+                                    </td>
+
+                                    <td class="p-4 text-center align-top">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700">@totalStock</span>
+                                    </td>
+
+                                    <td class="p-4 text-right space-x-1 align-top whitespace-nowrap">
+                                        <button class="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors" title="Biến thể" @onclick="() => OpenVariantManager(sp)">
+                                            <i class="ph ph-tshirt text-xl"></i>
+                                        </button>
+                                        <button class="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Sửa" @onclick="() => Edit(sp)">
+                                            <i class="ph ph-pencil-simple text-xl"></i>
+                                        </button>
+                                        <button class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Xóa" @onclick="() => Delete(sp.MaSP)">
+                                            <i class="ph ph-trash text-xl"></i>
+                                        </button>
+                                    </td>
+
+                                    <td class="p-4 text-right align-top">
+                                        <img src="@previewImage" alt="@sp.TenSP" class="inline-block h-12 w-12 rounded-lg object-cover border border-gray-100 shadow-sm" onerror="this.src='product1.jpg';" />
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- Phân trang UI (Căn giữa theo style storefront) -->
+        @if (!isLoading && TotalPages > 1)
+        {
+            <div class="mt-8 mb-4 flex flex-col items-center gap-4 pb-6">
+                <div class="flex items-center justify-center gap-2 p-2">
+                    <button class="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed" 
+                            @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    
+                    <div class="flex items-center gap-1.5 px-2">
+                        @{
+                            var pageNumbers = GetPageNumbers();
+                            foreach (var p in pageNumbers)
+                            {
+                                if (p == -1)
+                                {
+                                    <span class="w-10 h-10 flex items-center justify-center text-gray-400">
+                                        <i class="ph ph-dots-three-outline text-lg"></i>
+                                    </span>
+                                }
+                                else
+                                {
+                                    var pageNum = p;
+                                    <button class="w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all
+                                                   @(currentPage == pageNum ? "bg-gray-900 text-white shadow-lg shadow-gray-200" : "bg-white border border-gray-100 text-gray-500 hover:border-gray-300")"
+                                            @onclick="() => ChangePage(pageNum)">
+                                        @pageNum
+                                    </button>
+                                }
+                            }
+                        }
+                    </div>
+
+                    <button class="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed" 
+                            @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == TotalPages)">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+                <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                    Trang <span class="text-gray-900">@currentPage</span> / @TotalPages — Tổng <span class="text-gray-900">@FilteredItems.Count()</span> sản phẩm
+                </div>
+            </div>
+        }
     }
 </div>
 
@@ -258,11 +337,76 @@
     private bool isLoading = true;
     private List<SanPhamDto> items = new();
     private List<DanhMucDto> categories = new();
+    private List<LoaiDanhMucDto> loaiDanhMucs = new();
     private bool showEditor;
     private SanPhamCreateRequest editor = new();
     private Guid editingId = Guid.Empty;
     private bool isAuthorized;
-    private string searchText = string.Empty;
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredItems.Count() / pageSize);
+
+    private IEnumerable<SanPhamDto> PaginatedItems => FilteredItems
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    private List<int> GetPageNumbers()
+    {
+        var pages = new List<int>();
+        int total = TotalPages;
+        int current = currentPage;
+
+        if (total <= 7)
+        {
+            for (int i = 1; i <= total; i++) pages.Add(i);
+        }
+        else
+        {
+            pages.Add(1);
+
+            int start = Math.Max(2, current - 2);
+            int end = Math.Min(total - 1, current + 2);
+
+            if (current <= 4) end = 5;
+            if (current >= total - 3) start = total - 4;
+
+            if (start > 2) pages.Add(-1);
+
+            for (int i = start; i <= end; i++)
+            {
+                pages.Add(i);
+            }
+
+            if (end < total - 1) pages.Add(-1);
+
+            pages.Add(total);
+        }
+        return pages;
+    }
+
+    private string _searchText = string.Empty;
+    private string searchText 
+    { 
+        get => _searchText; 
+        set { if (_searchText != value) { _searchText = value; currentPage = 1; } } 
+    }
+
+    private Guid _filterMaDM = Guid.Empty;
+    private Guid filterMaDM
+    {
+        get => _filterMaDM;
+        set { if (_filterMaDM != value) { _filterMaDM = value; currentPage = 1; } }
+    }
+
     private string? message;
     private bool isError;
 
@@ -274,10 +418,42 @@
     private Guid variantEditingId = Guid.Empty;
     private ChiTietSanPhamCreateRequest variantEditor = new();
 
+    private Guid _filterMaLDM = Guid.Empty;
+    private Guid filterMaLDM
+    {
+        get => _filterMaLDM;
+        set 
+        { 
+            if (_filterMaLDM != value) 
+            { 
+                _filterMaLDM = value; 
+                _filterMaDM = Guid.Empty; // Reset danh mục khi đổi loại
+                currentPage = 1; 
+            } 
+        }
+    }
+
     private IEnumerable<SanPhamDto> FilteredItems
-        => string.IsNullOrWhiteSpace(searchText)
-            ? items
-            : items.Where(x => x.TenSP.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    {
+        get
+        {
+            var query = items.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(x => x.TenSP.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            }
+            if (filterMaLDM != Guid.Empty)
+            {
+                var validMaDMs = categories.Where(c => c.MaLDM == filterMaLDM).Select(c => c.MaDM).ToList();
+                query = query.Where(x => validMaDMs.Contains(x.MaDM));
+            }
+            if (filterMaDM != Guid.Empty)
+            {
+                query = query.Where(x => x.MaDM == filterMaDM);
+            }
+            return query;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -300,6 +476,7 @@
         isLoading = true;
         try
         {
+            loaiDanhMucs = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
             categories = (await categoryService.GetAllAsync()).ToList();
             items = (await productService.GetAllAsync()).ToList();
             message = null;

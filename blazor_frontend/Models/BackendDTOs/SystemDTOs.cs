@@ -18,6 +18,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string Role { get; set; } = string.Empty;
         public string HoTen { get; set; } = string.Empty;
     }
+
     public class RegisterRequest
     {
         public string HoTen { get; set; } = string.Empty;
@@ -26,6 +27,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string DiaChi { get; set; } = string.Empty;
         public string MatKhau { get; set; } = string.Empty;
     }
+
     public class RegisterResponse
     {
         public string Message { get; set; } = string.Empty;
@@ -193,7 +195,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public Guid MaDM { get; set; }
         public Guid MaLDM { get; set; }
         public string TenDM { get; set; } = string.Empty;
-        public string TenLDM { get; set; } = string.Empty; // Tên danh mục cha để hiển thị
+        public string TenLDM { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
     }
 

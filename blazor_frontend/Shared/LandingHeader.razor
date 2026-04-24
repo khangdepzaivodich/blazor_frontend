@@ -236,7 +236,19 @@
                             <div class="text-xs text-gray-500">Quản lý hồ sơ và đơn hàng</div>
                         </div>
                         <a href="/account/profile" class="block px-4 py-3 text-sm transition" @onclick="CloseAll">Profile</a>
-                        <a href="/account/orders" class="block px-4 py-3 text-sm transition" @onclick="CloseAll">Đơn hàng của tôi</a>
+                        
+                        @if (AuthState.Role == "Admin")
+                        {
+                            <a href="/admin" class="block px-4 py-3 text-sm transition font-semibold text-blue-600" @onclick="CloseAll">Quản trị hệ thống</a>
+                        }
+                        else if (AuthState.Role == "Staff")
+                        {
+                            <a href="/staff" class="block px-4 py-3 text-sm transition font-semibold text-blue-600" @onclick="CloseAll">Trang nhân viên</a>
+                        }
+                        else
+                        {
+                            <a href="/account/orders" class="block px-4 py-3 text-sm transition" @onclick="CloseAll">Đơn hàng của tôi</a>
+                        }
                         <div class="border-t border-gray-100"></div>
                         <button class="block w-full px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50" @onclick="LogoutAsync">Đăng xuất</button>
                     }
