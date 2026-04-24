@@ -1,8 +1,11 @@
 @inherits LayoutComponentBase
+@using blazor_frontend.Services
+@inject IChatService ChatService
+@inject IJSRuntime JS
 
 <div class="flex h-screen bg-gray-100 overflow-hidden">
     <!-- Sidebar  -->
-    <aside class="h-full shadow-lg z-20 transition-all duration-300 ease-in-out flex-shrink-0" style="width: @(_drawerOpen ? "256px" : "0px"); overflow: hidden;">
+    <aside class="h-full shadow-lg z-20 transition-all duration-300 ease-in-out shrink-0" style="width: @(_drawerOpen ? "256px" : "0px"); overflow: hidden;">
         <div style="width: 256px; height: 100%;">
             <StaffSidebar Role="Admin" />
         </div>
@@ -12,8 +15,8 @@
     <div class="flex-1 flex flex-col min-w-0 h-screen transition-all duration-300 ease-in-out">
         <!-- Header -->
         <StaffHeader OnToggleSidebar="DrawerToggle" Role="Admin"
-            StaffName="Nguyễn Văn A"
-                     AvatarUrl="https://ui-avatars.com/api/?name=Nguyễn+A&background=e0f2fe&color=2563eb&size=100" />
+            StaffName="@_staffName"
+                     AvatarUrl="@(_avatarUrl)" />
 
         <!-- Main Body -->
         <main class="flex-1 p-6 overflow-y-auto">
@@ -24,6 +27,25 @@
 
 @code {
     bool _drawerOpen = true;
+    string _staffName = "Quản trị viên";
+    string _avatarUrl = "https://ui-avatars.com/api/?name=Admin&background=e0f2fe&color=2563eb&size=100";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var name = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten");
+        var adminId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            _staffName = name;
+            _avatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(name)}&background=e0f2fe&color=2563eb&size=100";
+        }
+
+        if (!string.IsNullOrEmpty(adminId))
+        {
+            await ChatService.RegisterStaffAsync(adminId, _staffName);
+        }
+    }
 
     void DrawerToggle()
     {

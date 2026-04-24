@@ -1,9 +1,10 @@
 @page "/staff/messages"
-@using Microsoft.AspNetCore.SignalR.Client
-@using System.Net.Http.Json
-@inject HttpClient Http
+@using blazor_frontend.Models
+@using blazor_frontend.Services
+@inject IChatService ChatService
 @inject IJSRuntime JS
-@implements IAsyncDisposable
+@implements IDisposable
+
 <PageTitle>Tư vấn khách hàng</PageTitle>
 
 <div class="p-6 h-[calc(100vh-64px)] overflow-hidden flex flex-col">
@@ -15,7 +16,7 @@
             <div class="p-4 border-b border-gray-200">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-gray-800">Trò chuyện</h2>
-                    <button class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Tải lại">
+                    <button class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" title="Tải lại" @onclick="RefreshConversations">
                         <i class="ph ph-arrows-clockwise text-lg"></i>
                     </button>
                 </div>
@@ -31,7 +32,7 @@
                 @foreach (var chat in conversations)
                 {
                     <div @onclick="() => SelectConversation(chat)" 
-                         class="flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-all @(selectedChat?.Id == chat.Id ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "hover:bg-gray-50 border-l-4 border-l-transparent")">
+                          class="flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-all @(selectedChat?.Id == chat.Id ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "hover:bg-gray-50 border-l-4 border-l-transparent")">
                         <div class="relative shrink-0">
                             <img src="@(chat.AvatarUrl)" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-gray-200 @(chat.SessionStatus == "CLOSED" ? "opacity-50 grayscale" : "")" />
                             @if (chat.IsOnline && chat.SessionStatus == "ACTIVE")
@@ -198,26 +199,45 @@
 </style>
 
 @code {
-    private List<ChatModel> conversations = new();
-    private ChatModel? selectedChat;
-    private List<MessageModel> currentMessages = new();
+    private List<ChatUIModel> conversations = new();
+    private ChatUIModel? selectedChat;
+    private List<MessageUIModel> currentMessages = new();
     private string newMessage = "";
     
-    private HubConnection? hubConnection;
-    private string myStaffId = "STAFF_001"; // Giả lập id cho nhân viên này
+    private string myStaffId = ""; 
     private HashSet<Guid> receivedMessageIds = new(); // Chống duplicate tin nhắn
     
     protected override async Task OnInitializedAsync()
     {
-        // 1. TẢI DANH SÁCH KHÁCH HÀNG TỪ MONGODB (Khôi phục dữ liệu khi F5)
+        // 0. Lấy ID thật của nhân viên từ Storage
+        myStaffId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id") ?? "STAFF_ANON";
+        var staffName = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten") ?? "Tư vấn viên";
+
+        // 1. Đăng ký sự kiện
+        ChatService.OnNewChatAssigned += HandleNewChatAssigned;
+        ChatService.OnMessageReceived += HandleMessageReceived;
+        ChatService.OnSessionClosed += HandleSessionClosed;
+        ChatService.OnSessionReopened += HandleSessionReopened;
+        ChatService.OnSessionUpgraded += HandleSessionUpgraded;
+
+        // 2. Khởi tạo và Tải danh sách
+        await ChatService.InitializeAsync();
+        await RefreshConversations();
+
+        // 3. Đăng ký nhân viên này vào hàng chờ
+        await ChatService.RegisterStaffAsync(myStaffId, staffName);
+    }
+
+    private async Task RefreshConversations()
+    {
         try
         {
-            var dbSessions = await Http.GetFromJsonAsync<List<PhienHoiThoaiDto>>("http://localhost:5041/api/chat/chat-sessions");
+            var dbSessions = await ChatService.GetAllChatSessionsAsync();
             if (dbSessions != null && dbSessions.Any())
             {
                 conversations = dbSessions
                     .OrderByDescending(s => s.LastTime)
-                    .Select(s => new ChatModel
+                    .Select(s => new ChatUIModel
                     {
                         Id = s.Id.ToString(),
                         CustomerName = !string.IsNullOrEmpty(s.HoTen) ? s.HoTen : (s.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên"),
@@ -230,187 +250,138 @@
                         SessionStatus = s.TrangThai
                     }).ToList();
             }
-            else 
-            {
-                conversations = new List<ChatModel>();
-            }
         }
         catch (Exception ex)
         {
             Console.WriteLine("Lỗi không lấy được LS Phien: " + ex.Message);
-            conversations = new List<ChatModel>();
         }
-
-        // KẾT NỐI TỚI BACKEND SIGNALR
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5041/chat-hub")
-            .WithAutomaticReconnect()
-            .Build();
-
-        // 1. Lắng nghe Khách Hàng mới được chỉ định từ Backend
-        hubConnection.On<PhienHoiThoaiDto>("NewChatAssigned", (phien) =>
-        {
-            if (conversations.Any(c => c.Id == phien.Id.ToString())) return;
-
-            var newChat = new ChatModel
-            {
-                Id = phien.Id.ToString(),
-                CustomerName = phien.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
-                AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={phien.Id}",
-                LastMessage = phien.LastMessage,
-                LastSender = "System",
-                LastMessageTime = phien.LastTime,
-                SessionStatus = phien.TrangThai,
-                IsOnline = true,
-                UnreadCount = phien.UnreadCount
-            };
-
-            conversations.Insert(0, newChat);
-            InvokeAsync(StateHasChanged);
-        });
-
-        // 2. Lắng nghe Tin Nhắn Mới gửi vào room
-        hubConnection.On<TinNhanDto>("ReceiveNewMessage", (tinNhan) =>
-        {
-            // CHỐNG DUPLICATE: Nếu đã nhận tin này rồi (từ AdminGroup hoặc Room) thì bỏ qua
-            if (!receivedMessageIds.Add(tinNhan.ClientID))
-            {
-                return;
-            }
-
-            var phienIdStr = tinNhan.MaPhien.ToString();
-
-            var chatRoom = conversations.FirstOrDefault(c => c.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true);
-
-            if (chatRoom == null)
-            {
-                chatRoom = new ChatModel
-                {
-                    Id = phienIdStr,
-                    CustomerName = tinNhan.SenderType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
-                    AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={tinNhan.MaPhien}",
-                    UnreadCount = 0,
-                    SessionStatus = "ACTIVE",
-                    IsOnline = true
-                };
-                conversations.Insert(0, chatRoom);
-            }
-
-            chatRoom.LastMessage = tinNhan.NoiDung;
-            chatRoom.LastSender = tinNhan.SenderType == "STAFF" ? "Me" : "Customer";
-            chatRoom.LastMessageTime = tinNhan.ThoiGianGui;
-
-            if (selectedChat != null && selectedChat.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true)
-            {
-                if (tinNhan.SenderType != "STAFF") 
-                {
-                    currentMessages.Add(new MessageModel 
-                    {
-                        Text = tinNhan.NoiDung,
-                        Timestamp = tinNhan.ThoiGianGui,
-                        IsMine = false
-                    });
-
-                    // Reset unread 
-                    if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
-                    {
-                        _ = hubConnection.SendAsync("MarkAsRead", phienIdStr);
-                    }
-                }
-            }
-            else
-            {
-                if (tinNhan.SenderType != "STAFF") 
-                {
-                    chatRoom.UnreadCount++;
-                }
-            }
-
-            conversations.Remove(chatRoom);
-            conversations.Insert(0, chatRoom);
-
-            InvokeAsync(async () => {
-                StateHasChanged();
-                await Task.Delay(100); // Chờ UI render xong tin mới
-                await ScrollToBottom();
-            });
-        });
-
-        // 3. Lắng nghe sự kiện Kết thúc phiên
-        hubConnection.On<string>("SessionClosed", (maPhien) =>
-        {
-            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
-            if (chat != null)
-            {
-                chat.SessionStatus = "CLOSED";
-                chat.IsOnline = false;
-            }
-            InvokeAsync(StateHasChanged);
-        });
-
-        // 4. Lắng nghe sự kiện Mở lại phiên
-        hubConnection.On<string>("SessionReopened", (maPhien) =>
-        {
-            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
-            if (chat != null)
-            {
-                chat.SessionStatus = "ACTIVE";
-                chat.IsOnline = true;
-
-                // Đưa phiên vừa reopen lên đầu danh sách
-                conversations.Remove(chat);
-                conversations.Insert(0, chat);
-            }
-            InvokeAsync(StateHasChanged);
-        });
-
-        // 5. Lắng nghe sự kiện Nâng cấp phiên (Guest login → đổi tên thật)
-        hubConnection.On<string, string>("SessionUpgraded", (maPhien, hoTen) =>
-        {
-            Console.WriteLine($"[Staff] SessionUpgraded: SessionId={maPhien}, NewName={hoTen}");
-            var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
-            if (chat != null)
-            {
-                Console.WriteLine($"[Staff] Found chat in list, updating name...");
-                chat.CustomerName = hoTen;
-            }
-            InvokeAsync(StateHasChanged);
-        });
-
-        try
-        {
-            await hubConnection.StartAsync();
-
-            // 5. Đăng ký nhân viên này vào hàng chờ (Queue) rảnh rỗi
-            await hubConnection.SendAsync("RegisterStaff", myStaffId);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Lỗi khi kết nối SignalR Backend Chat: " + ex.Message);
-        }
+        StateHasChanged();
     }
 
-    private async Task SelectConversation(ChatModel chat)
+    private void HandleNewChatAssigned(ChatSessionDto phien)
+    {
+        if (conversations.Any(c => c.Id == phien.Id.ToString())) return;
+
+        var newChat = new ChatUIModel
+        {
+            Id = phien.Id.ToString(),
+            CustomerName = phien.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
+            AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={phien.Id}",
+            LastMessage = phien.LastMessage,
+            LastSender = "System",
+            LastMessageTime = phien.LastTime,
+            SessionStatus = phien.TrangThai,
+            IsOnline = true,
+            UnreadCount = phien.UnreadCount
+        };
+
+        conversations.Insert(0, newChat);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageReceived(ChatMessageDto tinNhan)
+    {
+        if (!receivedMessageIds.Add(tinNhan.ClientID)) return;
+
+        var phienIdStr = tinNhan.MaPhien.ToString();
+        var chatRoom = conversations.FirstOrDefault(c => c.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (chatRoom == null)
+        {
+            chatRoom = new ChatUIModel
+            {
+                Id = phienIdStr,
+                CustomerName = tinNhan.SenderType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
+                AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={tinNhan.MaPhien}",
+                UnreadCount = 0,
+                SessionStatus = "ACTIVE",
+                IsOnline = true
+            };
+            conversations.Insert(0, chatRoom);
+        }
+
+        chatRoom.LastMessage = tinNhan.NoiDung;
+        chatRoom.LastSender = tinNhan.SenderType == "STAFF" ? "Me" : "Customer";
+        chatRoom.LastMessageTime = tinNhan.ThoiGianGui;
+
+        if (selectedChat != null && selectedChat.Id?.Equals(phienIdStr, StringComparison.OrdinalIgnoreCase) == true)
+        {
+            if (tinNhan.SenderType != "STAFF") 
+            {
+                currentMessages.Add(new MessageUIModel 
+                {
+                    Text = tinNhan.NoiDung,
+                    Timestamp = tinNhan.ThoiGianGui,
+                    IsMine = false
+                });
+
+                _ = ChatService.MarkAsReadAsync(phienIdStr);
+            }
+        }
+        else if (tinNhan.SenderType != "STAFF")
+        {
+            chatRoom.UnreadCount++;
+        }
+
+        conversations.Remove(chatRoom);
+        conversations.Insert(0, chatRoom);
+
+        InvokeAsync(async () => {
+            StateHasChanged();
+            await Task.Delay(100);
+            await ScrollToBottom();
+        });
+    }
+
+    private void HandleSessionClosed(string maPhien)
+    {
+        var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+        if (chat != null)
+        {
+            chat.SessionStatus = "CLOSED";
+            chat.IsOnline = false;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSessionReopened(string maPhien)
+    {
+        var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+        if (chat != null)
+        {
+            chat.SessionStatus = "ACTIVE";
+            chat.IsOnline = true;
+            conversations.Remove(chat);
+            conversations.Insert(0, chat);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSessionUpgraded(string maPhien, string hoTen)
+    {
+        var chat = conversations.FirstOrDefault(c => c.Id?.Equals(maPhien, StringComparison.OrdinalIgnoreCase) == true);
+        if (chat != null)
+        {
+            chat.CustomerName = hoTen;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectConversation(ChatUIModel chat)
     {
         selectedChat = chat;
         chat.UnreadCount = 0;
-
         currentMessages.Clear();
 
-        // Gọi Hub đánh dấu đã đọc trong MongoDB (fix bug unread sau F5)
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
-        {
-            await hubConnection.SendAsync("MarkAsRead", chat.Id);
-        }
+        await ChatService.MarkAsReadAsync(chat.Id!);
 
-        // 2. TẢI LỊCH SỬ TIN NHẮN TỪ MONGODB API
         try
         {
-            var dbMsgs = await Http.GetFromJsonAsync<List<TinNhanDto>>($"http://localhost:5041/api/chat/messages/{chat.Id}");
+            var dbMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(chat.Id!));
             if (dbMsgs != null && dbMsgs.Any())
             {
                 currentMessages = dbMsgs.OrderBy(m => m.ThoiGianGui)
-                    .Select(m => new MessageModel
+                    .Select(m => new MessageUIModel
                     {
                         Text = m.NoiDung,
                         Timestamp = m.ThoiGianGui,
@@ -425,19 +396,9 @@
         catch (Exception ex)
         {
             Console.WriteLine("Lỗi tải chi tiết chat: " + ex.Message);
-            currentMessages = new List<MessageModel>
-            {
-                new MessageModel { Text = chat.LastMessage, Timestamp = chat.LastMessageTime, IsMine = chat.LastSender == "Me" }
-            };
         }
 
-        // Vào phòng chat cụ thể với Client
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
-        {
-            await hubConnection.SendAsync("JoinChatSession", chat.Id);
-        }
-
-        // Xóa tạm ép render frame này
+        await ChatService.JoinChatSessionAsync(chat.Id!);
         StateHasChanged();
     }
 
@@ -457,16 +418,9 @@
         if (string.IsNullOrWhiteSpace(newMessage) || selectedChat == null) return;
 
         var textToSend = newMessage.Trim();
-        newMessage = ""; // Clear ngay ô chat cho mượt mượt UX
+        newMessage = "";
 
-        // Thêm ngay tạm vào UI mình cho "Responsive"
-        currentMessages.Add(new MessageModel 
-        { 
-            Text = textToSend, 
-            Timestamp = DateTime.Now, 
-            IsMine = true 
-        });
-
+        currentMessages.Add(new MessageUIModel { Text = textToSend, Timestamp = DateTime.Now, IsMine = true });
         selectedChat.LastMessage = textToSend;
         selectedChat.LastSender = "Me";
         selectedChat.LastMessageTime = DateTime.Now;
@@ -478,30 +432,25 @@
         await Task.Delay(50);
         await ScrollToBottom();
 
-        // Gửi qua WebSocket
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+        await ChatService.SendMessageAsync(new ChatMessageDto
         {
-            var tn = new TinNhanDto
-            {
-                MaPhien = Guid.Parse(selectedChat.Id!),
-                SenderType = "STAFF",
-                NoiDung = textToSend,
-                TrangThai = "sent"
-            };
-            await hubConnection.SendAsync("SendMessage", tn);
-        }
+            MaPhien = Guid.Parse(selectedChat.Id!),
+            SenderType = "STAFF",
+            NoiDung = textToSend,
+            TrangThai = "sent"
+        });
     }
 
     private async Task CloseCurrentSession()
     {
-        if (selectedChat == null || hubConnection == null) return;
-        await hubConnection.SendAsync("CloseSession", selectedChat.Id, myStaffId);
+        if (selectedChat == null) return;
+        await ChatService.CloseSessionAsync(selectedChat.Id!, myStaffId);
     }
 
     private async Task ReopenCurrentSession()
     {
-        if (selectedChat == null || hubConnection == null) return;
-        await hubConnection.SendAsync("ReopenSession", selectedChat.Id, myStaffId);
+        if (selectedChat == null) return;
+        await ChatService.ReopenSessionAsync(selectedChat.Id!, myStaffId);
     }
 
     private async Task ScrollToBottom()
@@ -510,39 +459,17 @@
         catch { }
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
-    }
-
-    // --- CÁC MODELS MAP TỪ API ---
-    public class PhienHoiThoaiDto
-    {
-        public Guid Id { get; set; }
-        public string ClientType { get; set; } = string.Empty;
-        public string StaffID { get; set; } = string.Empty;
-        public string LastMessage { get; set; } = string.Empty;
-        public string HoTen { get; set; } = string.Empty;
-        public DateTime LastTime { get; set; }
-        public int UnreadCount { get; set; }
-        public string TrangThai { get; set; } = "ACTIVE";
-    }
-
-    public class TinNhanDto
-    {
-        public Guid MaPhien { get; set; }
-        public Guid ClientID { get; set; }
-        public string SenderType { get; set; } = string.Empty;
-        public string NoiDung { get; set; } = string.Empty;
-        public DateTime ThoiGianGui { get; set; } = DateTime.UtcNow;
-        public string TrangThai { get; set; } = string.Empty;
+        ChatService.OnNewChatAssigned -= HandleNewChatAssigned;
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+        ChatService.OnSessionClosed -= HandleSessionClosed;
+        ChatService.OnSessionReopened -= HandleSessionReopened;
+        ChatService.OnSessionUpgraded -= HandleSessionUpgraded;
     }
 
     // --- MODELS CỦA GIAO DIỆN ---
-    public class ChatModel
+    public class ChatUIModel
     {
         public string? Id { get; set; }
         public string CustomerName { get; set; } = "";
@@ -555,7 +482,7 @@
         public string SessionStatus { get; set; } = "ACTIVE";
     }
 
-    public class MessageModel
+    public class MessageUIModel
     {
         public string Text { get; set; } = "";
         public DateTime Timestamp { get; set; }

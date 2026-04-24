@@ -1,6 +1,5 @@
-﻿@page "/staff/orders"
-@page "/account/orders"
-@layout blazor_frontend.Layout.AccountProfileLayout
+@page "/staff/orders"
+@layout blazor_frontend.Layout.StaffPage
 @using System.Linq
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService orderService
@@ -262,7 +261,7 @@
                             @foreach (var detail in selectedOrder.ChiTietDonHangs)
                             {
                                 <li class="py-4 flex">
-                                    <div class="flex-shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
+                                    <div class="shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
                                         <img src="@GetVariantImage(detail.MaCTSP)" alt="@detail.TenSP_LuuTru" class="w-full h-full object-center object-cover" onerror="this.src='product1.jpg';" />
                                     </div>
                                     <div class="ml-4 flex-1 flex flex-col">

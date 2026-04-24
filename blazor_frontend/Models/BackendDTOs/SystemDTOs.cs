@@ -268,13 +268,4 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? Anh { get; set; }
     }
 
-    // CHAT
-    public class ChatMessageDto
-    {
-        public Guid MaPhien { get; set; }
-        public Guid SenderID { get; set; }
-        public string SenderType { get; set; } = string.Empty;
-        public string NoiDung { get; set; } = string.Empty;
-        public DateTime ThoiGianGui { get; set; }
-    }
-}
+}

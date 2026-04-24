@@ -16,10 +16,14 @@
 
     <LandingFooter />
 
-    <ChatWidget />
+    @if (AuthState?.Role != "Admin" && AuthState?.Role != "Staff")
+    {
+        <ChatWidget />
+    }
 </div>
 
 @code {
+    [Inject] private blazor_frontend.Services.AuthState AuthState { get; set; } = default!;
     private bool IsCartPage =>
         Nav.ToBaseRelativePath(Nav.Uri).StartsWith("cart", StringComparison.OrdinalIgnoreCase);
 }
