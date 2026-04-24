@@ -2,6 +2,7 @@
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IProductService productService
 @inject blazor_frontend.Services.ICategoryService categoryService
+@inject blazor_frontend.Services.IOrderService orderService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
@@ -70,6 +71,10 @@
                     </select>
                     <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
+                <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-purple-200 active:scale-95" @onclick="SyncSalesCount">
+                    <i class="ph ph-arrows-clockwise text-xl"></i>
+                    Sync lượt bán
+                </button>
                 <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-blue-200 active:scale-95" @onclick="New">
                     <i class="ph ph-plus-circle text-xl"></i>
                     Thêm sản phẩm
@@ -95,6 +100,7 @@
                             <th class="p-4 border-b border-gray-100">Mô tả</th>
                             <th class="p-4 border-b border-gray-100 text-center">Biến thể</th>
                             <th class="p-4 border-b border-gray-100 text-center">Kho</th>
+                            <th class="p-4 border-b border-gray-100 text-center">Lượt bán</th>
                             <th class="p-4 border-b border-gray-100 text-right">Thao tác</th>
                             <th class="p-4 border-b border-gray-100 text-right">Ảnh</th>
                         </tr>
@@ -140,6 +146,10 @@
 
                                     <td class="p-4 text-center align-top">
                                         <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700">@totalStock</span>
+                                    </td>
+
+                                    <td class="p-4 text-center align-top">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700">@sp.LuotBan</span>
                                     </td>
 
                                     <td class="p-4 text-right space-x-1 align-top whitespace-nowrap">
@@ -689,6 +699,33 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task SyncSalesCount()
+    {
+        try
+        {
+            message = "Đang đồng bộ lượt bán từ đơn hàng...";
+            isError = false;
+            StateHasChanged();
+
+            var success = await orderService.SyncSalesCountAsync();
+            if (success)
+            {
+                message = "Đồng bộ lượt bán thành công!";
+                await Load();
+            }
+            else
+            {
+                message = "Đồng bộ lượt bán thất bại.";
+                isError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi: {ex.Message}";
+            isError = true;
         }
     }
 

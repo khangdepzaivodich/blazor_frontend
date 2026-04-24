@@ -1,8 +1,10 @@
 @using Microsoft.AspNetCore.Components
 @inject blazor_frontend.Services.IAuthService AuthService
 @inject blazor_frontend.Services.AuthState AuthState
+@inject blazor_frontend.Services.ICategoryService CategoryService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@using blazor_frontend.Models.BackendDTOs
 
 @code {
     private bool _mobileOpen;
@@ -14,11 +16,17 @@
 
     [Parameter] public int CartCount { get; set; } = 0;
 
-    protected override void OnInitialized()
+    private List<LoaiDanhMucDto> _loaiDanhMucs = new();
+    private List<DanhMucDto> _danhMucs = new();
+
+    protected override async Task OnInitializedAsync()
     {
         _isUserLoggedIn = AuthState.IsAuthenticated;
         if (_isUserLoggedIn) _isLoaded = true;
         AuthState.AuthStateChanged += HandleAuthStateChanged;
+        
+        _loaiDanhMucs = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
+        _danhMucs = (await CategoryService.GetAllAsync()).ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -147,37 +155,20 @@
                                 </ul>
                             </div>
 
-                            <div class="px-6">
-                                <a href="/category/f641efa0-571c-4876-92d1-19c985968d39/Áo">
-                                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900 hover:text-blue-600 transition-colors">Áo</h3>
-                                </a>
-                                <ul class="space-y-1 text-[15px] font-medium text-gray-500">
-                                    <li><a href="/subcategory/60a3c1be-ae8d-4720-85e7-6cbcce09be84/Áo thun" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Thun</a></li>
-                                    <li><a href="/subcategory/bb656af1-534e-4c73-8aba-1dbf8c2c449d/Áo sơ mi" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Sơ mi</a></li>
-                                    <li><a href="/subcategory/deadc13c-8ff0-4ae9-8df9-ea81b00a8e1f/Áo polo" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Polo</a></li>
-                                </ul>
-                            </div>
-
-                            <div class="px-6">
-                                <a href="/category/4c418a3e-1769-4f39-8379-f39db79ec50f/Quần">
-                                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900 hover:text-blue-600 transition-colors">Quần</h3>
-                                </a>
-                                <ul class="space-y-1 text-[15px] font-medium text-gray-500">
-                                    <li><a href="/subcategory/dcf16b99-5241-4acd-8106-a3372b76f729/Quần Jean" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Jean</a></li>
-                                    <li><a href="/subcategory/9ab1c2df-e37e-4c83-9b38-1cd37896d696/Quần Tây" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Quần Tây</a></li>
-                                    <li><a href="/subcategory/c1784ca7-abfe-4c46-9c0c-f1ad40363a0d/Quần Short" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Short</a></li>
-                                </ul>
-                            </div>
-
-                            <div class="px-6">
-                                <a href="/category/865167ea-cdbc-41ed-a282-c28353cf50e3/Phụ kiện">
-                                    <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900 hover:text-blue-600 transition-colors">Phụ kiện</h3>
-                                </a>
-                                <ul class="space-y-1 text-[15px] font-medium text-gray-500">
-                                    <li><a href="/category/865167ea-cdbc-41ed-a282-c28353cf50e3/Thắt lưng" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Thắt lưng</a></li>
-                                    <li><a href="/category/aaee47ce-87f2-4875-93fb-07df6bd4b77b/Khác" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Khác</a></li>
-                                </ul>
-                            </div>
+                            @foreach (var loai in _loaiDanhMucs.Take(3))
+                            {
+                                <div class="px-6">
+                                    <a href="/category/@loai.MaLDM/@Uri.EscapeDataString(loai.TenLDM)">
+                                        <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900 hover:text-blue-600 transition-colors">@loai.TenLDM</h3>
+                                    </a>
+                                    <ul class="space-y-1 text-[15px] font-medium text-gray-500">
+                                        @foreach (var danhMuc in _danhMucs.Where(d => d.MaLDM == loai.MaLDM))
+                                        {
+                                            <li><a href="/subcategory/@danhMuc.MaDM/@Uri.EscapeDataString(danhMuc.TenDM)" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">@danhMuc.TenDM</a></li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
 
                             <div class="pl-6 space-y-3">
                                 <a href="/products/summer" class="group/card block overflow-hidden rounded-xl border border-gray-100 bg-gray-50">

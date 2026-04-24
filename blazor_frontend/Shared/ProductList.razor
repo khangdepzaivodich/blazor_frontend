@@ -15,6 +15,7 @@
                              BadgeText="@p.BadgeText"
                              Colors="@p.Colors"
                              ProductId="@p.Id"
+                             LuotBan="@p.LuotBan"
                              ShowActions="@ShowActions" />
             }
         }
@@ -95,5 +96,5 @@
     [Parameter] public int TotalPages { get; set; } = 1;
     [Parameter] public EventCallback<int> OnPageChanged { get; set; }
 
-    public record ProductDto(string Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors, string Category = "", Guid? CategoryId = null);
+    public record ProductDto(string Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors, string Category = "", Guid? CategoryId = null, int LuotBan = 0);
 }

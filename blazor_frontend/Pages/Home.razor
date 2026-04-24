@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using blazor_frontend.Shared
 @inject blazor_frontend.Services.IProductService productService
 
@@ -46,6 +46,7 @@
                                      Price="@item.Price" 
                                      BadgeText="@item.BadgeText" 
                                      Colors="@item.Colors"
+                                     LuotBan="@item.LuotBan"
                                      ShowActions="true" />
                     </div>
                 }
@@ -191,7 +192,8 @@
                         Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
                         BadgeText: "NEW",
                         Colors: colors.Length > 0 ? colors : ["#000000"],
-                        CategoryId: sp.MaDM);
+                        CategoryId: sp.MaDM,
+                        LuotBan: sp.LuotBan);
                 })
                 .ToList();
         }

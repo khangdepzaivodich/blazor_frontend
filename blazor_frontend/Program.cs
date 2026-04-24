@@ -17,7 +17,6 @@ builder.Services.AddHttpClient("DiscountAPI", client => client.BaseAddress = new
 builder.Services.AddHttpClient("BasketAPI", client => client.BaseAddress = new Uri("https://localhost:7021/")).AddHttpMessageHandler<blazor_frontend.Services.AuthHandler>();
 builder.Services.AddHttpClient("CatalogAPI", client => client.BaseAddress = new Uri("https://localhost:7103/")).AddHttpMessageHandler<blazor_frontend.Services.AuthHandler>();
 builder.Services.AddHttpClient("ChatAPI", client => client.BaseAddress = new Uri("https://localhost:7229/")).AddHttpMessageHandler<blazor_frontend.Services.AuthHandler>();
-
 // Register Frontend Services
 builder.Services.AddSingleton<blazor_frontend.Services.AuthState>(); // Singleton State
 builder.Services.AddScoped<blazor_frontend.Services.IAuthService, blazor_frontend.Services.AuthService>();

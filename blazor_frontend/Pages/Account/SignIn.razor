@@ -28,13 +28,13 @@
         <div>
             <label class="block text-sm text-gray-600 mb-1">Email</label>
             <InputText class="w-full border px-3 py-2 rounded-lg" @bind-Value="model.Email" />
-            <ValidationMessage For="@(() => model.Email)" />
+            <ValidationMessage For="@(() => model.Email)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <div>
             <label class="block text-sm text-gray-600 mb-1">Password</label>
             <InputText class="w-full border px-3 py-2 rounded-lg" type="password" @bind-Value="model.MatKhau" />
-            <ValidationMessage For="@(() => model.MatKhau)" />
+            <ValidationMessage For="@(() => model.MatKhau)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <button class="w-full flex items-center justify-center gap-2 bg-blue-700 text-white py-2 rounded-lg" disabled="@isSubmitting">

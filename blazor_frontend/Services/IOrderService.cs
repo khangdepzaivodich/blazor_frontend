@@ -12,5 +12,6 @@ namespace blazor_frontend.Services
         Task<IEnumerable<DonHangDto>> GetOrdersByUserIdAsync(Guid maTK);
         Task<PagedDonHangResult?> GetAllPagedAsync(int page, int pageSize);
         Task<bool> UpdateOrderStatusAsync(Guid maDH, string newStatus);
+        Task<bool> SyncSalesCountAsync();
     }
 }

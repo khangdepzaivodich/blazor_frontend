@@ -20,13 +20,17 @@ public static class DiscountPricingHelper
         var currentLoaiDanhMucId = currentCategory?.MaLDM;
 
         return discounts
-            .Where(discount => IsApplicable(discount, product, currentLoaiDanhMucId))
+            .Where(discount => IsApplicable(discount, product, currentLoaiDanhMucId, price))
             .OrderByDescending(discount => GetDiscountAmount(discount, price))
             .FirstOrDefault();
     }
 
-    public static bool IsApplicable(MaGiamGiaDto discount, SanPhamDto product, Guid? currentLoaiDanhMucId)
+    public static bool IsScopeApplicable(MaGiamGiaDto discount, SanPhamDto product, Guid? currentLoaiDanhMucId)
     {
+        // Don't show expired or fully used discounts
+        if (discount.HanSuDung < DateTime.Now.AddHours(-12)) return false;
+        if (discount.SoLuong <= 0) return false;
+
         return discount.ApDungCho switch
         {
             "TatCa" => true,
@@ -36,6 +40,21 @@ public static class DiscountPricingHelper
                 || (discount.MaSPs?.Contains(product.MaSP) == true),
             _ => false
         };
+    }
+
+    public static bool IsConditionsMet(MaGiamGiaDto discount, decimal currentPriceOrTotal)
+    {
+        // Expiration and quantity are already checked in IsScopeApplicable, but we check again for safety
+        if (discount.HanSuDung < DateTime.Now.AddHours(-12)) return false;
+        if (discount.SoLuong <= 0) return false;
+        
+        if (discount.DonHangToiThieu.HasValue && currentPriceOrTotal < discount.DonHangToiThieu.Value) return false;
+        return true;
+    }
+
+    public static bool IsApplicable(MaGiamGiaDto discount, SanPhamDto product, Guid? currentLoaiDanhMucId, decimal currentPriceOrTotal)
+    {
+        return IsScopeApplicable(discount, product, currentLoaiDanhMucId) && IsConditionsMet(discount, currentPriceOrTotal);
     }
 
     public static string GetScopeDisplayText(MaGiamGiaDto item, IReadOnlyCollection<LoaiDanhMucDto> loaiDanhMucs, IReadOnlyCollection<DanhMucDto> danhMucs, IReadOnlyCollection<SanPhamDto> sanPhams)
@@ -67,7 +86,7 @@ public static class DiscountPricingHelper
         var currentLoaiDanhMucId = currentCategory?.MaLDM;
 
         return discounts
-            .Where(discount => IsApplicable(discount, product, currentLoaiDanhMucId))
+            .Where(discount => IsScopeApplicable(discount, product, currentLoaiDanhMucId))
             .OrderByDescending(discount => GetDiscountAmount(discount, price))
             .ThenBy(discount => discount.MaCode);
     }
@@ -77,7 +96,8 @@ public static class DiscountPricingHelper
         IReadOnlyDictionary<string, SanPhamDto> productById,
         IReadOnlyCollection<LoaiDanhMucDto> loaiDanhMucs,
         IReadOnlyCollection<DanhMucDto> danhMucs,
-        IEnumerable<MaGiamGiaDto> discounts)
+        IEnumerable<MaGiamGiaDto> discounts,
+        decimal cartTotal)
     {
         var matched = new List<MaGiamGiaDto>();
 
@@ -91,7 +111,7 @@ public static class DiscountPricingHelper
             var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
             var currentLoaiDanhMucId = currentCategory?.MaLDM;
 
-            matched.AddRange(discounts.Where(discount => IsApplicable(discount, product, currentLoaiDanhMucId)));
+            matched.AddRange(discounts.Where(discount => IsScopeApplicable(discount, product, currentLoaiDanhMucId)));
         }
 
         return matched

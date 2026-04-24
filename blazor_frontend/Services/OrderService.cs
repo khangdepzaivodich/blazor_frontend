@@ -48,5 +48,11 @@ namespace blazor_frontend.Services
             var res = await _httpClient.PatchAsync($"api/donhang/{maDH}/status", JsonContent.Create(newStatus));
             return res.IsSuccessStatusCode;
         }
+
+        public async Task<bool> SyncSalesCountAsync()
+        {
+            var res = await _httpClient.PostAsync("api/donhang/sync-sales-count", null);
+            return res.IsSuccessStatusCode;
+        }
     }
 }

@@ -41,7 +41,10 @@
         <a href="/product/@ProductId" class="text-[15px] text-gray-600 font-medium line-clamp-1 hover:text-blue-600 transition-colors" title="@Title">@Title</a>
         
         <div class="flex items-center justify-between mt-auto">
-            <div class="text-[17px] font-extrabold text-gray-900">@Price</div>
+            <div class="flex items-center gap-2">
+                <div class="text-[17px] font-extrabold text-gray-900">@Price</div>
+                <span class="text-[11px] text-gray-400 font-medium">| Đã bán @FormatLuotBan(LuotBan)</span>
+            </div>
             
             @if (Colors?.Any() == true)
             {
@@ -68,10 +71,17 @@
     [Parameter] public string[] Colors { get; set; } = new[] { "#000", "#fff", "#f00" };
     [Parameter] public bool ShowActions { get; set; } = true;
     [Parameter] public string ProductId { get; set; } = string.Empty;
+    [Parameter] public int LuotBan { get; set; } = 0;
 
     [Parameter] public EventCallback<string> OnAddToCart { get; set; }
     [Parameter] public EventCallback<string> OnQuickView { get; set; }
 
     private Task OnAddToCartClicked() => OnAddToCart.InvokeAsync(ProductId);
     private Task OnQuickViewClicked() => OnQuickView.InvokeAsync(ProductId);
+
+    private string FormatLuotBan(int count)
+    {
+        if (count >= 1000) return $"{count / 1000.0:0.#}k";
+        return count.ToString();
+    }
 }

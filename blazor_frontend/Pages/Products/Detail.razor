@@ -84,8 +84,15 @@
         <!-- RIGHT: Product Info -->
         <div class="w-full lg:w-[55%] flex flex-col">
             <h1 class="text-2xl font-bold text-gray-900 mb-2">@(currentProduct?.TenSP ?? "Sản phẩm")</h1>
-            <div class="mb-4">
+            <div class="mb-4 flex items-center gap-3">
                 <span class="inline-block text-white text-xs font-bold px-2 py-0.5 rounded @(IsInStock ? "bg-green-500" : "bg-gray-500")">@(IsInStock ? "Còn hàng" : "Hết hàng")</span>
+                @if (currentProduct != null)
+                {
+                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        Đã bán @FormatLuotBan(currentProduct.LuotBan)
+                    </span>
+                }
             </div>
             
             <p class="text-sm text-gray-600 mb-2">Mã sản phẩm: <span class="font-semibold text-gray-800">@(currentProduct?.MaSP.ToString()[..8].ToUpper() ?? "N/A")</span></p>
@@ -108,16 +115,43 @@
             {
                 <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <div class="font-semibold mb-2">Mã giảm giá áp dụng</div>
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-col gap-3">
                         @foreach (var discount in ApplicableDiscounts)
                         {
+                            var isConditionsMet = DiscountPricingHelper.IsConditionsMet(discount, CurrentPrice);
                             var isSelectedVoucher = string.Equals(selectedVoucherCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
-                            <div class="flex items-center gap-2 rounded-full px-3 py-1 @(isSelectedVoucher ? "border-2 border-red-600 bg-red-100" : "border border-red-300 bg-white")">
-                                <span class="text-xs font-semibold text-red-700">@discount.MaCode - @FormatDiscountText(discount)</span>
-                                <button class="rounded-full @(isSelectedVoucher ? "bg-red-800" : "bg-red-600") px-2 py-1 text-[11px] font-bold text-white hover:bg-red-700"
-                                        @onclick="() => SaveVoucherForCartAsync(discount.MaCode)">
-                                    @(isSelectedVoucher ? "Đã áp dụng" : "Áp dụng")
-                                </button>
+                            <div class="flex flex-col gap-1 rounded-lg border p-3 @(isSelectedVoucher ? "border-red-500 bg-red-50" : "border-gray-200 bg-white")">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-gray-800">@discount.MaCode - @FormatDiscountText(discount)</span>
+                                    <div class="flex items-center gap-2">
+                                        @if (discount.GiaTriGiamToiDa.HasValue && discount.GiaTriGiamToiDa.Value > 0)
+                                        {
+                                            <span class="text-[11px] text-gray-500 italic">Giảm tối đa @(discount.GiaTriGiamToiDa.Value.ToString("N0"))đ</span>
+                                        }
+                                        <button class="rounded px-3 py-1 text-xs font-bold text-white transition-colors @(!isConditionsMet ? "bg-gray-400 cursor-not-allowed" : (isSelectedVoucher ? "bg-red-800 hover:bg-red-900" : "bg-red-600 hover:bg-red-700"))"
+                                                disabled="@(!isConditionsMet)"
+                                                @onclick="() => SaveVoucherForCartAsync(discount.MaCode)">
+                                            @(isSelectedVoucher ? "Đã áp dụng" : "Áp dụng")
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-[11px] text-gray-500 mt-1">
+                                    @if (discount.DonHangToiThieu.HasValue && discount.DonHangToiThieu.Value > 0)
+                                    {
+                                        <span class="@(CurrentPrice < discount.DonHangToiThieu.Value ? "text-red-500 font-medium" : "")">
+                                            Đơn tối thiểu: @discount.DonHangToiThieu.Value.ToString("N0")đ
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>Không yêu cầu tối thiểu</span>
+                                    }
+                                    <span class="@(discount.HanSuDung < DateTime.Now ? "text-red-500 font-medium" : "")">HSD: @discount.HanSuDung.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                @if (discount.SoLuong <= 0)
+                                {
+                                    <div class="text-[11px] text-red-500 font-medium mt-1">Mã đã hết lượt sử dụng</div>
+                                }
                             </div>
                         }
                     </div>
@@ -161,12 +195,6 @@
                             @size
                         </button>
                     }
-                </div>
-                <div class="grid grid-cols-4 gap-2 text-xs text-center text-gray-600">
-                    <div class="border border-gray-900 rounded py-2 font-semibold text-black bg-gray-50">Ôm<br/><span class="font-normal">(Slim-Fit)</span></div>
-                    <div class="border border-gray-200 rounded py-2">Linh Hoạt<br/>(Regular)</div>
-                    <div class="border border-gray-200 rounded py-2">Rộng Vừa<br/>(Relaxed)</div>
-                    <div class="border border-gray-200 rounded py-2">Rộng<br/>(Oversize)</div>
                 </div>
             </div>
 
@@ -284,7 +312,7 @@
     private List<LoaiDanhMucDto> allCategoryGroups = new();
     private string? selectedVoucherCode;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         if (!Guid.TryParse(Id, out var productId))
         {
@@ -388,11 +416,13 @@
 
     private bool IsInStock => Variants.Any(x => x.SoLuong > 0);
 
-    private MaGiamGiaDto? CurrentDiscount => DiscountPricingHelper.GetBestApplicableDiscount(currentProduct, SelectedVariant?.Gia ?? 0m, allCategoryGroups, allCategories, discounts);
+    private decimal CurrentPrice => SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0m;
 
-    private decimal CurrentFinalPrice => DiscountPricingHelper.GetFinalPrice(CurrentDiscount, SelectedVariant?.Gia ?? 0m);
+    private MaGiamGiaDto? CurrentDiscount => DiscountPricingHelper.GetBestApplicableDiscount(currentProduct, CurrentPrice, allCategoryGroups, allCategories, discounts);
 
-    private IEnumerable<MaGiamGiaDto> ApplicableDiscounts => DiscountPricingHelper.GetApplicableDiscounts(currentProduct, SelectedVariant?.Gia ?? 0m, allCategoryGroups, allCategories, discounts);
+    private decimal CurrentFinalPrice => DiscountPricingHelper.GetFinalPrice(CurrentDiscount, CurrentPrice);
+
+    private IEnumerable<MaGiamGiaDto> ApplicableDiscounts => DiscountPricingHelper.GetApplicableDiscounts(currentProduct, CurrentPrice, allCategoryGroups, allCategories, discounts);
 
     private async Task SelectMedia(int index)
     {
@@ -509,7 +539,8 @@
             Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
             BadgeText: "HÀNG MỚI",
             Colors: colors.Length > 0 ? colors : ["#000000"],
-            CategoryId: product.MaDM);
+            CategoryId: product.MaDM,
+            LuotBan: product.LuotBan);
     }
 
     private static string FormatDiscountText(MaGiamGiaDto discount)
@@ -524,6 +555,11 @@
         await JSRuntime.InvokeVoidAsync("alert", $"Đã lưu mã {code}. Vào giỏ hàng để áp dụng.");
     }
 
+    private string FormatLuotBan(int count)
+    {
+        if (count >= 1000) return $"{count / 1000.0:0.#}k";
+        return count.ToString();
+    }
 }
 
 <style>

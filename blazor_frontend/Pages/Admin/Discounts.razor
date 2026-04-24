@@ -42,6 +42,10 @@
                     <input type="number" class="w-full rounded border px-3 py-2" @bind="model.GiaTriGiamToiDa" />
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Số tiền tối thiếu trong đơn hàng để áp dụng </label>
+                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.DonHangToiThieu" />
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
                     <input type="number" class="w-full rounded border px-3 py-2" @bind="model.SoLuong" />
                 </div>
@@ -147,8 +151,8 @@
                 }
 
                 <div class="pt-4">
-                    <button class="rounded bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700" @onclick="CreateAsync">
-                        Lưu mã giảm giá
+                    <button class="rounded bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700" @onclick="SaveAsync">
+                        @(editingDiscountId.HasValue ? "Cập nhật mã" : "Lưu mã giảm giá")
                     </button>
                 </div>
             </div>
@@ -164,7 +168,9 @@
                     <th class="p-4">Áp dụng cho</th>
                     <th class="p-4">Giá trị</th>
                     <th class="p-4">Số lượng</th>
+                    <th class="p-4">Đơn tối thiểu</th>
                     <th class="p-4">Hạn</th>
+                    <th class="p-4">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -176,7 +182,11 @@
                         <td class="p-4">@DiscountPricingHelper.GetScopeDisplayText(item, loaiDanhMucs, danhMucs, sanPhams)</td>
                         <td class="p-4">@item.SoTien</td>
                         <td class="p-4">@item.SoLuong</td>
+                        <td class="p-4">@(item.DonHangToiThieu?.ToString("N0") ?? "0")</td>
                         <td class="p-4">@item.HanSuDung.ToString("dd/MM/yyyy")</td>
+                        <td class="p-4">
+                            <button class="text-blue-600 font-medium hover:underline" @onclick="() => EditDiscount(item)">Sửa</button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -209,6 +219,7 @@
     private Dictionary<Guid, string> loaiDanhMucNames = new();
     private Dictionary<Guid, string> danhMucNames = new();
     private Dictionary<Guid, string> sanPhamNames = new();
+    private Guid? editingDiscountId = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,7 +246,11 @@
         sanPhamNames = sanPhams.ToDictionary(x => x.MaSP, x => x.TenSP);
     }
 
-    private void ToggleForm() => showForm = !showForm;
+    private void ToggleForm() 
+    {
+        showForm = !showForm;
+        if (!showForm) ResetForm();
+    }
 
     private void OnScopeChanged()
     {
@@ -262,7 +277,55 @@
         expireText = e.Value?.ToString() ?? string.Empty;
     }
 
-    private async Task CreateAsync()
+    private void EditDiscount(MaGiamGiaDto item)
+    {
+        showForm = true;
+        editingDiscountId = item.MaGG;
+        model = new CreateMaGiamGiaRequest
+        {
+            MaCode = item.MaCode,
+            Loai = item.Loai,
+            SoTien = item.SoTien,
+            DonHangToiThieu = item.DonHangToiThieu,
+            GiaTriGiamToiDa = item.GiaTriGiamToiDa,
+            SoLuong = item.SoLuong,
+            HanSuDung = item.HanSuDung,
+            ApDungCho = item.ApDungCho,
+            MaLDM = item.MaLDM,
+            MaDM = item.MaDM,
+            MaSP = item.MaSP,
+            MaSPs = item.MaSPs ?? new List<Guid>()
+        };
+
+        expireText = item.HanSuDung.ToString("yyyy-MM-ddTHH:mm");
+
+        selectedLoaiDanhMucId = item.MaLDM?.ToString();
+        selectedDanhMucId = item.MaDM?.ToString();
+        selectedSanPhamId = item.MaSP?.ToString();
+
+        if (item.ApDungCho == "SanPham")
+        {
+            selectedProductIds = new HashSet<string>(item.MaSPs?.Select(x => x.ToString()) ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            if (item.MaSP.HasValue)
+            {
+                selectedProductIds.Add(item.MaSP.Value.ToString());
+            }
+
+            var firstProductId = selectedProductIds.FirstOrDefault();
+            if (firstProductId != null && Guid.TryParse(firstProductId, out var pId))
+            {
+                var p = sanPhams.FirstOrDefault(x => x.MaSP == pId);
+                if (p != null)
+                {
+                    selectedDanhMucInProductScopeId = p.MaDM.ToString();
+                    var cat = danhMucs.FirstOrDefault(x => x.MaDM == p.MaDM);
+                    selectedLoaiDanhMucId = cat?.MaLDM.ToString();
+                }
+            }
+        }
+    }
+
+    private async Task SaveAsync()
     {
         if (!DateTime.TryParse(expireText, out var parsedExpire))
         {
@@ -279,26 +342,41 @@
         if (model.ApDungCho == "TenDM" && model.MaDM == null) return;
         if (model.ApDungCho == "SanPham" && model.MaSPs.Count == 0) return;
 
-        var created = await DiscountService.CreateDiscountAsync(model);
-        if (created != null)
+        MaGiamGiaDto? result = null;
+        if (editingDiscountId.HasValue)
+        {
+            result = await DiscountService.UpdateDiscountAsync(editingDiscountId.Value, model);
+        }
+        else
+        {
+            result = await DiscountService.CreateDiscountAsync(model);
+        }
+
+        if (result != null)
         {
             await LoadAsync();
-            model = new CreateMaGiamGiaRequest
-            {
-                Loai = "PhanTram",
-                SoTien = 10,
-                SoLuong = 1,
-                HanSuDung = DateTime.UtcNow.AddDays(7),
-                ApDungCho = "TatCa"
-            };
-            selectedLoaiDanhMucId = null;
-            selectedDanhMucId = null;
-            selectedSanPhamId = null;
-            selectedDanhMucInProductScopeId = null;
-            selectedProductIds.Clear();
-            expireText = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
-            showForm = false;
+            ResetForm();
         }
+    }
+
+    private void ResetForm()
+    {
+        editingDiscountId = null;
+        model = new CreateMaGiamGiaRequest
+        {
+            Loai = "PhanTram",
+            SoTien = 10,
+            SoLuong = 1,
+            HanSuDung = DateTime.UtcNow.AddDays(7),
+            ApDungCho = "TatCa"
+        };
+        selectedLoaiDanhMucId = null;
+        selectedDanhMucId = null;
+        selectedSanPhamId = null;
+        selectedDanhMucInProductScopeId = null;
+        selectedProductIds.Clear();
+        expireText = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+        showForm = false;
     }
 
     private IEnumerable<SanPhamDto> SanPhamsOfSelectedDanhMuc

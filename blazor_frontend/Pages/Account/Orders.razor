@@ -5,6 +5,7 @@
 @inject blazor_frontend.Services.IOrderService orderService
 @inject blazor_frontend.Services.IUserService userService
 @inject blazor_frontend.Services.ICatalogService catalogService
+@inject blazor_frontend.Services.IDiscountService discountService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
@@ -82,9 +83,17 @@
                                     @foreach (var order in orders)
                                     {
                                         <tr class="hover:bg-gray-50/70">
-                                            <td class="px-5 py-4">
-                                                <div class="font-semibold text-gray-900">#@order.MaDH.ToString().Substring(0,8)</div>
-                                                <div class="mt-1 text-xs text-gray-500">@GetItemSummary(order)</div>
+                                            <td class="px-5 py-4 flex items-center gap-3">
+                                                @if (order.ChiTietDonHangs != null && order.ChiTietDonHangs.Any())
+                                                {
+                                                    <div class="h-12 w-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                                        <img src="@(string.IsNullOrEmpty(order.ChiTietDonHangs[0].Anh_LuuTru) ? "/images/placeholder.png" : order.ChiTietDonHangs[0].Anh_LuuTru)" alt="@order.ChiTietDonHangs[0].TenSP_LuuTru" class="h-full w-full object-cover" />
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <div class="font-semibold text-gray-900">#@order.MaDH.ToString().Substring(0,8)</div>
+                                                    <div class="mt-1 text-xs text-gray-500">@GetItemSummary(order)</div>
+                                                </div>
                                             </td>
                                             <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy")</td>
                                             <td class="px-5 py-4 text-right font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</td>
@@ -95,7 +104,7 @@
                                             </td>
                                             <td class="px-5 py-4 text-center">
                                                 <button class="text-blue-600 font-medium hover:underline"
-                                                        @onclick="@(() => Navigation.NavigateTo($"/account/orders/{order.MaDH}"))">
+                                                        @onclick="@(() => ViewDetails(order))">
                                                     Chi tiết
                                                 </button>
                                             </td>
@@ -111,9 +120,103 @@
     </div>
 </div>
 
+@if (showOrderModal && selectedOrder != null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-3xl rounded-2xl bg-white shadow-xl flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between border-b px-6 py-4">
+                <h3 class="text-xl font-bold text-gray-900">Chi tiết đơn hàng #@selectedOrder.MaDH.ToString().Substring(0,8)</h3>
+                <button @onclick="CloseModal" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto p-6 space-y-6">
+                <!-- Status & Date -->
+                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between rounded-xl bg-gray-50 p-4 border border-gray-100">
+                    <div>
+                        <div class="text-sm text-gray-500">Ngày đặt: @selectedOrder.NgayDat.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                    <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold @GetStatusClass(selectedOrder.TrangThaiDH)">
+                        @GetStatusText(selectedOrder.TrangThaiDH)
+                    </span>
+                </div>
+
+                <!-- Products -->
+                <div>
+                    <h4 class="mb-3 font-semibold text-gray-900">Sản phẩm</h4>
+                    <div class="space-y-3">
+                        @if (selectedOrder.ChiTietDonHangs != null)
+                        {
+                            @foreach (var item in selectedOrder.ChiTietDonHangs)
+                            {
+                                <div class="flex items-center justify-between rounded-lg border border-gray-100 p-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-12 w-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                            <img src="@(string.IsNullOrEmpty(item.Anh_LuuTru) ? "/images/placeholder.png" : item.Anh_LuuTru)" alt="@item.TenSP_LuuTru" class="h-full w-full object-cover" />
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">@item.TenSP_LuuTru</div>
+                                            <div class="text-sm text-gray-500">@item.Mau_LuuTru • @item.KichCo_LuuTru | SL: @item.SoLuong</div>
+                                        </div>
+                                    </div>
+                                    <div class="font-semibold text-gray-900">@((item.Gia_LuuTru * item.SoLuong).ToString("N0"))đ</div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                
+                <!-- Total -->
+                <div class="flex flex-col gap-2 border-t pt-4">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">Mã giảm giá:</span>
+                        <span class="font-semibold @(discountCode != null ? "text-green-600" : "text-gray-500")">
+                            @(discountCode != null ? $"{discountCode} {(minOrderValue > 0 ? $"(Tối thiểu {minOrderValue?.ToString("N0")}đ)" : "")}" : "Không áp dụng")
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-gray-700">Tổng cộng:</span>
+                        <span class="text-xl font-bold text-blue-600">@selectedOrder.TongTien.ToString("N0")đ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<DonHangDto> orders = new();
     private bool isLoading = true;
+    private DonHangDto? selectedOrder = null;
+    private bool showOrderModal = false;
+    private string? discountCode = null;
+    private decimal? minOrderValue = null;
+
+    private async Task ViewDetails(DonHangDto order)
+    {
+        selectedOrder = order;
+        discountCode = null;
+        minOrderValue = null;
+        if (order.MaGG.HasValue)
+        {
+            var discounts = await discountService.GetDiscountsAsync();
+            var appliedDiscount = discounts.FirstOrDefault(d => d.MaGG == order.MaGG.Value);
+            if (appliedDiscount != null)
+            {
+                discountCode = appliedDiscount.MaCode;
+                minOrderValue = appliedDiscount.DonHangToiThieu;
+            }
+        }
+        showOrderModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showOrderModal = false;
+        selectedOrder = null;
+        discountCode = null;
+        minOrderValue = null;
+    }
 
     protected override async Task OnInitializedAsync()
     {

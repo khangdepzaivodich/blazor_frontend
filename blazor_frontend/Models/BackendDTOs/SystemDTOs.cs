@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace blazor_frontend.Models.BackendDTOs
 {
     // IDENTITY
     public class LoginRequest
     {
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Mật khẩu không được để trống")]
         public string MatKhau { get; set; } = string.Empty;
     }
 
@@ -33,10 +38,24 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class RegisterRequest
     {
+        [Required(ErrorMessage = "Họ tên không được để trống")]
+        [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
         public string HoTen { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Số điện thoại không được để trống")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string SoDienThoai { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
-        public string DiaChi { get; set; } = string.Empty;
+
+        // [Required(ErrorMessage = "Địa chỉ không được để trống")]
+        // [StringLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự")]
+        // public string DiaChi { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Mật khẩu không được để trống")]
+        [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
         public string MatKhau { get; set; } = string.Empty;
     }
 
@@ -48,13 +67,22 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class ForgotPasswordRequest
     {
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
     }
 
     public class ResetPasswordRequest
     {
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Mã xác nhận (Token) không được để trống")]
         public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Mật khẩu mới không được để trống")]
+        [MinLength(6, ErrorMessage = "Mật khẩu mới phải có ít nhất 6 ký tự")]
         public string NewPassword { get; set; } = string.Empty;
     }
 
@@ -75,9 +103,15 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class UpdateMeRequest
     {
+        [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
         public string HoTen { get; set; } = string.Empty;
+
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? SoDienThoai { get; set; }
+
+        [StringLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự")]
         public string? DiaChi { get; set; }
+
         public DateTime? NgaySinh { get; set; }
         public string? GioiTinh { get; set; }
         public string? Avatar { get; set; }
@@ -91,10 +125,21 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class CreateUserRequest
     {
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Mật khẩu không được để trống")]
+        [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
         public string Password { get; set; } = string.Empty;
+
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? SoDienThoai { get; set; }
+
+        [Required(ErrorMessage = "Họ tên không được để trống")]
+        [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
         public string HoTen { get; set; } = string.Empty;
+
         public string? DiaChi { get; set; }
         public string? VaiTro { get; set; }
         public DateTime NgaySinh { get; set; } = DateTime.UtcNow;
@@ -102,9 +147,15 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class UpdateUserByAdminRequest
     {
+        [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
         public string? HoTen { get; set; }
+
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
         public string? SoDienThoai { get; set; }
+
+        [StringLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự")]
         public string? DiaChi { get; set; }
+
         public string? VaiTro { get; set; }
         public string? TrangThai { get; set; }
     }
@@ -177,6 +228,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string MaCode { get; set; } = string.Empty;
         public string Loai { get; set; } = string.Empty;
         public decimal SoTien { get; set; }
+        public decimal? DonHangToiThieu { get; set; }
         public decimal? GiaTriGiamToiDa { get; set; }
         public int SoLuong { get; set; }
         public DateTime HanSuDung { get; set; }
@@ -192,6 +244,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string MaCode { get; set; } = string.Empty;
         public string Loai { get; set; } = string.Empty;
         public decimal SoTien { get; set; }
+        public decimal? DonHangToiThieu { get; set; }
         public decimal? GiaTriGiamToiDa { get; set; }
         public int SoLuong { get; set; }
         public DateTime HanSuDung { get; set; } = DateTime.UtcNow;
@@ -237,6 +290,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? MoTa { get; set; }
         public decimal GiaMin { get; set; }
         public decimal GiaMax { get; set; }
+        public int LuotBan { get; set; }
         public DateTime NgayTao { get; set; } = DateTime.UtcNow;
         public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
@@ -247,6 +301,8 @@ namespace blazor_frontend.Models.BackendDTOs
         public Guid MaDM { get; set; }
         public string TenSP { get; set; } = string.Empty;
         public string? MoTa { get; set; }
+        public int LuotBan { get; set; }
+        public DateTime NgayTao { get; set; } = DateTime.UtcNow;
         public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
 

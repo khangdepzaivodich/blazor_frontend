@@ -272,7 +272,8 @@
             BadgeText: displayPriceVal < 500000 ? "New Arrival" : "Premium",
             Colors: colors,
             Category: CategoryName ?? "",
-            CategoryId: p.MaDM
+            CategoryId: p.MaDM,
+            LuotBan: p.LuotBan
         );
     }).ToList();
 
@@ -312,10 +313,31 @@
         if (!string.IsNullOrWhiteSpace(SearchQueryParam))
         {
             searchKeyword = SearchQueryParam;
+            SortMode = "newest";
         }
         else if (!string.IsNullOrWhiteSpace(SearchRouteParam))
         {
-            searchKeyword = SearchRouteParam;
+            if (SearchRouteParam.Equals("best-seller", StringComparison.OrdinalIgnoreCase))
+            {
+                searchKeyword = "";
+                SortMode = "best-seller";
+                CategoryTypeId = Guid.Empty;
+                CategoryId = null;
+                CategoryName = "Bán chạy";
+            }
+            else if (SearchRouteParam.Equals("new", StringComparison.OrdinalIgnoreCase))
+            {
+                searchKeyword = "";
+                SortMode = "newest";
+                CategoryTypeId = Guid.Empty;
+                CategoryId = null;
+                CategoryName = "Hàng mới";
+            }
+            else
+            {
+                searchKeyword = SearchRouteParam;
+                SortMode = "newest";
+            }
         }
         else if (string.IsNullOrEmpty(searchKeyword)) 
         {
@@ -444,19 +466,10 @@
             
             // Breadcrumb removed from here
 
-            var response = await ProductService.GetPagedAsync(currentPage, pageSize, targetTypeId, targetId, searchKeyword, minPrice, maxPrice);
+            var response = await ProductService.GetPagedAsync(currentPage, pageSize, targetTypeId, targetId, searchKeyword, minPrice, maxPrice, SortMode);
             if (response != null)
             {
                 products = response.Data.ToList();
-
-                // Apply Frontend Sorting
-                products = SortMode switch
-                {
-                    "price-asc" => products.OrderBy(p => p.GiaMin).ToList(),
-                    "price-desc" => products.OrderByDescending(p => p.GiaMin).ToList(),
-                    "newest" => products.OrderByDescending(p => p.NgayTao).ToList(),
-                    _ => products
-                };
 
                 totalCount = response.TotalCount;
                 totalPages = response.TotalPages;

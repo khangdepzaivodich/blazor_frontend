@@ -6,7 +6,7 @@ namespace blazor_frontend.Services
     public interface IProductService
     {
         Task<IEnumerable<SanPhamDto>> GetAllAsync();
-        Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null);
+        Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortBy = null);
         Task<SanPhamDto?> GetByIdAsync(Guid id);
         Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request);
         Task<bool> UpdateAsync(Guid id, SanPhamCreateRequest request);
@@ -44,7 +44,7 @@ namespace blazor_frontend.Services
             return response?.Data ?? new List<SanPhamDto>();
         }
 
-        public async Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null)
+        public async Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortBy = null)
         {
             var url = $"api/sanpham?pageNumber={pageNumber}&pageSize={pageSize}";
             if (categoryTypeId.HasValue) url += $"&maLDM={categoryTypeId.Value}";
@@ -55,6 +55,8 @@ namespace blazor_frontend.Services
                 url += $"&minPrice={minPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
             if (maxPrice.HasValue) 
                 url += $"&maxPrice={maxPrice.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            if (!string.IsNullOrWhiteSpace(sortBy))
+                url += $"&sortBy={Uri.EscapeDataString(sortBy)}";
             
             return await _httpClient.GetFromJsonAsync<PagedSanPhamResponse>(url);
         }

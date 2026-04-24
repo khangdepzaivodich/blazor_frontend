@@ -1,7 +1,7 @@
 @page "/staff/orders/{maDH:guid}"
-@page "/account/orders/{maDH:guid}"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService OrderService
+@inject blazor_frontend.Services.IDiscountService DiscountService
 @inject NavigationManager Nav
 @inject IJSRuntime JSRuntime
 
@@ -53,6 +53,12 @@
                         <div class="mt-1 font-semibold text-gray-900">@order.DiaChiGiaoHang</div>
                     </div>
                     <div class="rounded-xl bg-gray-50 p-4">
+                        <div class="text-gray-500">Mã giảm giá</div>
+                        <div class="mt-1 font-semibold @(discountCode != null ? "text-green-600" : "text-gray-500")">
+                            @(discountCode != null ? $"{discountCode} {(minOrderValue > 0 ? $"(Tối thiểu {minOrderValue?.ToString("N0")}đ)" : "")}" : "Không áp dụng")
+                        </div>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 p-4">
                         <div class="text-gray-500">Tổng tiền</div>
                         <div class="mt-1 font-semibold text-gray-900">@order.TongTien.ToString("N0")đ</div>
                     </div>
@@ -77,9 +83,14 @@
                             @foreach (var it in order.ChiTietDonHangs)
                             {
                                 <tr>
-                                    <td class="px-6 py-4">
-                                        <div class="font-semibold text-gray-900">@it.TenSP_LuuTru</div>
-                                        <div class="mt-1 text-xs text-gray-500">@it.Mau_LuuTru • @it.KichCo_LuuTru</div>
+                                    <td class="px-6 py-4 flex items-center gap-3">
+                                        <div class="h-12 w-12 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                                            <img src="@(string.IsNullOrEmpty(it.Anh_LuuTru) ? "/images/placeholder.png" : it.Anh_LuuTru)" alt="@it.TenSP_LuuTru" class="h-full w-full object-cover" />
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-gray-900">@it.TenSP_LuuTru</div>
+                                            <div class="mt-1 text-xs text-gray-500">@it.Mau_LuuTru • @it.KichCo_LuuTru</div>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 text-right text-gray-700">@it.Gia_LuuTru.ToString("N0")đ</td>
                                     <td class="px-6 py-4 text-center text-gray-700">@it.SoLuong</td>
@@ -100,20 +111,40 @@
 
     private DonHangDto? order;
     private bool isLoading = true;
+    private string? discountCode;
+    private decimal? minOrderValue;
 
     protected override async Task OnInitializedAsync()
     {
         var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
         var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role");
+
         if (string.IsNullOrWhiteSpace(token) || !Guid.TryParse(userIdText, out _))
         {
-            Nav.NavigateTo("/account/signin?returnUrl=/account/orders");
+            Nav.NavigateTo("/account/signin?returnUrl=/staff/orders/" + maDH);
+            return;
+        }
+
+        if (role != "Admin" && role != "Staff")
+        {
+            Nav.NavigateTo("/", replace: true);
             return;
         }
 
         try
         {
             order = await OrderService.GetOrderByIdAsync(maDH);
+            if (order != null && order.MaGG.HasValue)
+            {
+                var discounts = await DiscountService.GetDiscountsAsync();
+                var appliedDiscount = discounts.FirstOrDefault(d => d.MaGG == order.MaGG.Value);
+                if (appliedDiscount != null)
+                {
+                    discountCode = appliedDiscount.MaCode;
+                    minOrderValue = appliedDiscount.DonHangToiThieu;
+                }
+            }
         }
         catch
         {

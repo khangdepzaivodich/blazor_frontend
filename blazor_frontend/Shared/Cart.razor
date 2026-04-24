@@ -1,4 +1,4 @@
-﻿@page "/cart"
+@page "/cart"
 @using Microsoft.AspNetCore.Components
 @using blazor_frontend.Models
 @inject IBasketService BasketService
@@ -213,30 +213,48 @@
                             <div class="flex gap-4 min-w-max">
                                 @foreach (var discount in ApplicableCartDiscounts)
                                 {
+                                    var isConditionsMet = DiscountPricingHelper.IsConditionsMet(discount, TamTinh);
                                     var isSelectedVoucher = string.Equals(DiscountCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
                                     var isBestVoucher = BestApplicableCartDiscount?.MaGG == discount.MaGG;
 
-                                    <div class="relative w-[360px] shrink-0 rounded-xl border bg-white p-4 shadow-sm @(isSelectedVoucher ? "border-[#0b2b73] ring-2 ring-[#0b2b73]" : "border-gray-200")">
-                                        @if (isBestVoucher)
+                                    <div class="relative w-[360px] shrink-0 rounded-xl border p-4 shadow-sm transition-all @(!isConditionsMet ? "bg-gray-50 border-gray-200 opacity-75" : (isSelectedVoucher ? "bg-blue-50 border-[#0b2b73] ring-2 ring-[#0b2b73]" : "bg-white border-gray-200"))">
+                                        @if (isBestVoucher && isConditionsMet)
                                         {
                                             <div class="absolute right-0 top-0 rounded-bl-lg rounded-tr-xl bg-[#ff4d2d] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white">
                                                 Lựa chọn tốt nhất
                                             </div>
                                         }
 
-                                        <div class="mb-3 pr-28 text-2xl font-extrabold text-gray-900">
+                                        <div class="mb-3 pr-28 text-2xl font-extrabold @(isConditionsMet ? "text-gray-900" : "text-gray-400")">
                                             @discount.MaCode
                                         </div>
 
-                                        <label class="flex cursor-pointer items-start gap-3">
+                                        <label class="flex items-start gap-3 @(isConditionsMet ? "cursor-pointer" : "cursor-not-allowed")">
                                             <input type="radio"
                                                    name="cart-voucher"
                                                    class="mt-1 h-5 w-5 text-[#0b2b73] focus:ring-[#0b2b73]"
+                                                   disabled="@(!isConditionsMet)"
                                                    checked="@isSelectedVoucher"
                                                    @onchange="() => ApplyVoucherCodeAsync(discount.MaCode)" />
-                                            <div class="space-y-2 text-sm text-gray-700">
-                                                <div>Giảm @FormatDiscountText(discount) đơn từ @(discount.GiaTriGiamToiDa.HasValue ? FormatMoney(discount.GiaTriGiamToiDa.Value) : "không giới hạn")</div>
-                                                <div>HSD : @discount.HanSuDung.ToString("dd/MM/yyyy")</div>
+                                            <div class="space-y-2 text-sm @(isConditionsMet ? "text-gray-700" : "text-gray-500")">
+                                                <div class="font-medium">
+                                                    Giảm @FormatDiscountText(discount) 
+                                                    @if (discount.GiaTriGiamToiDa.HasValue && discount.GiaTriGiamToiDa.Value > 0)
+                                                    {
+                                                        <span class="italic text-xs font-normal">(tối đa @FormatMoney(discount.GiaTriGiamToiDa.Value))</span>
+                                                    }
+                                                </div>
+                                                @if (discount.DonHangToiThieu.HasValue && discount.DonHangToiThieu.Value > 0)
+                                                {
+                                                    <div class="@(TamTinh < discount.DonHangToiThieu.Value ? "text-red-500 font-medium" : "")">
+                                                        Đơn tối thiểu: @discount.DonHangToiThieu.Value.ToString("N0")đ
+                                                    </div>
+                                                }
+                                                <div class="@(discount.HanSuDung < DateTime.Now ? "text-red-500 font-medium" : "")">HSD: @discount.HanSuDung.ToString("dd/MM/yyyy HH:mm")</div>
+                                                @if (discount.SoLuong <= 0)
+                                                {
+                                                    <div class="text-red-500 font-medium">Đã hết lượt sử dụng</div>
+                                                }
                                             </div>
                                         </label>
                                     </div>
@@ -318,8 +336,6 @@
     private string DiaChi = string.Empty;
     private string GhiChu = string.Empty;
     private string DiscountCode = string.Empty;
-    private Guid? MaGiamGia;
-    private decimal VoucherGiamGia;
     private string? checkoutError;
     private bool showFieldErrors;
     private List<MaGiamGiaDto> allDiscounts = new();
@@ -334,6 +350,13 @@
     private string SelectedDistrictCode = string.Empty;
     private string SelectedWardCode = string.Empty;
     private string StreetAddress = string.Empty;
+
+    private MaGiamGiaDto? AppliedDiscount => string.IsNullOrWhiteSpace(DiscountCode) ? null 
+        : allDiscounts.FirstOrDefault(d => string.Equals(d.MaCode, DiscountCode, StringComparison.OrdinalIgnoreCase));
+
+    private Guid? MaGiamGia => AppliedDiscount?.MaGG;
+
+    private decimal VoucherGiamGia => AppliedDiscount != null ? CalculateCartDiscount(AppliedDiscount) : 0m;
 
     private decimal TamTinh => CartModel?.Items?.Sum(item => GetItemEffectivePrice(item) * item.Quantity) ?? 0;
     private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
@@ -445,10 +468,11 @@
             return;
         }
 
-        var voucher = await DiscountService.GetDiscountByCodeAsync(DiscountCode);
+        var voucher = allDiscounts.FirstOrDefault(d => string.Equals(d.MaCode, DiscountCode, StringComparison.OrdinalIgnoreCase));
         if (voucher == null)
         {
-            await JS.InvokeVoidAsync("alert", "Mã giảm giá không hợp lệ");
+            await JS.InvokeVoidAsync("alert", "Mã giảm giá không tồn tại");
+            DiscountCode = string.Empty;
             return;
         }
 
@@ -457,14 +481,19 @@
             return;
         }
 
-        if (!IsVoucherApplicableToCart(voucher))
+        if (!DiscountPricingHelper.IsConditionsMet(voucher, TamTinh))
         {
-            await JS.InvokeVoidAsync("alert", "Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng");
+            await JS.InvokeVoidAsync("alert", "Không đủ điều kiện áp dụng mã giảm giá này (kiểm tra đơn tối thiểu, số lượng hoặc HSD)");
+            DiscountCode = string.Empty;
             return;
         }
 
-        MaGiamGia = voucher.MaGG;
-        VoucherGiamGia = CalculateCartDiscount(voucher);
+        if (!IsVoucherApplicableToCart(voucher))
+        {
+            await JS.InvokeVoidAsync("alert", "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng");
+            DiscountCode = string.Empty;
+            return;
+        }
     }
 
     private async Task ApplyVoucherCodeAsync(string code)
@@ -475,7 +504,7 @@
     }
 
     private IEnumerable<MaGiamGiaDto> ApplicableCartDiscounts => CartModel?.Items?.Any() == true
-        ? DiscountPricingHelper.GetApplicableDiscountsForCart(CartModel.Items, productById, allCategoryGroups, allCategories, allDiscounts)
+        ? DiscountPricingHelper.GetApplicableDiscountsForCart(CartModel.Items, productById, allCategoryGroups, allCategories, allDiscounts, TamTinh)
         : Enumerable.Empty<MaGiamGiaDto>();
 
     private MaGiamGiaDto? BestApplicableCartDiscount => ApplicableCartDiscounts.FirstOrDefault();
@@ -653,7 +682,7 @@
                 return 0m;
             }
 
-            return DiscountPricingHelper.IsApplicable(discount, product, allCategories.FirstOrDefault(c => c.MaDM == product.MaDM)?.MaLDM)
+            return DiscountPricingHelper.IsApplicable(discount, product, allCategories.FirstOrDefault(c => c.MaDM == product.MaDM)?.MaLDM, TamTinh)
                 ? DiscountPricingHelper.GetDiscountAmount(discount, item.Price) * item.Quantity
                 : 0m;
         });
@@ -680,7 +709,7 @@
             }
 
             var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
-            if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM))
+            if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh))
             {
                 return true;
             }

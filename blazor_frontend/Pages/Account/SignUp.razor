@@ -19,22 +19,26 @@
 
         <div>
             <label class="block text-sm text-gray-600">Full name</label>
-            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.HoTen" />
+            <InputText class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" @bind-Value="model.HoTen" />
+            <ValidationMessage For="@(() => model.HoTen)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <div>
             <label class="block text-sm text-gray-600">Email</label>
-            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.Email" />
+            <InputText class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" @bind-Value="model.Email" />
+            <ValidationMessage For="@(() => model.Email)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <div>
             <label class="block text-sm text-gray-600">Phone</label>
-            <InputText class="w-full border px-3 py-2 rounded" @bind-Value="model.SoDienThoai" />
+            <InputText class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" @bind-Value="model.SoDienThoai" />
+            <ValidationMessage For="@(() => model.SoDienThoai)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <div>
             <label class="block text-sm text-gray-600">Password</label>
-            <InputText class="w-full border px-3 py-2 rounded" type="password" @bind-Value="model.MatKhau" />
+            <InputText class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" type="password" @bind-Value="model.MatKhau" />
+            <ValidationMessage For="@(() => model.MatKhau)" class="text-red-500 text-xs mt-1" />
         </div>
 
         <button class="w-full bg-blue-800 text-white py-2 rounded" disabled="@isLoading">
