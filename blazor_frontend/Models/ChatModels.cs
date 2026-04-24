@@ -8,6 +8,8 @@ namespace blazor_frontend.Models
         public Guid MaPhien { get; set; }
         public Guid SenderID { get; set; }
         public string SenderType { get; set; } = "user";
+        public string SenderName { get; set; } = string.Empty;
+        public string SenderAvatar { get; set; } = string.Empty;
         public string NoiDung { get; set; } = string.Empty;
         public DateTime ThoiGianGui { get; set; } = DateTime.UtcNow;
         public string TrangThai { get; set; } = "sent";
@@ -25,7 +27,9 @@ namespace blazor_frontend.Models
         public DateTime LastTime { get; set; }
         public string LastMessage { get; set; } = string.Empty;
         public string HoTen { get; set; } = string.Empty;
+        public string Avatar { get; set; } = string.Empty;
         public string StaffHoTen { get; set; } = string.Empty;
+        public string StaffAvatar { get; set; } = string.Empty;
         public int UnreadCount { get; set; }
     }
 }

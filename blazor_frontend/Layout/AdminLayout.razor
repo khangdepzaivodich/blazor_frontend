@@ -14,9 +14,7 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0 h-screen transition-all duration-300 ease-in-out">
         <!-- Header -->
-        <StaffHeader OnToggleSidebar="DrawerToggle" Role="Admin"
-            StaffName="@_staffName"
-                     AvatarUrl="@(_avatarUrl)" />
+        <StaffHeader OnToggleSidebar="DrawerToggle" Role="Admin" />
 
         <!-- Main Body -->
         <main class="flex-1 p-6 overflow-y-auto">
@@ -27,24 +25,12 @@
 
 @code {
     bool _drawerOpen = true;
-    string _staffName = "Quản trị viên";
-    string _avatarUrl = "https://ui-avatars.com/api/?name=Admin&background=e0f2fe&color=2563eb&size=100";
+
+    [Inject] private IAuthService AuthService { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        var name = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten");
-        var adminId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-
-        if (!string.IsNullOrEmpty(name))
-        {
-            _staffName = name;
-            _avatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(name)}&background=e0f2fe&color=2563eb&size=100";
-        }
-
-        if (!string.IsNullOrEmpty(adminId))
-        {
-            await ChatService.RegisterStaffAsync(adminId, _staffName);
-        }
+        await AuthService.InitializeAsync();
     }
 
     void DrawerToggle()

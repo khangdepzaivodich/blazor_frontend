@@ -13,6 +13,7 @@ namespace blazor_frontend.Services
         Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request);
         Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
         Task LogoutAsync();
+        Task InitializeAsync();
     }
 
     public class AuthService : IAuthService
@@ -20,6 +21,7 @@ namespace blazor_frontend.Services
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
         private readonly AuthState _authState;
+        private Task? _initializeTask;
 
         public AuthService(IHttpClientFactory httpClientFactory, IJSRuntime jsRuntime, AuthState authState)
         {
@@ -33,7 +35,8 @@ namespace blazor_frontend.Services
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
             if (response.IsSuccessStatusCode)
             {
-                var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var rawJson = await response.Content.ReadAsStringAsync();
+                var loginResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(rawJson);
                 if (loginResponse != null)
                 {
                     _authState.SetUser(
@@ -41,8 +44,18 @@ namespace blazor_frontend.Services
                         loginResponse.UserId,
                         loginResponse.Email,
                         loginResponse.Role,
-                        loginResponse.HoTen
+                        loginResponse.HoTen,
+                        loginResponse.Avatar ?? ""
                     );
+
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_token", loginResponse.Token);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_user_id", loginResponse.UserId.ToString());
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_email", loginResponse.Email);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_role", loginResponse.Role);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", loginResponse.HoTen);
+                    
+                    // Always set auth_avatar, even if empty, to overwrite old data
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_avatar", loginResponse.Avatar ?? "");
                 }
                 return loginResponse;
             }
@@ -78,12 +91,48 @@ namespace blazor_frontend.Services
         public async Task LogoutAsync()
         {
             _authState.Clear();
+            _initializeTask = null; // Allow re-initialization for next user
+            
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_email");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_account");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
+        }
+
+        public Task InitializeAsync()
+        {
+            if (_initializeTask != null) return _initializeTask;
+
+            _initializeTask = DoInitializeAsync();
+            return _initializeTask;
+        }
+
+        private async Task DoInitializeAsync()
+        {
+            try
+            {
+                var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+                if (string.IsNullOrEmpty(token)) return;
+
+                var userIdStr = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+                var email = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_email");
+                var role = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role");
+                var hoTen = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten");
+                var avatar = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_avatar");
+
+                if (Guid.TryParse(userIdStr, out var userId))
+                {
+                    _authState.SetUser(token, userId, email ?? "", role ?? "", hoTen ?? "", avatar ?? "");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] InitializeAsync ERROR: {ex.Message}");
+            }
         }
     }
 }

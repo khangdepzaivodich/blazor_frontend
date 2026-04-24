@@ -14,5 +14,8 @@ namespace blazor_frontend.Services
         Task<bool> DeleteUserAsync(Guid id);
         Task<bool> LockUserAsync(Guid id);
         Task<bool> UnlockUserAsync(Guid id);
+        Task<UserDto?> GetMeAsync();
+        Task<bool> UpdateMeAsync(UpdateMeRequest request);
+        Task<string?> UploadAvatarAsync(Stream fileStream, string fileName);
     }
 }

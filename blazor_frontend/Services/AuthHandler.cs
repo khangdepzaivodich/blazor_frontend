@@ -17,7 +17,12 @@ namespace blazor_frontend.Services
             // Nếu đã đăng nhập, tự động gắn Token vào Header
             if (_authState.IsAuthenticated)
             {
+                Console.WriteLine($"[DEBUG] AuthHandler({_authState.GetHashCode()}): Gắn Token cho {request.RequestUri}");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _authState.Token);
+            }
+            else 
+            {
+                Console.WriteLine($"[DEBUG] AuthHandler({_authState.GetHashCode()}): CHƯA ĐĂNG NHẬP cho {request.RequestUri}");
             }
 
             return await base.SendAsync(request, cancellationToken);

@@ -44,11 +44,13 @@ namespace blazor_frontend.Models
     public class TaiKhoan
     {
         public Guid MaTK { get; set; } = Guid.NewGuid();
+        public string Email { get; set; } = string.Empty;
         public string SoDienThoai { get; set; } = string.Empty;
         public string VaiTro { get; set; } = string.Empty;
         public string HoTen { get; set; } = string.Empty;
         public string DiaChi { get; set; } = string.Empty;
-        public bool TrangThai { get; set; }
+        public DateTime? NgaySinh { get; set; }
+        public string TrangThai { get; set; } = "Active";
         public DateTime NgayTao { get; set; } = DateTime.Now;
         public DateTime? LastActiveAt { get; set; }
     }
@@ -158,10 +160,10 @@ namespace blazor_frontend.Models
         {
             return new List<TaiKhoan>
             {
-                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Nguyễn Văn Admin", SoDienThoai = "0901234567", VaiTro = "Admin", DiaChi = "123 Q1, TP.HCM", TrangThai = true, NgayTao = new DateTime(2023, 10, 1) },
-                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Trần Thị Staff", SoDienThoai = "0987654321", VaiTro = "Staff", DiaChi = "456 Q3, TP.HCM", TrangThai = true, NgayTao = new DateTime(2023, 11, 15) },
-                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Lê Khách Hàng", SoDienThoai = "0123456789", VaiTro = "Customer", DiaChi = "789 Q7, TP.HCM", TrangThai = true, NgayTao = DateTime.Now.AddDays(-2) },
-                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Phạm Khách Cũ", SoDienThoai = "0333222111", VaiTro = "Customer", DiaChi = "111 Gò Vấp, TP.HCM", TrangThai = false, NgayTao = DateTime.Now.AddDays(-20) }
+                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Nguyễn Văn Admin", SoDienThoai = "0901234567", VaiTro = "Admin", DiaChi = "123 Q1, TP.HCM", TrangThai = "Active", NgayTao = new DateTime(2023, 10, 1) },
+                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Trần Thị Staff", SoDienThoai = "0987654321", VaiTro = "Staff", DiaChi = "456 Q3, TP.HCM", TrangThai = "Active", NgayTao = new DateTime(2023, 11, 15) },
+                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Lê Khách Hàng", SoDienThoai = "0123456789", VaiTro = "Customer", DiaChi = "789 Q7, TP.HCM", TrangThai = "Active", NgayTao = DateTime.Now.AddDays(-2) },
+                new TaiKhoan { MaTK = Guid.NewGuid(), HoTen = "Phạm Khách Cũ", SoDienThoai = "0333222111", VaiTro = "Customer", DiaChi = "111 Gò Vấp, TP.HCM", TrangThai = "Locked", NgayTao = DateTime.Now.AddDays(-20) }
             };
         }
     }

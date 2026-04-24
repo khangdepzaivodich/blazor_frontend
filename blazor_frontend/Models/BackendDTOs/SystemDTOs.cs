@@ -12,11 +12,23 @@ namespace blazor_frontend.Models.BackendDTOs
 
     public class LoginResponse
     {
+        [System.Text.Json.Serialization.JsonPropertyName("token")]
         public string Token { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("userId")]
         public Guid UserId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
         public string Email { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("role")]
         public string Role { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hoTen")]
         public string HoTen { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("avatar")]
+        public string? Avatar { get; set; }
     }
 
     public class RegisterRequest
@@ -55,8 +67,20 @@ namespace blazor_frontend.Models.BackendDTOs
         public string DiaChi { get; set; } = string.Empty;
         public string VaiTro { get; set; } = string.Empty;
         public string TrangThai { get; set; } = string.Empty;
-        public DateTime NgayThangNamSinh { get; set; }
+        public DateTime NgaySinh { get; set; }
+        public string? Avatar { get; set; }
+        public string? GioiTinh { get; set; }
         public DateTime? LastActiveAt { get; set; }
+    }
+
+    public class UpdateMeRequest
+    {
+        public string HoTen { get; set; } = string.Empty;
+        public string? SoDienThoai { get; set; }
+        public string? DiaChi { get; set; }
+        public DateTime? NgaySinh { get; set; }
+        public string? GioiTinh { get; set; }
+        public string? Avatar { get; set; }
     }
 
     public class UserPaginatedResult
@@ -73,7 +97,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string HoTen { get; set; } = string.Empty;
         public string? DiaChi { get; set; }
         public string? VaiTro { get; set; }
-        public DateTime NgayThangNamSinh { get; set; } = DateTime.UtcNow;
+        public DateTime NgaySinh { get; set; } = DateTime.UtcNow;
     }
 
     public class UpdateUserByAdminRequest
@@ -287,6 +311,8 @@ namespace blazor_frontend.Models.BackendDTOs
         public Guid MaPhien { get; set; }
         public Guid SenderID { get; set; }
         public string SenderType { get; set; } = string.Empty;
+        public string? SenderName { get; set; }
+        public string? SenderAvatar { get; set; }
         public string NoiDung { get; set; } = string.Empty;
         public DateTime ThoiGianGui { get; set; }
     }

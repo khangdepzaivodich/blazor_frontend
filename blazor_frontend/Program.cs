@@ -19,7 +19,7 @@ builder.Services.AddHttpClient("CatalogAPI", client => client.BaseAddress = new 
 builder.Services.AddHttpClient("ChatAPI", client => client.BaseAddress = new Uri("http://localhost:7229/")).AddHttpMessageHandler<blazor_frontend.Services.AuthHandler>();
 
 // Register Frontend Services
-builder.Services.AddScoped<blazor_frontend.Services.AuthState>(); // Scoped State
+builder.Services.AddSingleton<blazor_frontend.Services.AuthState>(); // Singleton State
 builder.Services.AddScoped<blazor_frontend.Services.IAuthService, blazor_frontend.Services.AuthService>();
 builder.Services.AddScoped<blazor_frontend.Services.IOrderService, blazor_frontend.Services.OrderService>();
 builder.Services.AddScoped<blazor_frontend.Services.IDiscountService, blazor_frontend.Services.DiscountService>();

@@ -40,16 +40,14 @@ namespace blazor_frontend.Services
 
         public async Task<Guid?> CreateUserAsync(CreateUserRequest request)
         {
-            try
+            var response = await _httpClient.PostAsJsonAsync("api/user", request);
+            if (response.IsSuccessStatusCode)
             {
-                var response = await _httpClient.PostAsJsonAsync("api/user", request);
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<Guid>();
-                }
-                return null;
+                return await response.Content.ReadFromJsonAsync<Guid>();
             }
-            catch { return null; }
+            
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Server error ({response.StatusCode}): {error}");
         }
 
         public async Task<bool> UpdateUserAsync(Guid id, UpdateUserByAdminRequest request)
@@ -90,6 +88,48 @@ namespace blazor_frontend.Services
                 return response.IsSuccessStatusCode;
             }
             catch { return false; }
+        }
+
+        public async Task<UserDto?> GetMeAsync()
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<UserDto>("api/user/me");
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> UpdateMeAsync(UpdateMeRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync("api/user/me", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<string?> UploadAvatarAsync(Stream fileStream, string fileName)
+        {
+            using var content = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", fileName);
+
+            var response = await _httpClient.PostAsync("api/user/me/avatar", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                return result?.Url;
+            }
+            
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Server error ({response.StatusCode}): {error}");
+        }
+
+        private class UploadResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("url")]
+            public string Url { get; set; } = string.Empty;
         }
     }
 }

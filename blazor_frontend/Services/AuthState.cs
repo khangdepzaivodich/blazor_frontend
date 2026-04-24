@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace blazor_frontend.Services
 {
@@ -6,23 +6,23 @@ namespace blazor_frontend.Services
     {
         public event Action? AuthStateChanged;
 
-        // non-nullable auth properties requested
         public string Token { get; private set; } = string.Empty;
         public Guid UserId { get; private set; } = Guid.Empty;
         public string Email { get; private set; } = string.Empty;
         public string Role { get; private set; } = string.Empty;
         public string HoTen { get; private set; } = string.Empty;
+        public string AvatarUrl { get; private set; } = string.Empty;
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(Token);
 
-        // Primary setter with full metadata
-        public void SetUser(string token, Guid userId, string email, string role, string hoTen)
+        public void SetUser(string token, Guid userId, string email, string role, string hoTen, string avatarUrl)
         {
             Token = token ?? string.Empty;
             UserId = userId;
             Email = email ?? string.Empty;
             Role = role ?? string.Empty;
             HoTen = hoTen ?? string.Empty;
+            AvatarUrl = avatarUrl ?? string.Empty;
             AuthStateChanged?.Invoke();
         }
 
@@ -33,6 +33,7 @@ namespace blazor_frontend.Services
             Email = string.Empty;
             Role = string.Empty;
             HoTen = string.Empty;
+            AvatarUrl = string.Empty;
             AuthStateChanged?.Invoke();
         }
     }

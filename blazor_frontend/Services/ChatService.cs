@@ -18,18 +18,19 @@ namespace blazor_frontend.Services
         event Action<string>? OnSessionClosed;
         event Action<string>? OnSessionReopened;
         event Action<string, string>? OnSessionUpgraded;
+        event Action<string>? OnStaffNameUpdated;
 
         Task InitializeAsync();
         Task<IEnumerable<ChatMessageDto>> GetChatHistoryAsync(Guid sessionId);
         Task<ChatSessionDto?> GetChatSessionAsync(Guid sessionId);
         Task<IEnumerable<ChatSessionDto>> GetAllChatSessionsAsync();
         
-        Task RegisterStaffAsync(string staffId, string staffName);
+        Task RegisterStaffAsync(string staffId, string staffName, string staffAvatar);
         Task<string> CreateNewChatSessionAsync(string userId, string clientType);
         Task JoinChatSessionAsync(string sessionId);
         Task SendMessageAsync(ChatMessageDto message);
         Task MarkAsReadAsync(string sessionId);
-        Task UpgradeSessionAsync(string sessionId, string userId, string hoTen);
+        Task UpgradeSessionAsync(string sessionId, string userId, string hoTen, string? avatar = null);
         Task CloseSessionAsync(string sessionId, string staffId);
         Task ReopenSessionAsync(string sessionId, string staffId);
     }
@@ -48,6 +49,7 @@ namespace blazor_frontend.Services
         public event Action<string>? OnSessionClosed;
         public event Action<string>? OnSessionReopened;
         public event Action<string, string>? OnSessionUpgraded;
+        public event Action<string>? OnStaffNameUpdated;
 
         public HubConnectionState ConnectionState => _hubConnection?.State ?? HubConnectionState.Disconnected;
 
@@ -76,6 +78,7 @@ namespace blazor_frontend.Services
             _hubConnection.On<string>("SessionClosed", (sessionId) => OnSessionClosed?.Invoke(sessionId));
             _hubConnection.On<string>("SessionReopened", (sessionId) => OnSessionReopened?.Invoke(sessionId));
             _hubConnection.On<string, string>("SessionUpgraded", (sessionId, hoTen) => OnSessionUpgraded?.Invoke(sessionId, hoTen));
+            _hubConnection.On<string>("StaffNameUpdated", (newName) => OnStaffNameUpdated?.Invoke(newName));
 
             await _hubConnection.StartAsync();
         }
@@ -97,10 +100,10 @@ namespace blazor_frontend.Services
             return await _httpClient.GetFromJsonAsync<ChatSessionDto>($"api/chat/chat-sessions/{sessionId}");
         }
 
-        public async Task RegisterStaffAsync(string staffId, string staffName)
+        public async Task RegisterStaffAsync(string staffId, string staffName, string staffAvatar)
         {
             if (_hubConnection == null) await InitializeAsync();
-            await _hubConnection!.SendAsync("RegisterStaff", staffId, staffName);
+            await _hubConnection!.SendAsync("RegisterStaff", staffId, staffName, staffAvatar);
         }
 
         public async Task<string> CreateNewChatSessionAsync(string userId, string clientType)
@@ -127,10 +130,10 @@ namespace blazor_frontend.Services
             await _hubConnection!.SendAsync("MarkAsRead", sessionId);
         }
 
-        public async Task UpgradeSessionAsync(string sessionId, string userId, string hoTen)
+        public async Task UpgradeSessionAsync(string sessionId, string userId, string hoTen, string? avatar = null)
         {
             if (_hubConnection == null) await InitializeAsync();
-            await _hubConnection!.SendAsync("UpgradeSession", sessionId, userId, hoTen);
+            await _hubConnection!.SendAsync("UpgradeSession", sessionId, userId, hoTen, avatar);
         }
 
         public async Task CloseSessionAsync(string sessionId, string staffId)

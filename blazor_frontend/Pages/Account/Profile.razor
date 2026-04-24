@@ -9,6 +9,7 @@
 @inject NavigationManager Nav
 @inject blazor_frontend.Services.IAuthService AuthService
 @inject blazor_frontend.Services.AuthState AuthState
+@inject blazor_frontend.Services.IUserService UserService
 
 <div class="min-h-[80vh] flex items-center justify-center">
 
@@ -26,15 +27,21 @@
                         Profile
                     </a>
 
-                    <a href="/account/orders"
-                       class="px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100">
-                        Đơn hàng của tôi
-                    </a>
+                    @if (_isLoaded && !string.Equals(account.VaiTro, "Admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(account.VaiTro, "Staff", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a href="/account/orders"
+                           class="px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100">
+                            Đơn hàng của tôi
+                        </a>
+                    }
 
-                    <a href="/account/messages"
-                       class="px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100">
-                        Messages
-                    </a>
+                    @if (_isLoaded && !string.Equals(account.VaiTro, "Admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(account.VaiTro, "Staff", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <a href="/account/messages"
+                           class="px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100">
+                            Messages
+                        </a>
+                    }
                 </nav>
             </aside>
 
@@ -74,7 +81,7 @@
                             @if (!string.IsNullOrEmpty(avatarDataUrl))
                             {
                                 <img src="@avatarDataUrl"
-                                     class="w-24 h-24 rounded-full object-cover border ring-2 ring-gray-100 shadow-sm" />
+                                     class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg ring-1 ring-gray-100" />
                             }
                             else
                             {
@@ -119,6 +126,15 @@
                                                          focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                                                          disabled:bg-gray-100 disabled:text-gray-400"
                                                    @bind-Value="account.SoDienThoai"
+                                                   disabled="@(!isEditing)" />
+                                    </div>
+
+                                    <div>
+                                        <label class="text-xs text-gray-500">Ngày sinh</label>
+                                        <InputDate class="w-full mt-1 px-3 py-2 border rounded-xl bg-white
+                                                         focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
+                                                         disabled:bg-gray-100 disabled:text-gray-400"
+                                                   @bind-Value="account.NgaySinh"
                                                    disabled="@(!isEditing)" />
                                     </div>
 
@@ -182,11 +198,20 @@
     private TaiKhoan backup = new();
 
     private bool isEditing;
+    private bool _isLoaded;
     private string? avatarDataUrl;
     private string? message;
 
     protected override async Task OnInitializedAsync()
     {
+        // Force initialization of AuthState from localStorage first
+        await AuthService.InitializeAsync();
+
+        // Pre-populate from AuthState for immediate UI feedback (F5 resilience)
+        account.HoTen = AuthState.HoTen;
+        account.VaiTro = AuthState.Role;
+        avatarDataUrl = AuthState.AvatarUrl;
+
         var token = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_token");
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -194,13 +219,48 @@
             return;
         }
 
-        var json = await JS.InvokeAsync<string>("localStorage.getItem", "user_account");
-        if (!string.IsNullOrEmpty(json))
+        var user = await UserService.GetMeAsync();
+        if (user != null)
         {
-            account = JsonSerializer.Deserialize<TaiKhoan>(json) ?? new();
-        }
+            account = new TaiKhoan
+            {
+                MaTK = user.MaTK,
+                HoTen = user.HoTen,
+                SoDienThoai = user.SoDienThoai,
+                DiaChi = user.DiaChi,
+                VaiTro = user.VaiTro,
+                TrangThai = user.TrangThai,
+                NgaySinh = user.NgaySinh,
+                LastActiveAt = user.LastActiveAt
+            };
+            avatarDataUrl = user.Avatar;
 
-        avatarDataUrl = await JS.InvokeAsync<string>("localStorage.getItem", "user_avatar");
+            // Sync with AuthState and localStorage so Header updates
+            if (!string.IsNullOrEmpty(user.Avatar))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", user.Avatar);
+            }
+            await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", user.HoTen);
+            await JS.InvokeVoidAsync("localStorage.setItem", "auth_role", user.VaiTro);
+
+            AuthState.SetUser(token, user.MaTK, user.Email, user.VaiTro, user.HoTen, user.Avatar ?? "");
+        }
+        else 
+        {
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", "user_account");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var cached = JsonSerializer.Deserialize<TaiKhoan>(json);
+                if (cached != null) account = cached;
+            }
+            if (string.IsNullOrEmpty(avatarDataUrl))
+            {
+                avatarDataUrl = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar");
+            }
+        }
+        
+        _isLoaded = true;
+        StateHasChanged();
     }
 
     private void StartEdit()
@@ -230,18 +290,53 @@
 
     private async Task SaveChanges()
     {
-        account.LastActiveAt = DateTime.Now;
+        message = "Saving...";
+        StateHasChanged();
 
-        var json = JsonSerializer.Serialize(account);
-        await JS.InvokeVoidAsync("localStorage.setItem", "user_account", json);
-
-        if (!string.IsNullOrEmpty(avatarDataUrl))
+        var request = new UpdateMeRequest
         {
-            await JS.InvokeVoidAsync("localStorage.setItem", "user_avatar", avatarDataUrl);
-        }
+            HoTen = account.HoTen,
+            SoDienThoai = account.SoDienThoai,
+            DiaChi = account.DiaChi,
+            NgaySinh = account.NgaySinh,
+            Avatar = avatarDataUrl
+        };
 
-        isEditing = false;
-        message = "Saved";
+        var ok = await UserService.UpdateMeAsync(request);
+        if (ok)
+        {
+            // Re-fetch to get latest state
+            var user = await UserService.GetMeAsync();
+            if (user != null)
+            {
+                // Sync to localStorage & AuthState
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", user.HoTen);
+                
+                var avatarUrl = user.Avatar ?? "";
+                if (!string.IsNullOrEmpty(avatarUrl))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", avatarUrl);
+                }
+                
+                AuthState.SetUser(
+                    await JS.InvokeAsync<string>("localStorage.getItem", "auth_token"),
+                    user.MaTK,
+                    user.Email,
+                    user.VaiTro,
+                    user.HoTen,
+                    avatarUrl
+                );
+                
+                avatarDataUrl = avatarUrl;
+            }
+
+            isEditing = false;
+            message = "Profile updated successfully!";
+        }
+        else
+        {
+            message = "Failed to update profile.";
+        }
     }
 
     private async Task LogoutAsync()
@@ -254,9 +349,42 @@
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
         var file = e.File;
-        using var ms = new MemoryStream();
-        await file.OpenReadStream(5_000_000).CopyToAsync(ms);
-        avatarDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+        if (file == null) return;
+
+        try 
+        {
+            message = "Đang tải ảnh...";
+            StateHasChanged();
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+            var url = await UserService.UploadAvatarAsync(stream, file.Name);
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                avatarDataUrl = url;
+                await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", url);
+                
+                // Update AuthState so Header reflects change
+                AuthState.SetUser(
+                    AuthState.Token,
+                    AuthState.UserId,
+                    AuthState.Email,
+                    AuthState.Role,
+                    AuthState.HoTen,
+                    url
+                );
+                
+                message = "Tải ảnh đại diện thành công!";
+            }
+            else
+            {
+                message = "Tải ảnh đại diện thất bại.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi: {ex.Message}";
+        }
     }
 
     private async Task DeleteAvatar()
