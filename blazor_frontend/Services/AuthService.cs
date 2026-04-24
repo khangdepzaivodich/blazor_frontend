@@ -10,6 +10,8 @@ namespace blazor_frontend.Services
     {
         Task<LoginResponse?> LoginAsync(LoginRequest request);
         Task<RegisterResponse?> RegisterAsync(RegisterRequest request);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
         Task LogoutAsync();
     }
 
@@ -17,11 +19,13 @@ namespace blazor_frontend.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
+        private readonly AuthState _authState;
 
-        public AuthService(IHttpClientFactory httpClientFactory, IJSRuntime jsRuntime)
+        public AuthService(IHttpClientFactory httpClientFactory, IJSRuntime jsRuntime, AuthState authState)
         {
             _httpClient = httpClientFactory.CreateClient("IdentityAPI");
             _jsRuntime = jsRuntime;
+            _authState = authState;
         }
 
         public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -29,7 +33,18 @@ namespace blazor_frontend.Services
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (loginResponse != null)
+                {
+                    _authState.SetUser(
+                        loginResponse.Token,
+                        loginResponse.UserId,
+                        loginResponse.Email,
+                        loginResponse.Role,
+                        loginResponse.HoTen
+                    );
+                }
+                return loginResponse;
             }
             return null;
         }
@@ -41,15 +56,28 @@ namespace blazor_frontend.Services
 
             Console.WriteLine($"STATUS: {response.StatusCode}");
             Console.WriteLine($"BODY: {body}");
-            if (response != null)
+            if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<RegisterResponse>();
             }
             return null;
         }
 
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/auth/forgot-password", request);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/auth/reset-password", request);
+            return response.IsSuccessStatusCode;
+        }
+
         public async Task LogoutAsync()
         {
+            _authState.Clear();
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
