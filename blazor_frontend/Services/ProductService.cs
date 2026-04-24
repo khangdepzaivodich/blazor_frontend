@@ -16,6 +16,8 @@ namespace blazor_frontend.Services
         Task<ChiTietSanPhamDto?> CreateVariantAsync(ChiTietSanPhamCreateRequest request);
         Task<bool> UpdateVariantAsync(Guid id, ChiTietSanPhamUpdateRequest request);
         Task<bool> DeleteVariantAsync(Guid id);
+        Task<string?> UploadVariantPhotoAsync(Guid variantId, Stream fileStream, string fileName);
+        Task<string?> UploadPhotoAsync(Stream fileStream, string fileName);
     }
 
     public class PagedSanPhamResponse
@@ -109,6 +111,44 @@ namespace blazor_frontend.Services
         {
             var res = await _httpClient.DeleteAsync($"api/sanpham/variants/{id}");
             return res.IsSuccessStatusCode;
+        }
+
+        public async Task<string?> UploadVariantPhotoAsync(Guid variantId, Stream fileStream, string fileName)
+        {
+            using var content = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", fileName);
+
+            var response = await _httpClient.PostAsync($"api/ChiTietSanPham/{variantId}/photo", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                return result?.Url;
+            }
+            return null;
+        }
+
+        public async Task<string?> UploadPhotoAsync(Stream fileStream, string fileName)
+        {
+            using var content = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", fileName);
+
+            var response = await _httpClient.PostAsync("api/photo/upload", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                return result?.Url;
+            }
+            
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Server error ({response.StatusCode}): {error}");
+        }
+
+        private class UploadResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("url")]
+            public string Url { get; set; } = string.Empty;
         }
     }
 }

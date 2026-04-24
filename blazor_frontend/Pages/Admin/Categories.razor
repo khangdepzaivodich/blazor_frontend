@@ -136,7 +136,7 @@
                                     </td>
                                     <td class="p-4">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">
-                                            @(itemsLoaiDanhMuc.FirstOrDefault(x => x.MaLDM == dm.MaLDM)?.TenLDM ?? "Chưa xác định")
+                                            @(itemsLoaiDanhMuc?.FirstOrDefault(x => x.MaLDM == dm.MaLDM)?.TenLDM ?? "Chưa xác định")
                                         </span>
                                     </td>
                                     <td class="p-4">
@@ -317,6 +317,10 @@
         errorMessage = string.Empty;
         editingId = Guid.Empty;
         editorDanh = new DanhMucCreateUpdateRequest();
+        if (itemsLoaiDanhMuc != null && itemsLoaiDanhMuc.Any())
+        {
+            editorDanh.MaLDM = itemsLoaiDanhMuc.First().MaLDM;
+        }
         showEditorDanh = true;
     }
 

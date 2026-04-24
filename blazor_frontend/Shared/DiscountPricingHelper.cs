@@ -46,7 +46,7 @@ public static class DiscountPricingHelper
             "TenDM" => $"Danh mục: {danhMucs.FirstOrDefault(x => x.MaDM == item.MaDM)?.TenDM ?? item.MaDM?.ToString() ?? "N/A"}",
             "SanPham" => item.MaSPs?.Count > 1
                 ? $"Danh mục > Sản phẩm: {item.MaSPs.Count} sản phẩm"
-                : $"Sản phẩm: {sanPhams.FirstOrDefault(x => x.MaSP == (item.MaSPs.FirstOrDefault() != Guid.Empty ? item.MaSPs.FirstOrDefault() : item.MaSP))?.TenSP ?? item.MaSP?.ToString() ?? "N/A"}",
+                : $"Sản phẩm: {sanPhams.FirstOrDefault(x => x.MaSP == ((item.MaSPs ?? new List<Guid>()).FirstOrDefault() != Guid.Empty ? item.MaSPs!.FirstOrDefault() : item.MaSP))?.TenSP ?? item.MaSP?.ToString() ?? "N/A"}",
             _ => "Tất cả"
         };
     }

@@ -16,14 +16,23 @@
 
     <LandingFooter />
 
-    @if (AuthState?.Role != "Admin" && AuthState?.Role != "Staff")
+    @if (_isLoaded && AuthState?.Role != "Admin" && AuthState?.Role != "Staff")
     {
         <ChatWidget />
     }
 </div>
 
 @code {
+    private bool _isLoaded = false;
     [Inject] private blazor_frontend.Services.AuthState AuthState { get; set; } = default!;
+    [Inject] private blazor_frontend.Services.IAuthService AuthService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+        _isLoaded = true;
+    }
+
     private bool IsCartPage =>
         Nav.ToBaseRelativePath(Nav.Uri).StartsWith("cart", StringComparison.OrdinalIgnoreCase);
 }

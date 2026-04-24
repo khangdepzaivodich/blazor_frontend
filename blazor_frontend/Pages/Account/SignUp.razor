@@ -1,4 +1,4 @@
-﻿@page "/account/signup"
+@page "/account/signup"
 @layout blazor_frontend.Layout.AccountLayout
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IAuthService AuthService
@@ -84,13 +84,6 @@
 
             if (loginRes != null && !string.IsNullOrEmpty(loginRes.Token))
             {
-                // persist token/user info (localStorage) and update in-memory state
-                await JS.InvokeVoidAsync("localStorage.setItem", "auth_token", loginRes.Token);
-                await JS.InvokeVoidAsync("localStorage.setItem", "auth_user_id", loginRes.UserId.ToString());
-                await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", loginRes.HoTen ?? "");
-
-                AuthState.SetUser(loginRes.Token, loginRes.UserId, loginRes.Email ?? "", loginRes.Role ?? "User", loginRes.HoTen ?? "");
-
                 Nav.NavigateTo("/", true);
                 return;
             }

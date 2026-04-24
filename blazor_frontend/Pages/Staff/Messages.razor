@@ -22,14 +22,14 @@
                 </div>
                 <div class="relative">
                     <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                    <input type="text" placeholder="Tìm kiếm khách hàng..." 
+                    <input type="text" placeholder="Tìm kiếm khách hàng..." @bind="searchTerm" @bind:event="oninput"
                            class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm transition-all" />
                 </div>
             </div>
 
             <!-- Danh sách trò chuyện -->
             <div class="flex-1 overflow-y-auto custom-scrollbar">
-                @foreach (var chat in conversations)
+                @foreach (var chat in FilteredConversations)
                 {
                     <div @onclick="() => SelectConversation(chat)" 
                           class="flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-all @(selectedChat?.Id == chat.Id ? "bg-blue-50/50 border-l-4 border-l-blue-600" : "hover:bg-gray-50 border-l-4 border-l-transparent")">
@@ -52,7 +52,7 @@
                                     {
                                         <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Đã đóng</span>
                                     }
-                                    <span class="text-xs text-gray-500 whitespace-nowrap">@chat.LastMessageTime.ToString("HH:mm")</span>
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">@chat.LastMessageTime.ToLocalTime().ToString("HH:mm")</span>
                                 </div>
                             </div>
                             <div class="flex justify-between items-center text-sm">
@@ -124,7 +124,7 @@
                 <div id="staffChatContainer" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 custom-scrollbar bg-gray-50/50">
                     <div class="text-center">
                         <span class="text-xs font-medium text-gray-500 bg-gray-200/60 px-3 py-1 rounded-full">
-                            @selectedChat.LastMessageTime.ToString("dd/MM/yyyy")
+                            @selectedChat.LastMessageTime.ToLocalTime().ToString("dd/MM/yyyy")
                         </span>
                     </div>
 
@@ -133,7 +133,11 @@
                         <div class="flex @(msg.IsMine ? "justify-end" : "justify-start") group items-end gap-2">
                             @if (!msg.IsMine)
                             {
-                                <img src="@selectedChat.AvatarUrl" class="w-8 h-8 rounded-full shrink-0" />
+                                <img src="@(string.IsNullOrEmpty(msg.Avatar) ? selectedChat.AvatarUrl : msg.Avatar)" class="w-8 h-8 rounded-full shrink-0 object-cover" />
+                            }
+                            else 
+                            {
+                                <img src="@myStaffAvatar" class="w-8 h-8 rounded-full shrink-0 object-cover order-last" />
                             }
 
                             <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
@@ -141,7 +145,7 @@
                                     @msg.Text
                                 </div>
                                 <span class="text-[11px] text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    @msg.Timestamp.ToString("HH:mm")
+                                    @msg.Timestamp.ToLocalTime().ToString("HH:mm")
                                 </span>
                             </div>
                         </div>
@@ -203,14 +207,26 @@
     private ChatUIModel? selectedChat;
     private List<MessageUIModel> currentMessages = new();
     private string newMessage = "";
+    private string searchTerm = "";
+
+    private IEnumerable<ChatUIModel> FilteredConversations => 
+        string.IsNullOrWhiteSpace(searchTerm) 
+            ? conversations 
+            : conversations.Where(c => c.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) 
+                                      || c.LastMessage.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
     
     private string myStaffId = ""; 
+    private string myStaffAvatar = "";
     private HashSet<Guid> receivedMessageIds = new(); // Chống duplicate tin nhắn
     
     protected override async Task OnInitializedAsync()
     {
         // 0. Lấy ID thật của nhân viên từ Storage
         myStaffId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id") ?? "STAFF_ANON";
+        myStaffAvatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar") ?? "";
+        if (string.IsNullOrEmpty(myStaffAvatar)) 
+            myStaffAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString("Staff")}&background=random";
+            
         var staffName = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten") ?? "Tư vấn viên";
 
         // 1. Đăng ký sự kiện
@@ -224,8 +240,12 @@
         await ChatService.InitializeAsync();
         await RefreshConversations();
 
-        // 3. Đăng ký nhân viên này vào hàng chờ
-        await ChatService.RegisterStaffAsync(myStaffId, staffName);
+        // 3. Đăng ký nhân viên này vào hàng chờ (CHỈ NẾU KHÔNG PHẢI ADMIN)
+        var userRole = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_role");
+        if (userRole != "Admin")
+        {
+            await ChatService.RegisterStaffAsync(myStaffId, staffName, myStaffAvatar);
+        }
     }
 
     private async Task RefreshConversations()
@@ -241,7 +261,7 @@
                     {
                         Id = s.Id.ToString(),
                         CustomerName = !string.IsNullOrEmpty(s.HoTen) ? s.HoTen : (s.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên"),
-                        AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={s.Id}",
+                        AvatarUrl = !string.IsNullOrEmpty(s.Avatar) ? s.Avatar : $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(!string.IsNullOrEmpty(s.HoTen) ? s.HoTen : "Guest")}&background=random",
                         LastMessage = s.LastMessage,
                         LastSender = "N/A",
                         LastMessageTime = s.LastTime,
@@ -266,7 +286,7 @@
         {
             Id = phien.Id.ToString(),
             CustomerName = phien.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
-            AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={phien.Id}",
+            AvatarUrl = !string.IsNullOrEmpty(phien.Avatar) ? phien.Avatar : $"https://ui-avatars.com/api/?name=Guest&background=random",
             LastMessage = phien.LastMessage,
             LastSender = "System",
             LastMessageTime = phien.LastTime,
@@ -279,7 +299,7 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void HandleMessageReceived(ChatMessageDto tinNhan)
+    private void HandleMessageReceived(blazor_frontend.Models.ChatMessageDto tinNhan)
     {
         if (!receivedMessageIds.Add(tinNhan.ClientID)) return;
 
@@ -292,7 +312,7 @@
             {
                 Id = phienIdStr,
                 CustomerName = tinNhan.SenderType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
-                AvatarUrl = $"https://api.dicebear.com/7.x/bottts/svg?seed={tinNhan.MaPhien}",
+                AvatarUrl = !string.IsNullOrEmpty(tinNhan.SenderAvatar) ? tinNhan.SenderAvatar : $"https://ui-avatars.com/api/?name={(tinNhan.SenderType == "GUEST" ? "Guest" : "Member")}&background=random",
                 UnreadCount = 0,
                 SessionStatus = "ACTIVE",
                 IsOnline = true
@@ -312,7 +332,8 @@
                 {
                     Text = tinNhan.NoiDung,
                     Timestamp = tinNhan.ThoiGianGui,
-                    IsMine = false
+                    IsMine = false,
+                    Avatar = tinNhan.SenderAvatar
                 });
 
                 _ = ChatService.MarkAsReadAsync(phienIdStr);
@@ -385,7 +406,8 @@
                     {
                         Text = m.NoiDung,
                         Timestamp = m.ThoiGianGui,
-                        IsMine = m.SenderType == "STAFF"
+                        IsMine = m.SenderType == "STAFF",
+                        Avatar = m.SenderAvatar
                     }).ToList();
                 
                 StateHasChanged();
@@ -432,10 +454,12 @@
         await Task.Delay(50);
         await ScrollToBottom();
 
-        await ChatService.SendMessageAsync(new ChatMessageDto
+        await ChatService.SendMessageAsync(new blazor_frontend.Models.ChatMessageDto
         {
             MaPhien = Guid.Parse(selectedChat.Id!),
             SenderType = "STAFF",
+            SenderName = "Nhân viên",
+            SenderAvatar = myStaffAvatar,
             NoiDung = textToSend,
             TrangThai = "sent"
         });
@@ -487,5 +511,6 @@
         public string Text { get; set; } = "";
         public DateTime Timestamp { get; set; }
         public bool IsMine { get; set; }
+        public string Avatar { get; set; } = "";
     }
 }

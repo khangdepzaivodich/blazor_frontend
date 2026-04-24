@@ -294,8 +294,11 @@
         }
     }
 
+    [Inject] private blazor_frontend.Services.IAuthService authService { get; set; } = default!;
+
     protected override async Task OnInitializedAsync()
     {
+        await authService.InitializeAsync();
         await LoadData();
     }
 
@@ -362,10 +365,18 @@
                 errorMessage = "Vui lòng nhập đầy đủ Email, Mật khẩu và Họ tên.";
                 return;
             }
-            var newId = await userService.CreateUserAsync(editorCreate);
-            if (newId == null)
+            try 
             {
-                errorMessage = "Thêm thất bại. Email có thể đã tồn tại.";
+                var newId = await userService.CreateUserAsync(editorCreate);
+                if (newId == null)
+                {
+                    errorMessage = "Thêm thất bại. Không nhận được ID người dùng.";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Lỗi: {ex.Message}";
                 return;
             }
         }

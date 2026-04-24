@@ -3,7 +3,7 @@
 @page "/subcategory/{CategoryId:guid}"
 @page "/subcategory/{CategoryId:guid}/{CategoryName}"
 @page "/products"
-@page "/products/{SearchQuery}"
+@page "/products/{SearchRouteParam}"
 @using blazor_frontend.Models.BackendDTOs
 @using blazor_frontend.Services
 @using blazor_frontend.Shared
@@ -251,7 +251,8 @@
     [Parameter] public Guid? CategoryTypeId { get; set; }
     [Parameter] public Guid? CategoryId { get; set; }
     [Parameter] public string? CategoryName { get; set; }
-    [Parameter] public string? SearchQuery { get; set; }
+    [Parameter] public string? SearchRouteParam { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "q")] public string? SearchQueryParam { get; set; }
 
     private List<SanPhamDto> products = new();
     private List<ProductList.ProductDto> DisplayProducts => products.Select(p => {
@@ -307,12 +308,16 @@
     {
         await LoadCategories();
         
-        // Always reset search if navigating without a SearchQuery parameter
-        if (!string.IsNullOrEmpty(SearchQuery))
+        // Ưu tiên lấy từ Query String (?q=), sau đó đến Route Param, cuối cùng giữ nguyên keyword hiện tại
+        if (!string.IsNullOrWhiteSpace(SearchQueryParam))
         {
-            searchKeyword = SearchQuery;
+            searchKeyword = SearchQueryParam;
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(SearchRouteParam))
+        {
+            searchKeyword = SearchRouteParam;
+        }
+        else if (string.IsNullOrEmpty(searchKeyword)) 
         {
             searchKeyword = "";
         }

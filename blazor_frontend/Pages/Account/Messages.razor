@@ -37,11 +37,11 @@
             <!-- Header Chat -->
             <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white z-10 shrink-0">
                 <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border border-gray-200">
-                        <img src="https://ui-avatars.com/api/?name=CSKH&background=0b3b72&color=fff" alt="Support" class="w-full h-full object-cover" />
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-100 border-2 border-white shadow-md">
+                        <img src="@(string.IsNullOrEmpty(staffAvatar) ? "https://ui-avatars.com/api/?name=Staff&background=0b3b72&color=fff" : staffAvatar)" alt="Support" class="w-full h-full object-cover" />
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-900 text-lg">@(string.IsNullOrEmpty(staffName) ? "Hỗ trợ trực tuyến" : $"Tư vấn viên: {staffName}")</h3>
+                        <h3 class="font-bold text-gray-900 text-lg">@(string.IsNullOrEmpty(staffName) || staffName == "Administrator" ? "Nhân viên tư vấn" : $"Tư vấn viên: {staffName}")</h3>
                         <div class="flex items-center gap-1.5 mt-0.5">
                             <span class="w-2 h-2 rounded-full block bg-green-500"></span>
                             <span class="text-sm text-gray-500">Chúng tôi đang trực tuyến</span>
@@ -56,17 +56,17 @@
                 {
                     @foreach (var msg in messages)
                     {
-                        <div class="flex @(msg.IsMine ? "justify-end" : "justify-start") group items-end gap-2">
-                            @if (!msg.IsMine)
-                            {
-                                <img src="https://ui-avatars.com/api/?name=CSKH&background=0b3b72&color=fff" class="w-8 h-8 rounded-full shrink-0" />
-                            }
+                        <div class="flex @(msg.IsMine ? "flex-row-reverse" : "flex-row") items-end gap-3 mb-2">
+                            <div class="w-9 h-9 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm bg-gray-100">
+                                <img src="@(string.IsNullOrEmpty(msg.Avatar) ? (msg.IsMine ? (string.IsNullOrEmpty(userAvatar) ? "https://ui-avatars.com/api/?name=Me&background=random" : userAvatar) : (string.IsNullOrEmpty(staffAvatar) ? "https://ui-avatars.com/api/?name=Staff&background=0b3b72&color=fff" : staffAvatar)) : msg.Avatar)" 
+                                     class="w-full h-full object-cover" />
+                            </div>
                             <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
                                 <div class="px-4 py-2.5 shadow-sm text-[15px] @(msg.IsMine ? "bg-blue-600 text-white rounded-lg rounded-br-sm" : "bg-white border border-gray-200 text-gray-800 rounded-lg rounded-bl-sm") leading-relaxed whitespace-pre-wrap">
                                     @msg.Text
                                 </div>
                                 <span class="text-[11px] text-gray-400 mt-1">
-                                    @msg.Timestamp.ToString("HH:mm")
+                                    @msg.Timestamp.ToLocalTime().ToString("HH:mm")
                                 </span>
                             </div>
                         </div>
@@ -90,6 +90,8 @@
 @code {
     private string currentSessionId = "";
     private string staffName = "";
+    private string staffAvatar = "";
+    private string userAvatar = "";
     private string newMessage = "";
     private List<ChatMessage> messages = new();
 
@@ -97,7 +99,10 @@
     {
         ChatService.OnMessageReceived += HandleMessageReceived;
         ChatService.OnSessionAssigned += HandleSessionAssigned;
+        ChatService.OnStaffNameUpdated += HandleStaffNameUpdated;
         await ChatService.InitializeAsync();
+
+        userAvatar = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_avatar") ?? "";
 
         var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
         var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
@@ -122,6 +127,9 @@
             if (sessionInfo != null)
             {
                 staffName = sessionInfo.StaffHoTen;
+                staffAvatar = sessionInfo.StaffAvatar;
+                if (staffName == "Administrator") staffName = "Nhân viên tư vấn";
+                StateHasChanged();
             }
             
             var history = await JS.InvokeAsync<string>("localStorage.getItem", $"chat_history_{currentSessionId}");
@@ -153,11 +161,16 @@
         await ScrollToBottom();
     }
 
-    private void HandleMessageReceived(ChatMessageDto tinNhan)
+    private void HandleMessageReceived(blazor_frontend.Models.ChatMessageDto tinNhan)
     {
         if (tinNhan.SenderType != "GUEST" && tinNhan.SenderType != "USER") // Chỉ nhận tin từ Staff/Bot
         {
-            messages.Add(new ChatMessage { Text = tinNhan.NoiDung, IsMine = false, Timestamp = tinNhan.ThoiGianGui });
+            messages.Add(new ChatMessage { 
+                Text = tinNhan.NoiDung, 
+                IsMine = false, 
+                Timestamp = tinNhan.ThoiGianGui,
+                Avatar = tinNhan.SenderAvatar
+            });
             _ = SaveMessages();
             InvokeAsync(() => {
                 StateHasChanged();
@@ -166,11 +179,19 @@
         }
     }
 
+    private void HandleStaffNameUpdated(string newName)
+    {
+        InvokeAsync(() => {
+            staffName = newName;
+            StateHasChanged();
+        });
+    }
+
     private void HandleSessionAssigned(string staffId, string name)
     {
         InvokeAsync(() => {
-            staffName = name;
-            messages.Add(new ChatMessage { Text = $"Tư vấn viên {name} đã tham gia cuộc trò chuyện.", IsMine = false, Timestamp = DateTime.Now });
+            staffName = name == "Administrator" ? "Nhân viên tư vấn" : name;
+            messages.Add(new ChatMessage { Text = $"Tư vấn viên {staffName} đã tham gia cuộc trò chuyện.", IsMine = false, Timestamp = DateTime.Now });
             StateHasChanged();
         });
     }
@@ -193,7 +214,7 @@
         var textToSend = newMessage.Trim();
         newMessage = "";
 
-        messages.Add(new ChatMessage { Text = textToSend, IsMine = true, Timestamp = DateTime.Now });
+        messages.Add(new ChatMessage { Text = textToSend, IsMine = true, Timestamp = DateTime.Now, Avatar = userAvatar });
         await SaveMessages();
         StateHasChanged();
         await ScrollToBottom();
@@ -201,13 +222,17 @@
         if (ChatService.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
         {
             var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
+            var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
+            var avatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar");
             bool isUser = !string.IsNullOrEmpty(userId);
 
-            var tn = new ChatMessageDto
+            var tn = new blazor_frontend.Models.ChatMessageDto
             {
                 MaPhien = Guid.Parse(currentSessionId),
                 SenderType = isUser ? "USER" : "GUEST",
                 SenderID = isUser ? Guid.Parse(userId) : Guid.Empty,
+                SenderName = hoTen ?? (isUser ? "Thành viên" : "Khách"),
+                SenderAvatar = avatar ?? "",
                 NoiDung = textToSend,
                 TrangThai = "sent"
             };
@@ -237,6 +262,7 @@
     {
         ChatService.OnMessageReceived -= HandleMessageReceived;
         ChatService.OnSessionAssigned -= HandleSessionAssigned;
+        ChatService.OnStaffNameUpdated -= HandleStaffNameUpdated;
     }
 
     public class ChatMessage
@@ -244,5 +270,6 @@
         public string Text { get; set; } = "";
         public bool IsMine { get; set; }
         public DateTime Timestamp { get; set; }
+        public string Avatar { get; set; } = "";
     }
 }

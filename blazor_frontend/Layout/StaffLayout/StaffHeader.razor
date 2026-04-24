@@ -1,4 +1,4 @@
-﻿<header class="h-16 bg-white border-b border-gray-200 grid grid-cols-3 items-center px-4 shadow-sm z-10 w-full relative">
+<header class="h-16 bg-white border-b border-gray-200 grid grid-cols-3 items-center px-4 shadow-sm z-10 w-full relative">
     <!-- Nút Menu (Left) -->
     <div class="flex justify-start">
         <button @onclick="OnToggleSidebar" 
@@ -54,6 +54,10 @@
     </div>
 </header>
 
+@using blazor_frontend.Services
+@implements IDisposable
+@inject AuthState AuthState
+
 @code {
     private bool _isDropdownOpen = false;
 
@@ -67,18 +71,49 @@
         _isDropdownOpen = false;
     }
 
-
     [Parameter]
     public EventCallback OnToggleSidebar { get; set; }
 
-    // Thông tin hiển thị của Staff
     [Parameter]
     public string StaffName { get; set; } = "Nguyễn Văn A";
 
     [Parameter]
     public string Role { get; set; } = "Admin";
 
-    // Hình Avatar Random từ UI Faces
     [Parameter]
     public string AvatarUrl { get; set; } = "https://ui-avatars.com/api/?name=Nguyễn+A&background=e0f2fe&color=2563eb&size=100";
+
+    protected override void OnInitialized()
+    {
+        AuthState.AuthStateChanged += HandleAuthStateChanged;
+        UpdateFromAuthState();
+    }
+
+    private void HandleAuthStateChanged()
+    {
+        UpdateFromAuthState();
+        StateHasChanged();
+    }
+
+    private void UpdateFromAuthState()
+    {
+        if (AuthState.IsAuthenticated)
+        {
+            StaffName = AuthState.HoTen;
+            Role = AuthState.Role;
+            if (!string.IsNullOrEmpty(AuthState.AvatarUrl))
+            {
+                AvatarUrl = AuthState.AvatarUrl;
+            }
+            else 
+            {
+                AvatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(StaffName)}&background=e0f2fe&color=2563eb&size=100";
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthState.AuthStateChanged -= HandleAuthStateChanged;
+    }
 }
