@@ -52,6 +52,17 @@
     private string? errorMessage;
     private bool isLoading = false;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await AuthService.InitializeAsync();
+        if (AuthState.IsAuthenticated)
+        {       
+            Nav.NavigateTo("/", replace: true);
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
         errorMessage = null;

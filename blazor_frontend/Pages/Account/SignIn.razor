@@ -64,6 +64,17 @@
     [SupplyParameterFromQuery(Name = "returnUrl")]
     public string? ReturnUrl { get; set; }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await AuthService.InitializeAsync();
+        if (AuthState.IsAuthenticated)
+        {
+            Nav.NavigateTo("/", replace: true);
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
         isSubmitting = true;
