@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using blazor_frontend.Models
 @using blazor_frontend.Services
+@inject blazor_frontend.Services.AuthState AuthState
 @implements IDisposable
 
 @if (isOpen)
@@ -29,7 +30,7 @@
                 {
                     <div class="flex @(msg.IsMine ? "flex-row-reverse" : "flex-row") items-end gap-2 mb-2">
                         <div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-200 bg-gray-100">
-                            <img src="@(string.IsNullOrEmpty(msg.Avatar) ? (msg.IsMine ? (string.IsNullOrEmpty(userAvatar) ? "https://ui-avatars.com/api/?name=Me&background=random" : userAvatar) : "https://ui-avatars.com/api/?name=Staff&background=random") : msg.Avatar)" 
+                            <img src="@(string.IsNullOrEmpty(msg.Avatar) ? (msg.IsMine ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(AuthState.IsAuthenticated ? AuthState.HoTen : "Khách")}&background=random" : "https://ui-avatars.com/api/?name=Staff&background=random") : msg.Avatar)" 
                                  class="w-full h-full object-cover" />
                         </div>
                         <div class="@(msg.IsMine ? "bg-blue-600 text-white rounded-l-lg rounded-tr-lg" : "bg-blue-100 text-blue-900 rounded-r-lg rounded-tl-lg") p-2 max-w-[75%] text-sm shadow-sm">
@@ -67,7 +68,7 @@
         guestId = await JS.InvokeAsync<string>("localStorage.getItem", "chat_guest_id");
         if (string.IsNullOrEmpty(guestId))
         {
-            guestId = $"GUEST_{Guid.NewGuid().ToString().Substring(0,8)}";
+            guestId = $"GUEST_{Guid.NewGuid().ToString().Substring(0, 8)}";
             await JS.InvokeVoidAsync("localStorage.setItem", "chat_guest_id", guestId);
         }
 
@@ -75,63 +76,98 @@
         ChatService.OnMessageReceived += HandleMessageReceived;
         ChatService.OnSessionQueued += HandleSessionQueued;
         ChatService.OnSessionAssigned += HandleSessionAssigned;
+        AuthState.AuthStateChanged += HandleAuthStateChanged;
         await ChatService.InitializeAsync();
 
-        userAvatar = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_avatar") ?? "";
+        await InitializeSessionAsync();
+    }
 
-        // 3. Xử lý Session ID
-        var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
-        var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
+    private void HandleAuthStateChanged()
+    {
+        _ = InvokeAsync(async () => {
+            await InitializeSessionAsync();
+        });
+    }
 
-        if (string.IsNullOrEmpty(session) && !string.IsNullOrEmpty(userId))
+    private bool isInitializing = false;
+    private async Task InitializeSessionAsync()
+    {
+        if (isInitializing) return;
+        isInitializing = true;
+
+        try
         {
-            session = await ChatService.CreateNewChatSessionAsync(userId, "USER");
-            if (!string.IsNullOrEmpty(session))
+            // Ưu tiên lấy từ AuthState thay vì localStorage để tránh race condition khi vừa login
+            userAvatar = AuthState.AvatarUrl;
+            var userId = AuthState.UserId;
+            bool isAuthenticated = AuthState.IsAuthenticated;
+
+            // 3. Xử lý Session ID
+            var session = await JS.InvokeAsync<string?>("localStorage.getItem", "chat_session_id");
+
+            if (isAuthenticated)
             {
-                await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
-            }
-        }
+                // Bắt buộc xóa ID cũ để tránh dùng lại phiên khách
+                await JS.InvokeVoidAsync("localStorage.removeItem", "chat_session_id");
+                session = null;
 
-        if (string.IsNullOrEmpty(session))
-        {
-            currentSessionId = "";
-        }
-        else
-        {
-            currentSessionId = session;
-            
-            // Lấy lịch sử từ server nếu local trống (để đồng bộ giữa các thiết bị)
-            var history = await JS.InvokeAsync<string>("localStorage.getItem", $"chat_history_{currentSessionId}");
-
-            if (string.IsNullOrEmpty(history))
-            {
-                var serverMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(currentSessionId));
-                if (serverMsgs != null && serverMsgs.Any())
+                // 1. LUÔN ƯU TIÊN tìm phiên cũ của User này trên server trước
+                var serverSession = await ChatService.GetLatestActiveSessionAsync(userId.ToString());
+                
+                if (serverSession != null)
                 {
-                    messages = serverMsgs
-                        .Where(m => !m.IsInternalNote)
-                        .Select(m => new ChatMessage { 
-                        Text = m.NoiDung, 
-                        IsMine = m.SenderType == "USER" || m.SenderType == "GUEST",
-                        Timestamp = m.ThoiGianGui.ToLocalTime() 
-                    }).ToList();
-                    await SaveMessages();
+                    session = serverSession.Id.ToString();
+                    await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
                 }
+                else
+                {
+                    // 2. Nếu Server không có phiên nào active -> Tạo mới cho User (không dùng lại khách)
+                    session = await ChatService.CreateNewChatSessionAsync(userId.ToString(), "USER");
+                    if (!string.IsNullOrEmpty(session))
+                    {
+                        await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(session))
+            {
+                currentSessionId = "";
+                messages = new();
             }
             else
             {
-                try { messages = JsonSerializer.Deserialize<List<ChatMessage>>(history) ?? new(); }
-                catch { messages = new(); }
+                currentSessionId = session;
+
+                // Lấy lịch sử từ server
+                var serverMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(currentSessionId));
+                if (serverMsgs != null)
+                {
+                    messages = serverMsgs
+                        .Where(m => !m.IsInternalNote)
+                        .Select(m => new ChatMessage
+                        {
+                            Text = m.NoiDung,
+                            IsMine = m.SenderType == "USER" || m.SenderType == "GUEST",
+                            Timestamp = m.ThoiGianGui.ToLocalTime()
+                        }).ToList();
+                    await SaveMessages();
+                }
+
+                // Join vào room
+                await ChatService.JoinChatSessionAsync(currentSessionId);
+
+                // Nâng cấp phiên nếu đã login (đảm bảo backend sync đúng info)
+                await TryUpgradeSession();
+
+                await Task.Delay(300);
+                await ScrollToBottom();
             }
-
-            // Join vào room cũ
-            await ChatService.JoinChatSessionAsync(currentSessionId);
-
-            // Nâng cấp phiên nếu đã login
-            await TryUpgradeSession();
-            
-            await Task.Delay(300);
-            await ScrollToBottom();
+        }
+        finally
+        {
+            isInitializing = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -195,7 +231,7 @@
             messages.Add(new ChatMessage { Text = "Chào bạn! Chúng tôi có thể giúp gì cho bạn hôm nay?", IsMine = false, Timestamp = DateTime.Now });
             await SaveMessages();
 
-            await TryUpgradeSession();
+            // Không gọi TryUpgradeSession ở đây để tránh nâng cấp nhầm trước khi InitializeSessionAsync kịp xử lý
         }
 
         if (isOpen)
@@ -266,6 +302,7 @@
         ChatService.OnMessageReceived -= HandleMessageReceived;
         ChatService.OnSessionQueued -= HandleSessionQueued;
         ChatService.OnSessionAssigned -= HandleSessionAssigned;
+        AuthState.AuthStateChanged -= HandleAuthStateChanged;
     }
 
     public class ChatMessage

@@ -156,10 +156,10 @@
                                         <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
                                         <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(GetItemEffectivePrice(item))</span>
                                     </div>
-                                    @if (GetItemBestDiscount(item) != null)
+                                    @if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
                                     {
-                                        <div class="mt-1 text-xs text-red-600 font-medium">
-                                            Áp dụng: @GetItemBestDiscount(item)!.MaCode - @FormatDiscountText(GetItemBestDiscount(item)!)
+                                        <div class="mt-0.5 text-xs text-blue-600 font-medium">
+                                            Voucher: @AppliedDiscount.MaCode
                                         </div>
                                     }
                                 </div>
@@ -682,32 +682,7 @@
             return 0;
         }
 
-        return CartModel.Items.Sum(item =>
-        {
-            if (!Guid.TryParse(item.ProductId, out var productId))
-            {
-                return 0m;
-            }
-
-            var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
-            if (product == null)
-            {
-                return 0m;
-            }
-
-            return DiscountPricingHelper.IsApplicable(discount, product, allCategories.FirstOrDefault(c => c.MaDM == product.MaDM)?.MaLDM, TamTinh)
-                ? DiscountPricingHelper.GetDiscountAmount(discount, item.Price) * item.Quantity
-                : 0m;
-        });
-    }
-
-    private bool IsVoucherApplicableToCart(MaGiamGiaDto discount)
-    {
-        if (CartModel?.Items?.Any() != true)
-        {
-            return false;
-        }
-
+        decimal eligibleTotal = 0;
         foreach (var item in CartModel.Items)
         {
             if (!Guid.TryParse(item.ProductId, out var productId))
@@ -724,12 +699,25 @@
             var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
             if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh))
             {
-                return true;
+                eligibleTotal += item.Price * item.Quantity;
             }
         }
 
-        return false;
+        return DiscountPricingHelper.GetDiscountAmount(discount, eligibleTotal);
     }
+
+    private bool IsVoucherApplicableToItem(BasketItemDto item, MaGiamGiaDto discount)
+    {
+        if (!Guid.TryParse(item.ProductId, out var productId)) return false;
+        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
+        if (product == null) return false;
+
+        var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
+        return DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh);
+    }
+
+    private bool IsVoucherApplicableToCart(MaGiamGiaDto discount)
+        => CartModel?.Items?.Any(item => IsVoucherApplicableToItem(item, discount)) ?? false;
 
     private static string FormatDiscountText(MaGiamGiaDto discount)
         => discount.Loai == "PhanTram"

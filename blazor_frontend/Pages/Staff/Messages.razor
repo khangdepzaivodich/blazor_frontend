@@ -310,7 +310,7 @@
                     .Select(s => new ChatUIModel
                     {
                         Id = s.Id.ToString(),
-                        CustomerName = !string.IsNullOrEmpty(s.HoTen) ? s.HoTen : (s.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên"),
+                        CustomerName = !string.IsNullOrEmpty(s.HoTen) ? s.HoTen : (s.ClientType == "GUEST" ? "Khách" : "Thành viên"),
                         AvatarUrl = !string.IsNullOrEmpty(s.Avatar) ? s.Avatar : $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(!string.IsNullOrEmpty(s.HoTen) ? s.HoTen : "Guest")}&background=random",
                         LastMessage = s.LastMessage,
                         LastSender = "N/A",
@@ -337,7 +337,7 @@
         var newChat = new ChatUIModel
         {
             Id = phien.Id.ToString(),
-            CustomerName = phien.ClientType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
+            CustomerName = !string.IsNullOrEmpty(phien.HoTen) ? phien.HoTen : (phien.ClientType == "GUEST" ? "Khách" : "Thành viên"),
             AvatarUrl = !string.IsNullOrEmpty(phien.Avatar) ? phien.Avatar : $"https://ui-avatars.com/api/?name=Guest&background=random",
             LastMessage = phien.LastMessage,
             LastSender = "System",
@@ -365,7 +365,7 @@
             chatRoom = new ChatUIModel
             {
                 Id = phienIdStr,
-                CustomerName = tinNhan.SenderType == "GUEST" ? "Khách Vãng Lai" : "Thành viên",
+                CustomerName = !string.IsNullOrEmpty(tinNhan.SenderName) ? tinNhan.SenderName : (tinNhan.SenderType == "GUEST" ? "Khách" : "Thành viên"),
                 AvatarUrl = !string.IsNullOrEmpty(tinNhan.SenderAvatar) ? tinNhan.SenderAvatar : $"https://ui-avatars.com/api/?name={(tinNhan.SenderType == "GUEST" ? "Guest" : "Member")}&background=random",
                 UnreadCount = 0,
                 SessionStatus = "ASSIGNED",
