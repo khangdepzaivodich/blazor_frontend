@@ -668,8 +668,8 @@
         await AuthService.InitializeAsync();
         
         var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
-        var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
-        var isStaff = string.Equals(role, "Staff", StringComparison.OrdinalIgnoreCase);
+        var isAdmin = string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+        var isStaff = string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
         isAuthorized = isAdmin || isStaff;
 
         if (!isAuthorized)

@@ -1,33 +1,30 @@
 @page "/admin"
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
-@inject IHttpClientFactory HttpClientFactory
+@inject blazor_frontend.Services.IAuthService AuthService
+@inject blazor_frontend.Services.AuthState AuthState
+
+<div class="flex h-screen w-full items-center justify-center bg-gray-50">
+    <div class="flex flex-col items-center gap-4">
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+        <p class="text-gray-500 font-medium">Đang chuyển hướng đến trang quản trị...</p>
+    </div>
+</div>
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (firstRender)
         {
-            return;
-        }
+            await AuthService.InitializeAsync();
 
-        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
+            if (!AuthState.IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/account/signin?returnUrl=/admin", replace: true);
+                return;
+            }
 
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            NavigationManager.NavigateTo("/account/signin?returnUrl=/admin", replace: true);
-            return;
-        }
-
-        try
-        {
-            var httpClient = HttpClientFactory.CreateClient("IdentityAPI");
-            var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/admin");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            var response = await httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            var role = AuthState.Role?.ToUpperInvariant();
+            if (role == "ADMIN" || role == "STAFF")
             {
                 NavigationManager.NavigateTo("/admin/dashboard", replace: true);
             }
@@ -35,10 +32,6 @@
             {
                 NavigationManager.NavigateTo("/unauthorized", replace: true);
             }
-        }
-        catch
-        {
-            NavigationManager.NavigateTo("/unauthorized", replace: true);
         }
     }
 }

@@ -16,7 +16,7 @@
 
     <LandingFooter />
 
-    @if (_isLoaded && AuthState?.Role != "Admin" && AuthState?.Role != "Staff")
+    @if (_isLoaded && AuthState?.Role != "ADMIN" && AuthState?.Role != "STAFF")
     {
         <ChatWidget />
     }
