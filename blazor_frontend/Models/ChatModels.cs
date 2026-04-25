@@ -14,6 +14,7 @@ namespace blazor_frontend.Models
         public DateTime ThoiGianGui { get; set; } = DateTime.UtcNow;
         public string TrangThai { get; set; } = "sent";
         public Guid ClientID { get; set; } = Guid.NewGuid();
+        public bool IsInternalNote { get; set; } = false;
     }
 
     public class ChatSessionDto
