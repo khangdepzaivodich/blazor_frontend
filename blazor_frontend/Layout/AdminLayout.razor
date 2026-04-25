@@ -7,30 +7,54 @@
     <!-- Sidebar  -->
     <aside class="h-full shadow-lg z-20 transition-all duration-300 ease-in-out shrink-0" style="width: @(_drawerOpen ? "256px" : "0px"); overflow: hidden;">
         <div style="width: 256px; height: 100%;">
-            <StaffSidebar Role="Admin" />
+            <StaffSidebar Role="ADMIN" />
         </div>
     </aside>
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0 h-screen transition-all duration-300 ease-in-out">
         <!-- Header -->
-        <StaffHeader OnToggleSidebar="DrawerToggle" Role="Admin" />
+        <StaffHeader OnToggleSidebar="DrawerToggle" Role="ADMIN" />
 
         <!-- Main Body -->
         <main class="flex-1 p-6 overflow-y-auto">
-            @Body
+            @if (_isLoaded)
+            {
+                @Body
+            }
         </main>
     </div>
 </div>
 
 @code {
     bool _drawerOpen = true;
+    bool _isAuthorized = false;
+    bool _isLoaded = false;
 
     [Inject] private IAuthService AuthService { get; set; } = default!;
+    [Inject] private AuthState AuthState { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await AuthService.InitializeAsync();
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            
+            _isAuthorized = string.Equals(AuthState.Role, "ADMIN", StringComparison.OrdinalIgnoreCase) || 
+                           string.Equals(AuthState.Role, "STAFF", StringComparison.OrdinalIgnoreCase);
+
+            if (!_isAuthorized)
+            {
+                var currentUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+                Navigation.NavigateTo($"/account/signin?returnUrl={Uri.EscapeDataString(currentUrl)}", replace: true);
+            }
+            else
+            {
+                _isLoaded = true;
+                StateHasChanged();
+            }
+        }
     }
 
     void DrawerToggle()

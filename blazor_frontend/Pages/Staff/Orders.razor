@@ -312,10 +312,10 @@
     private bool showDetailModal = false;
     private DonHangDto? selectedOrder = null;
 
-    private bool IsStaffOrAdmin => string.Equals(currentRole, "Staff", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase);
+    private bool IsStaffOrAdmin => string.Equals(currentRole, "STAFF", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase);
 
-    private bool IsAdmin => string.Equals(currentRole, "Admin", StringComparison.OrdinalIgnoreCase);
+    private bool IsAdmin => string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase);
 
     private bool CanUpdateStatus => IsStaffOrAdmin;
     private IEnumerable<DonHangDto> DisplayOrders => orders;

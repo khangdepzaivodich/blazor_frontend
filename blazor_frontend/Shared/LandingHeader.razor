@@ -245,11 +245,11 @@
                         </div>
                         <a href="/account/profile" class="block px-4 py-3 text-sm transition" @onclick="CloseAll">Profile</a>
                         
-                        @if (AuthState.Role == "Admin")
+                        @if (AuthState.Role == "ADMIN")
                         {
                             <a href="/admin" class="block px-4 py-3 text-sm transition font-semibold text-blue-600" @onclick="CloseAll">Quản trị hệ thống</a>
                         }
-                        else if (AuthState.Role == "Staff")
+                        else if (AuthState.Role == "STAFF")
                         {
                             <a href="/staff" class="block px-4 py-3 text-sm transition font-semibold text-blue-600" @onclick="CloseAll">Trang nhân viên</a>
                         }
@@ -271,7 +271,7 @@
             </div>
 
             <!-- CART -->
-            @if (_isLoaded && (!_isUserLoggedIn || (AuthState.Role != "Admin" && AuthState.Role != "Staff")))
+            @if (_isLoaded && (!_isUserLoggedIn || (AuthState.Role != "ADMIN" && AuthState.Role != "STAFF")))
             {
                 <a href="/cart" class="header-icon-btn-light relative inline-flex h-10 w-10 items-center justify-center" aria-label="Giỏ hàng">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

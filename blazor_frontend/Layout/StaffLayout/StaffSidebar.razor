@@ -41,12 +41,12 @@
 
 @code {
     [Parameter]
-    public string Role { get; set; } = "Admin";
+    public string Role { get; set; } = "ADMIN";
 
     private List<MenuOption> MenuItems = new();
     protected override void OnParametersSet()
     {
-        if (Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        if (Role.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))
         {
             MenuItems = new List<MenuOption>
             {
@@ -58,7 +58,7 @@
                 new("Người dùng", "/admin/users", "ph ph-users")
             };
         }
-        else if (Role.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+        else if (Role.Equals("STAFF", StringComparison.OrdinalIgnoreCase))
         {
             MenuItems = new List<MenuOption>
             {

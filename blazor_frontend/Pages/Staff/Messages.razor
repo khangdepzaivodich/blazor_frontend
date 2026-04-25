@@ -225,7 +225,7 @@
         myStaffId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id") ?? "STAFF_ANON";
         myStaffAvatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar") ?? "";
         if (string.IsNullOrEmpty(myStaffAvatar)) 
-            myStaffAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString("Staff")}&background=random";
+            myStaffAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString("STAFF")}&background=random";
             
         var staffName = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten") ?? "Tư vấn viên";
 
@@ -242,7 +242,7 @@
 
         // 3. Đăng ký nhân viên này vào hàng chờ (CHỈ NẾU KHÔNG PHẢI ADMIN)
         var userRole = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_role");
-        if (userRole != "Admin")
+        if (userRole != "ADMIN")
         {
             await ChatService.RegisterStaffAsync(myStaffId, staffName, myStaffAvatar);
         }

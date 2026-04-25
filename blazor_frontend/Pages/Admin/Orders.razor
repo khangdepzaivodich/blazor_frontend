@@ -151,8 +151,8 @@
     protected override async Task OnInitializedAsync()
     {
         var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
-        isAuthorized = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(role, "Staff", StringComparison.OrdinalIgnoreCase);
+        isAuthorized = string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
 
         if (!isAuthorized)
         {
