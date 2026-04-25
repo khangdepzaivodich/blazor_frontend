@@ -312,7 +312,7 @@
             <div class="text-xl font-bold text-[#0b3b72]">@FormatMoney(ThanhTien)</div>
             <div class="text-sm text-gray-600 font-medium">Tiết kiệm: @FormatMoney(VoucherGiamGia)</div>
         </div>
-        @if (string.Equals(BuyerId, "guest", StringComparison.OrdinalIgnoreCase))
+        @if (IsGuest)
         {
             <button class="bg-gradient-to-r from-blue-700 to-cyan-600 text-white px-10 py-3 rounded-md font-bold text-lg hover:from-blue-800 hover:to-cyan-700 transition-all shadow-lg" @onclick="GoToLogin">
                 Đăng nhập để thanh toán
@@ -360,7 +360,7 @@
 
     private decimal TamTinh => CartModel?.Items?.Sum(item => GetItemEffectivePrice(item) * item.Quantity) ?? 0;
     private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
-    private bool IsGuest => string.Equals(BuyerId, "guest", StringComparison.OrdinalIgnoreCase);
+    private bool IsGuest = true;
     private string CheckoutRequirementMessage
     {
         get
@@ -382,9 +382,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id")
-            ?? await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id")
-            ?? "guest";
+        var authUserId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        if (!string.IsNullOrEmpty(authUserId))
+        {
+            BuyerId = authUserId;
+            IsGuest = false;
+        }
+        else
+        {
+            IsGuest = true;
+            BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+            if (string.IsNullOrEmpty(BuyerId))
+            {
+                BuyerId = Guid.NewGuid().ToString();
+                await JS.InvokeVoidAsync("localStorage.setItem", "buyer_id", BuyerId);
+            }
+        }
 
         if (!IsGuest)
         {

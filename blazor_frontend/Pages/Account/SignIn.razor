@@ -102,7 +102,10 @@
 
     private async Task MergeGuestCartAsync(string userId)
     {
-        var guestBasket = await BasketService.GetBasketAsync("guest");
+        var buyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+        if (string.IsNullOrEmpty(buyerId)) return;
+
+        var guestBasket = await BasketService.GetBasketAsync(buyerId);
         if (guestBasket?.Items?.Any() != true)
         {
             return;
@@ -140,6 +143,7 @@
         }
 
         await BasketService.UpdateBasketAsync(authBasket);
-        await BasketService.DeleteBasketAsync("guest");
+        await BasketService.DeleteBasketAsync(buyerId);
+        await JS.InvokeVoidAsync("localStorage.removeItem", "buyer_id");
     }
 }
