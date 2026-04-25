@@ -292,6 +292,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public decimal GiaMax { get; set; }
         public int LuotBan { get; set; }
         public DateTime NgayTao { get; set; } = DateTime.UtcNow;
+        public string Slug { get; set; } = string.Empty;
         public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
 
@@ -303,6 +304,7 @@ namespace blazor_frontend.Models.BackendDTOs
         public string? MoTa { get; set; }
         public int LuotBan { get; set; }
         public DateTime NgayTao { get; set; } = DateTime.UtcNow;
+        public string Slug { get; set; } = string.Empty;
         public List<ChiTietSanPhamDto> ChiTietSanPhams { get; set; } = new();
     }
 

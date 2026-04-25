@@ -1,4 +1,4 @@
-@page "/product/{Id}"
+@page "/product/{Slug}"
 @using blazor_frontend.Shared
 @using blazor_frontend.Models.BackendDTOs
 @inject IJSRuntime JSRuntime
@@ -297,7 +297,7 @@
 
 @code {
     [Parameter]
-    public string Id { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
 
     private int selectedMediaIndex = 0;
     private int activeTab = 1;
@@ -314,18 +314,19 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!Guid.TryParse(Id, out var productId))
+        if (string.IsNullOrEmpty(Slug))
         {
             return;
         }
 
-        var products = (await productService.GetAllAsync()).ToList();
-        currentProduct = products.FirstOrDefault(x => x.MaSP == productId);
+        currentProduct = await productService.GetBySlugAsync(Slug);
+
         if (currentProduct == null)
         {
             return;
         }
 
+        var products = (await productService.GetAllAsync()).ToList();
         discounts = (await DiscountService.GetDiscountsAsync()).ToList();
         allCategories = (await categoryService.GetAllAsync()).ToList();
         allCategoryGroups = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
@@ -495,7 +496,7 @@
 
         var basket = await BasketService.GetBasketAsync(buyerId) ?? new BasketDto { UserName = buyerId };
 
-        var existing = basket.Items.FirstOrDefault(x => x.ProductId == Id);
+        var existing = basket.Items.FirstOrDefault(x => x.ProductId == currentProduct?.MaSP.ToString());
         if (existing != null)
         {
             existing.Quantity += Quantity;
@@ -504,7 +505,7 @@
         {
             basket.Items.Add(new BasketItemDto
             {
-                ProductId = Id,
+                ProductId = currentProduct?.MaSP.ToString() ?? "",
                 ProductName = productName,
                 Price = productPrice,
                 Quantity = Quantity,
@@ -533,7 +534,7 @@
             .ToArray();
 
         return new ProductList.ProductDto(
-            Id: product.MaSP.ToString(),
+            Id: product.Slug,
             ImagePath: firstDetail?.Anh ?? "product1.jpg",
             Title: product.TenSP,
             Price: $"{(firstDetail?.Gia ?? 0):n0}₫",

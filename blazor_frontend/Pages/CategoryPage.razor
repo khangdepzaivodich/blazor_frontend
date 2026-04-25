@@ -265,7 +265,7 @@
             .ToArray();
 
         return new ProductList.ProductDto(
-            Id: p.MaSP.ToString(),
+            Id: p.Slug,
             ImagePath: firstDetail?.Anh ?? "product1.jpg",
             Title: p.TenSP,
             Price: $"{displayPriceVal:n0}₫",
