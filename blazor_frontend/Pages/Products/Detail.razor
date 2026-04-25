@@ -487,9 +487,16 @@
 
     private async Task AddToCartAsync()
     {
-        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id")
-            ?? await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id")
-            ?? "guest";
+        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
+        if (string.IsNullOrEmpty(buyerId))
+        {
+            buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+            if (string.IsNullOrEmpty(buyerId))
+            {
+                buyerId = Guid.NewGuid().ToString();
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "buyer_id", buyerId);
+            }
+        }
         var productName = currentProduct?.TenSP ?? "Sản phẩm";
         var productPrice = CurrentFinalPrice > 0 ? CurrentFinalPrice : SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams.FirstOrDefault()?.Gia ?? 0m;
         var productImage = CurrentImage;
