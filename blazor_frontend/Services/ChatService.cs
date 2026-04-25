@@ -25,6 +25,7 @@ namespace blazor_frontend.Services
         Task<IEnumerable<ChatMessageDto>> GetChatHistoryAsync(Guid sessionId);
         Task<ChatSessionDto?> GetChatSessionAsync(Guid sessionId);
         Task<IEnumerable<ChatSessionDto>> GetAllChatSessionsAsync();
+        Task<ChatSessionDto?> GetLatestActiveSessionAsync(string userId);
         
         Task RegisterStaffAsync(string staffId, string staffName, string staffAvatar);
         Task<string> CreateNewChatSessionAsync(string userId, string clientType);
@@ -102,6 +103,18 @@ namespace blazor_frontend.Services
         public async Task<ChatSessionDto?> GetChatSessionAsync(Guid sessionId)
         {
             return await _httpClient.GetFromJsonAsync<ChatSessionDto>($"api/chat/chat-sessions/{sessionId}");
+        }
+
+        public async Task<ChatSessionDto?> GetLatestActiveSessionAsync(string userId)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<ChatSessionDto>($"api/chat/latest-session/{userId}");
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task RegisterStaffAsync(string staffId, string staffName, string staffAvatar)

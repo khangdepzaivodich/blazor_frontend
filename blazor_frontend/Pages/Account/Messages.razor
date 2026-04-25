@@ -5,6 +5,7 @@
 @using blazor_frontend.Services
 @inject IJSRuntime JS
 @inject IChatService ChatService
+@inject AuthState AuthState
 @implements IDisposable
 
 <div class="min-h-[80vh] flex items-start justify-center py-10">
@@ -58,7 +59,7 @@
                     {
                         <div class="flex @(msg.IsMine ? "flex-row-reverse" : "flex-row") items-end gap-3 mb-2">
                             <div class="w-9 h-9 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm bg-gray-100">
-                                <img src="@(string.IsNullOrEmpty(msg.Avatar) ? (msg.IsMine ? (string.IsNullOrEmpty(userAvatar) ? "https://ui-avatars.com/api/?name=Me&background=random" : userAvatar) : (string.IsNullOrEmpty(staffAvatar) ? "https://ui-avatars.com/api/?name=Staff&background=0b3b72&color=fff" : staffAvatar)) : msg.Avatar)" 
+                                <img src="@(msg.IsMine ? (string.IsNullOrEmpty(AuthState.AvatarUrl) ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(AuthState.HoTen ?? "User")}&background=random" : AuthState.AvatarUrl) : (string.IsNullOrEmpty(msg.Avatar) ? (string.IsNullOrEmpty(staffAvatar) ? "https://ui-avatars.com/api/?name=Staff&background=0b3b72&color=fff" : staffAvatar) : msg.Avatar))" 
                                      class="w-full h-full object-cover" />
                             </div>
                             <div class="max-w-[70%] flex flex-col @(msg.IsMine ? "items-end" : "items-start")">
@@ -93,6 +94,7 @@
     private string staffAvatar = "";
     private string userAvatar = "";
     private string newMessage = "";
+    private string hoTen = "";
     private List<ChatMessage> messages = new();
 
     protected override async Task OnInitializedAsync()
@@ -103,17 +105,30 @@
         await ChatService.InitializeAsync();
 
         userAvatar = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_avatar") ?? "";
+        hoTen = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten") ?? "";
 
         var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
         var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
 
-        if (string.IsNullOrEmpty(session) && !string.IsNullOrEmpty(userId))
+        if (!string.IsNullOrEmpty(userId))
         {
-            // Nếu đã login nhưng chưa có session trong máy, thử lấy session cũ từ server
-            session = await ChatService.CreateNewChatSessionAsync(userId, "USER");
-            if (!string.IsNullOrEmpty(session))
+            // Bắt buộc xóa ID cũ để tránh dùng lại phiên khách
+            await JS.InvokeVoidAsync("localStorage.removeItem", "chat_session_id");
+            session = null;
+
+            var serverSession = await ChatService.GetLatestActiveSessionAsync(userId);
+            if (serverSession != null)
             {
+                session = serverSession.Id.ToString();
                 await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
+            }
+            else
+            {
+                session = await ChatService.CreateNewChatSessionAsync(userId, "USER");
+                if (!string.IsNullOrEmpty(session))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
+                }
             }
         }
 

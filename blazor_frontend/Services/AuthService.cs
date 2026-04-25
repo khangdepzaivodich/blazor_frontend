@@ -101,6 +101,10 @@ namespace blazor_frontend.Services
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_account");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
+
+            // Clear Chat sessions
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "chat_session_id");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "chat_guest_id");
         }
 
         public Task InitializeAsync()
