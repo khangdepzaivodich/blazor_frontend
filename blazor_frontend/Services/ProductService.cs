@@ -8,6 +8,7 @@ namespace blazor_frontend.Services
         Task<IEnumerable<SanPhamDto>> GetAllAsync();
         Task<PagedSanPhamResponse?> GetPagedAsync(int pageNumber, int pageSize, Guid? categoryTypeId = null, Guid? categoryId = null, string? keyword = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortBy = null);
         Task<SanPhamDto?> GetByIdAsync(Guid id);
+        Task<SanPhamDto?> GetBySlugAsync(string slug);
         Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request);
         Task<bool> UpdateAsync(Guid id, SanPhamCreateRequest request);
         Task<bool> DeleteAsync(Guid id);
@@ -64,6 +65,11 @@ namespace blazor_frontend.Services
         public async Task<SanPhamDto?> GetByIdAsync(Guid id)
         {
             return await _httpClient.GetFromJsonAsync<SanPhamDto>($"api/sanpham/{id}");
+        }
+        
+        public async Task<SanPhamDto?> GetBySlugAsync(string slug)
+        {
+            return await _httpClient.GetFromJsonAsync<SanPhamDto>($"api/sanpham/slug/{slug}");
         }
 
         public async Task<SanPhamDto?> CreateAsync(SanPhamCreateRequest request)
