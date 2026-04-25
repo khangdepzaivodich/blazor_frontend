@@ -139,7 +139,9 @@
                 var serverMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(currentSessionId));
                 if (serverMsgs != null && serverMsgs.Any())
                 {
-                    messages = serverMsgs.Select(m => new ChatMessage { 
+                    messages = serverMsgs
+                        .Where(m => !m.IsInternalNote)
+                        .Select(m => new ChatMessage { 
                         Text = m.NoiDung, 
                         IsMine = m.SenderType == "USER" || m.SenderType == "GUEST",
                         Timestamp = m.ThoiGianGui 
@@ -163,6 +165,8 @@
 
     private void HandleMessageReceived(blazor_frontend.Models.ChatMessageDto tinNhan)
     {
+        if (tinNhan.IsInternalNote) return; // Khách không bao giờ được thấy internal note
+
         if (tinNhan.SenderType != "GUEST" && tinNhan.SenderType != "USER") // Chỉ nhận tin từ Staff/Bot
         {
             messages.Add(new ChatMessage { 
@@ -187,7 +191,7 @@
         });
     }
 
-    private void HandleSessionAssigned(string staffId, string name)
+    private void HandleSessionAssigned(string sessionId, string staffId, string name)
     {
         InvokeAsync(() => {
             staffName = name == "Administrator" ? "Nhân viên tư vấn" : name;

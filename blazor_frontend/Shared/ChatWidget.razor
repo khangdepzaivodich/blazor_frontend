@@ -108,7 +108,9 @@
                 var serverMsgs = await ChatService.GetChatHistoryAsync(Guid.Parse(currentSessionId));
                 if (serverMsgs != null && serverMsgs.Any())
                 {
-                    messages = serverMsgs.Select(m => new ChatMessage { 
+                    messages = serverMsgs
+                        .Where(m => !m.IsInternalNote)
+                        .Select(m => new ChatMessage { 
                         Text = m.NoiDung, 
                         IsMine = m.SenderType == "USER" || m.SenderType == "GUEST",
                         Timestamp = m.ThoiGianGui.ToLocalTime() 
@@ -135,6 +137,8 @@
 
     private void HandleMessageReceived(blazor_frontend.Models.ChatMessageDto tinNhan)
     {
+        if (tinNhan.IsInternalNote) return; // Khách không bao giờ được thấy internal note
+
         // Chỉ thêm tin nhắn nếu người gửi không phải là mình (GUEST hoặc USER)
         if (tinNhan.SenderType != "GUEST" && tinNhan.SenderType != "USER")
         {
@@ -158,7 +162,7 @@
         // Overlay loading đã được gỡ bỏ theo yêu cầu của USER
     }
 
-    private void HandleSessionAssigned(string staffId, string staffName)
+    private void HandleSessionAssigned(string sessionId, string staffId, string staffName)
     {
         InvokeAsync(() => {
             messages.Add(new ChatMessage { Text = "Một tư vấn viên đã tham gia cuộc trò chuyện.", IsMine = false, Timestamp = DateTime.Now });
