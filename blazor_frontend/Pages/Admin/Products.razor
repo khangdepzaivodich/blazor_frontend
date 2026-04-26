@@ -71,10 +71,7 @@
                     </select>
                     <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
-                <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-purple-200 active:scale-95" @onclick="SyncSalesCount">
-                    <i class="ph ph-arrows-clockwise text-xl"></i>
-                    Sync lượt bán
-                </button>
+
                 <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-blue-200 active:scale-95" @onclick="New">
                     <i class="ph ph-plus-circle text-xl"></i>
                     Thêm sản phẩm
@@ -702,32 +699,7 @@
         }
     }
 
-    private async Task SyncSalesCount()
-    {
-        try
-        {
-            message = "Đang đồng bộ lượt bán từ đơn hàng...";
-            isError = false;
-            StateHasChanged();
 
-            var success = await orderService.SyncSalesCountAsync();
-            if (success)
-            {
-                message = "Đồng bộ lượt bán thành công!";
-                await Load();
-            }
-            else
-            {
-                message = "Đồng bộ lượt bán thất bại.";
-                isError = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            message = $"Lỗi: {ex.Message}";
-            isError = true;
-        }
-    }
 
     private string GetCategoryName(Guid maDM) => categories.FirstOrDefault(c => c.MaDM == maDM)?.TenDM ?? maDM.ToString();
 
