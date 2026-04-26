@@ -692,32 +692,10 @@
 
     private decimal GetItemEffectivePrice(BasketItemDto item)
     {
-        if (variantById.TryGetValue(item.ProductId, out var variant))
-        {
-            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
-            {
-                var discount = DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
-                return DiscountPricingHelper.GetFinalPrice(discount, item.Price);
-            }
-        }
-        return item.Price;
-    }
-            return item.Price;
-        }
-
-        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
-        if (product == null)
-        {
-            return item.Price;
-        }
-
-        // CHỈ ÁP DỤNG nếu có mã giảm giá được chọn thủ công (AppliedDiscount)
         if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
         {
             return DiscountPricingHelper.GetFinalPrice(AppliedDiscount, item.Price);
         }
-
-        // Không tự động áp dụng mã nữa, trả về giá gốc nếu không có voucher được chọn
         return item.Price;
     }
 
@@ -743,16 +721,9 @@
         decimal eligibleTotal = 0;
         foreach (var item in CartModel.Items)
         {
-            if (variantById.TryGetValue(item.ProductId, out var variant))
+            if (IsVoucherApplicableToItem(item, discount))
             {
-                if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
-                {
-                    var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
-                    if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh))
-                    {
-                        eligibleTotal += item.Price * item.Quantity;
-                    }
-                }
+                eligibleTotal += item.Price * item.Quantity;
             }
         }
 
@@ -814,34 +785,5 @@
         }.Where(x => !string.IsNullOrWhiteSpace(x));
 
         return string.Join(", ", parts);
-    }
-
-    private sealed class VietnamProvince
-    {
-        public string Code { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Unit { get; set; }
-    }
-
-    private sealed class VietnamDistrict
-    {
-        public string Code { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Unit { get; set; }
-        public string? province_code { get; set; }
-        public string? province_name { get; set; }
-        public string? full_name { get; set; }
-    }
-
-    private sealed class VietnamWard
-    {
-        public string Code { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Unit { get; set; }
-        public string? district_code { get; set; }
-        public string? district_name { get; set; }
-        public string? province_code { get; set; }
-        public string? province_name { get; set; }
-        public string? full_name { get; set; }
     }
 }
