@@ -23,6 +23,11 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Install TailwindCSS
+      run: |
+        cd blazor_frontend
+        npm install tailwindcss
+
     - name: Restore dependencies
       run: dotnet restore blazor_frontend.slnx
 
