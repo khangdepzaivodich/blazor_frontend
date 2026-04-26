@@ -1,0 +1,45 @@
+name: Frontend CI with Discord
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Setup Node.js (for Tailwind)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install TailwindCSS
+      run: |
+        cd blazor_frontend
+        npm install tailwindcss
+
+    - name: Restore dependencies
+      run: dotnet restore blazor_frontend.slnx
+
+    - name: Build
+      run: dotnet build blazor_frontend.slnx --configuration Release
+
+    - name: Discord Notification
+      if: always()
+      uses: sarisia/actions-status-discord@v1
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+        status: ${{ job.status }}
+        title: "Frontend Build Status"
+        description: "Build completed for branch ${{ github.ref_name }}"
+        color: 0x00ff00

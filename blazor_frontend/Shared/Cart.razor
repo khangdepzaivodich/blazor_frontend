@@ -165,10 +165,35 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => DecreaseItemAsync(item.ProductId)">-</button>
-                                    <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => IncreaseItemAsync(item.ProductId)">+</button>
+                                    
+                                    @{
+                                        bool canIncrease = true;
+                                        int availableStock = 0;
+                                        if (variantById.TryGetValue(item.ProductId, out var v))
+                                        {
+                                            availableStock = v.SoLuong;
+                                            canIncrease = item.Quantity < v.SoLuong;
+                                        }
+                                    }
+
+                                    <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 @(canIncrease ? "hover:bg-gray-50" : "opacity-30 cursor-not-allowed")" 
+                                            disabled="@(!canIncrease)"
+                                            @onclick="() => IncreaseItemAsync(item.ProductId)">+</button>
                                     <button class="h-8 w-8 rounded-full border border-red-200 text-red-600 hover:bg-red-50" @onclick="() => RemoveItemAsync(item.ProductId)">×</button>
                                 </div>
-                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(item.Price * item.Quantity)</div>
+                                <div class="text-right">
+                                    <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(GetItemEffectivePrice(item) * item.Quantity)</div>
+                                    @if (variantById.TryGetValue(item.ProductId, out var vr))
+                                    {
+                                        <div class="text-[10px] font-bold @(vr.SoLuong > 0 ? "text-gray-400" : "text-red-500") uppercase">
+                                            Kho: @vr.SoLuong
+                                        </div>
+                                        @if (item.Quantity > vr.SoLuong)
+                                        {
+                                            <div class="text-[9px] font-bold text-red-600 animate-pulse">Quá tồn kho!</div>
+                                        }
+                                    }
+                                </div>
                             </div>
                         }
                     </div>
@@ -346,6 +371,7 @@
     private List<DanhMucDto> allCategories = new();
     private List<LoaiDanhMucDto> allCategoryGroups = new();
     private Dictionary<string, SanPhamDto> productById = new();
+    private Dictionary<string, ChiTietSanPhamDto> variantById = new();
 
     private List<VietnamProvince> Provinces = new();
     private List<VietnamDistrict> Districts = new();
@@ -394,7 +420,7 @@
         else
         {
             IsGuest = true;
-            BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+            BuyerId = await JS.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? string.Empty;
             if (string.IsNullOrEmpty(BuyerId))
             {
                 BuyerId = Guid.NewGuid().ToString();
@@ -425,7 +451,9 @@
         allDiscounts = (await DiscountService.GetDiscountsAsync()).ToList();
         allCategories = (await CategoryService.GetAllAsync()).ToList();
         allCategoryGroups = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
-        productById = (await ProductService.GetAllAsync()).ToDictionary(x => x.MaSP.ToString(), x => x);
+        var allProducts = (await ProductService.GetAllAsync()).ToList();
+        productById = allProducts.ToDictionary(x => x.MaSP.ToString(), x => x);
+        variantById = allProducts.SelectMany(p => p.ChiTietSanPhams).ToDictionary(v => v.MaCTSP.ToString(), v => v);
         DiscountCode = await JS.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code") ?? string.Empty;
         await LoadVietnamProvincesAsync();
     }
@@ -562,12 +590,30 @@
             }).ToList()
         };
 
+        // Validate Stock before proceeding
+        foreach (var item in CartModel.Items)
+        {
+            if (variantById.TryGetValue(item.ProductId, out var variant))
+            {
+                if (item.Quantity > variant.SoLuong)
+                {
+                    await JS.InvokeVoidAsync("alert", $"Sản phẩm {item.ProductName} chỉ còn {variant.SoLuong} cái trong kho. Vui lòng điều chỉnh số lượng.");
+                    return;
+                }
+            }
+        }
+
         var order = await OrderService.CreateOrderAsync(request);
         if (order == null)
         {
             await JS.InvokeVoidAsync("alert", "Đặt hàng thất bại");
             return;
         }
+
+        // Automatic Sales Count Sync after successful order
+        try {
+            await OrderService.SyncSalesCountAsync();
+        } catch { /* Silent fail for sync */ }
 
         await BasketService.DeleteBasketAsync(BuyerId);
         await JS.InvokeVoidAsync("alert", "Đặt hàng thành công");
@@ -578,6 +624,15 @@
     {
         var item = CartModel?.Items.FirstOrDefault(x => x.ProductId == productId);
         if (item == null) return;
+
+        if (variantById.TryGetValue(productId, out var variant))
+        {
+            if (item.Quantity >= variant.SoLuong)
+            {
+                await JS.InvokeVoidAsync("alert", "Số lượng trong giỏ đã đạt giới hạn tồn kho.");
+                return;
+            }
+        }
 
         item.Quantity++;
         await SaveCartAsync();
@@ -637,8 +692,16 @@
 
     private decimal GetItemEffectivePrice(BasketItemDto item)
     {
-        if (!Guid.TryParse(item.ProductId, out var productId))
+        if (variantById.TryGetValue(item.ProductId, out var variant))
         {
+            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
+            {
+                var discount = DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+                return DiscountPricingHelper.GetFinalPrice(discount, item.Price);
+            }
+        }
+        return item.Price;
+    }
             return item.Price;
         }
 
@@ -660,18 +723,14 @@
 
     private MaGiamGiaDto? GetItemBestDiscount(BasketItemDto item)
     {
-        if (!Guid.TryParse(item.ProductId, out var productId))
+        if (variantById.TryGetValue(item.ProductId, out var variant))
         {
-            return null;
+            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
+            {
+                return DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+            }
         }
-
-        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
-        if (product == null)
-        {
-            return null;
-        }
-
-        return DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+        return null;
     }
 
     private decimal CalculateCartDiscount(MaGiamGiaDto discount)
@@ -684,21 +743,16 @@
         decimal eligibleTotal = 0;
         foreach (var item in CartModel.Items)
         {
-            if (!Guid.TryParse(item.ProductId, out var productId))
+            if (variantById.TryGetValue(item.ProductId, out var variant))
             {
-                continue;
-            }
-
-            var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
-            if (product == null)
-            {
-                continue;
-            }
-
-            var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
-            if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh))
-            {
-                eligibleTotal += item.Price * item.Quantity;
+                if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
+                {
+                    var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
+                    if (DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh))
+                    {
+                        eligibleTotal += item.Price * item.Quantity;
+                    }
+                }
             }
         }
 
@@ -707,12 +761,15 @@
 
     private bool IsVoucherApplicableToItem(BasketItemDto item, MaGiamGiaDto discount)
     {
-        if (!Guid.TryParse(item.ProductId, out var productId)) return false;
-        var product = productById.Values.FirstOrDefault(x => x.MaSP == productId);
-        if (product == null) return false;
-
-        var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
-        return DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh);
+        if (variantById.TryGetValue(item.ProductId, out var variant))
+        {
+            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
+            {
+                var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
+                return DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh);
+            }
+        }
+        return false;
     }
 
     private bool IsVoucherApplicableToCart(MaGiamGiaDto discount)

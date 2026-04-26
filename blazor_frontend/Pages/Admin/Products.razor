@@ -71,10 +71,7 @@
                     </select>
                     <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
-                <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-purple-200 active:scale-95" @onclick="SyncSalesCount">
-                    <i class="ph ph-arrows-clockwise text-xl"></i>
-                    Sync lượt bán
-                </button>
+
                 <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-sm hover:shadow-blue-200 active:scale-95" @onclick="New">
                     <i class="ph ph-plus-circle text-xl"></i>
                     Thêm sản phẩm
@@ -258,10 +255,9 @@
                             <div>
                                 <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loại danh mục</label>
                                 <div class="relative group">
-                                    <i class="ph ph-stack absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" 
-                                            @bind="selectedMaLDM">
-                                        <option value="@Guid.Empty">-- Chọn loại --</option>
+                                    <i class="ph ph-folders absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editorMaLDM">
+                                        <option value="@Guid.Empty">-- Chọn loại danh mục --</option>
                                         @foreach (var ldm in loaiDanhMucs)
                                         {
                                             <option value="@ldm.MaLDM">@ldm.TenLDM</option>
@@ -274,10 +270,10 @@
                             <div>
                                 <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Danh mục</label>
                                 <div class="relative group">
-                                    <i class="ph ph-folders absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editor.MaDM">
+                                    <i class="ph ph-folder-open absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editor.MaDM" disabled="@(editorMaLDM == Guid.Empty)">
                                         <option value="@Guid.Empty">-- Chọn danh mục --</option>
-                                        @foreach (var cat in categories.Where(c => selectedMaLDM == Guid.Empty || c.MaLDM == selectedMaLDM))
+                                        @foreach (var cat in categories.Where(c => c.MaLDM == editorMaLDM))
                                         {
                                             <option value="@cat.MaDM">@cat.TenDM</option>
                                         }
@@ -357,8 +353,20 @@
                                             </div>
                                             <div>
                                                 <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Kích cỡ</label>
-                                                <input class="w-full rounded-xl border border-gray-100 px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 bg-gray-50/50" 
-                                                       placeholder="S, M, L..." @bind="v.KichCo" />
+                                                <div class="relative">
+                                                    <select class="w-full rounded-xl border border-gray-100 px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 bg-gray-50/50 appearance-none" @bind="v.KichCo">
+                                                        <option value="Mặc định">Mặc định</option>
+                                                        <option value="Freesize">Freesize</option>
+                                                        <option value="XS">XS</option>
+                                                        <option value="S">S</option>
+                                                        <option value="M">M</option>
+                                                        <option value="L">L</option>
+                                                        <option value="XL">XL</option>
+                                                        <option value="XXL">XXL</option>
+                                                        <option value="3XL">3XL</option>
+                                                    </select>
+                                                    <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                                </div>
                                             </div>
                                             <div>
                                                 <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Giá bán (đ)</label>
@@ -486,8 +494,20 @@
                             </div>
                             <div class="col-span-1">
                                 <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kích cỡ (Size)</label>
-                                <input class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white" 
-                                       placeholder="S, M, L, XL..." @bind="variantEditor.KichCo" />
+                                <div class="relative">
+                                    <select class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white appearance-none" @bind="variantEditor.KichCo">
+                                        <option value="Mặc định">Mặc định</option>
+                                        <option value="Freesize">Freesize</option>
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                        <option value="XXL">XXL</option>
+                                        <option value="3XL">3XL</option>
+                                    </select>
+                                    <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                </div>
                             </div>
                             <div class="col-span-1">
                                 <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Giá bán</label>
@@ -566,6 +586,21 @@
     private Guid editingId = Guid.Empty;
     private Guid selectedMaLDM = Guid.Empty;
     private string tempProductImage = string.Empty;
+    
+    private Guid _editorMaLDM = Guid.Empty;
+    private Guid editorMaLDM
+    {
+        get => _editorMaLDM;
+        set
+        {
+            if (_editorMaLDM != value)
+            {
+                _editorMaLDM = value;
+                var firstCat = categories.FirstOrDefault(c => c.MaLDM == value);
+                editor.MaDM = firstCat?.MaDM ?? Guid.Empty;
+            }
+        }
+    }
     private bool isAuthorized;
     private int currentPage = 1;
     private int pageSize = 10;
@@ -721,32 +756,7 @@
         }
     }
 
-    private async Task SyncSalesCount()
-    {
-        try
-        {
-            message = "Đang đồng bộ lượt bán từ đơn hàng...";
-            isError = false;
-            StateHasChanged();
 
-            var success = await orderService.SyncSalesCountAsync();
-            if (success)
-            {
-                message = "Đồng bộ lượt bán thành công!";
-                await Load();
-            }
-            else
-            {
-                message = "Đồng bộ lượt bán thất bại.";
-                isError = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            message = $"Lỗi: {ex.Message}";
-            isError = true;
-        }
-    }
 
     private string GetCategoryName(Guid maDM) => categories.FirstOrDefault(c => c.MaDM == maDM)?.TenDM ?? maDM.ToString();
 
@@ -762,6 +772,10 @@
         { 
             new ChiTietSanPhamCreateRequest { Mau = "Mặc định", KichCo = "Mặc định", Gia = 0, SoLuong = 100 } 
         };
+        if (loaiDanhMucs != null && loaiDanhMucs.Any())
+        {
+            editorMaLDM = loaiDanhMucs.First().MaLDM;
+        }
         showEditor = true;
     }
 
@@ -780,6 +794,12 @@
         editingId = it.MaSP;
         selectedMaLDM = categories.FirstOrDefault(c => c.MaDM == it.MaDM)?.MaLDM ?? Guid.Empty;
         editor = new SanPhamCreateRequest { MaDM = it.MaDM, TenSP = it.TenSP, MoTa = it.MoTa };
+        
+        var cat = categories.FirstOrDefault(c => c.MaDM == it.MaDM);
+        if (cat != null)
+        {
+            _editorMaLDM = cat.MaLDM; // Use backing field to avoid triggering setter which resets MaDM
+        }
         
         // Tải biến thể hiện tại vào editor
         var existing = await productService.GetVariantsAsync(it.MaSP);

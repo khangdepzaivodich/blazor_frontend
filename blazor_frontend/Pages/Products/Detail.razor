@@ -199,15 +199,32 @@
             </div>
 
             <!-- Actions (Add to Cart / Buy Now) -->
-            <div class="flex gap-4 mb-4">
-                <div class="flex items-center justify-between w-32 border border-gray-300 rounded-md bg-white">
-                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none" @onclick="DecreaseQuantity">-</button>
-                    <div class="flex-1 text-center font-semibold text-gray-800">@Quantity</div>
-                    <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none" @onclick="IncreaseQuantity">+</button>
+            <div class="mb-4">
+                <div class="flex gap-4 mb-2">
+                    <div class="flex items-center justify-between w-32 border border-gray-300 rounded-md bg-white">
+                        <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none" @onclick="DecreaseQuantity">-</button>
+                        <div class="flex-1 text-center font-semibold text-gray-800">@Quantity</div>
+                        <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold transition-colors select-none @(SelectedVariant != null && Quantity >= SelectedVariant.SoLuong ? "opacity-30 cursor-not-allowed" : "")" 
+                                @onclick="IncreaseQuantity" 
+                                disabled="@(SelectedVariant != null && Quantity >= SelectedVariant.SoLuong)">+</button>
+                    </div>
+                    <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors" @onclick="AddToCartAsync">
+                        THÊM VÀO GIỎ
+                    </button>
                 </div>
-                <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors" @onclick="AddToCartAsync">
-                    THÊM VÀO GIỎ
-                </button>
+                @if (SelectedVariant != null)
+                {
+                    <p class="text-[11px] font-bold @(SelectedVariant.SoLuong > 0 ? "text-green-600" : "text-red-600") uppercase tracking-wider">
+                        @if (SelectedVariant.SoLuong > 0)
+                        {
+                            <span><i class="ph ph-check-circle"></i> Còn @SelectedVariant.SoLuong sản phẩm trong kho</span>
+                        }
+                        else
+                        {
+                            <span><i class="ph ph-x-circle"></i> Hết hàng</span>
+                        }
+                    </p>
+                }
             </div>
             <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6" @onclick="BuyNowAsync">
                 MUA NGAY
@@ -410,7 +427,7 @@
     }
 
     private string[] thumbnails => (currentProduct?.ChiTietSanPhams ?? new List<ChiTietSanPhamDto>())
-        .Select(x => x.Anh)
+        .Select(x => x.Anh!)
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray() switch
@@ -480,11 +497,13 @@
         {
             selectedSize = AvailableSizes.FirstOrDefault();
         }
+        ValidateQuantity();
     }
 
     private void SelectSize(string size)
     {
         selectedSize = size;
+        ValidateQuantity();
     }
 
     private bool HasStockForSize(string size)
@@ -495,7 +514,32 @@
             && x.SoLuong > 0);
     }
 
-    private void IncreaseQuantity() => Quantity++;
+    private void IncreaseQuantity()
+    {
+        if (SelectedVariant != null && Quantity < SelectedVariant.SoLuong)
+        {
+            Quantity++;
+        }
+    }
+
+    private void ValidateQuantity()
+    {
+        if (SelectedVariant != null)
+        {
+            if (SelectedVariant.SoLuong <= 0)
+            {
+                Quantity = 0;
+            }
+            else if (Quantity > SelectedVariant.SoLuong)
+            {
+                Quantity = SelectedVariant.SoLuong;
+            }
+            else if (Quantity <= 0 && SelectedVariant.SoLuong > 0)
+            {
+                Quantity = 1;
+            }
+        }
+    }
 
     private void DecreaseQuantity()
     {
@@ -517,23 +561,41 @@
                 await JSRuntime.InvokeVoidAsync("localStorage.setItem", "buyer_id", buyerId);
             }
         }
-        var productName = currentProduct?.TenSP ?? "Sản phẩm";
-        // QUAN TRỌNG: Gửi GIÁ GỐC vào giỏ hàng để tránh bị giảm giá 2 lần
-        var productPrice = CurrentPrice; 
+        var selectedVariant = SelectedVariant;
+        if (selectedVariant == null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Vui lòng chọn màu sắc và kích cỡ");
+            return;
+        }
+
+        var productName = $"{currentProduct?.TenSP ?? "Sản phẩm"} ({selectedVariant.Mau}, {selectedVariant.KichCo})";
+        var productPrice = CurrentFinalPrice > 0 ? CurrentFinalPrice : selectedVariant.Gia;
         var productImage = CurrentImage;
+        var variantId = selectedVariant.MaCTSP.ToString();
 
         var basket = await BasketService.GetBasketAsync(buyerId) ?? new BasketDto { UserName = buyerId };
 
-        var existing = basket.Items.FirstOrDefault(x => x.ProductId == currentProduct?.MaSP.ToString());
+        var existing = basket.Items.FirstOrDefault(x => x.ProductId == variantId);
         if (existing != null)
         {
-            existing.Quantity += Quantity;
+            var newTotal = existing.Quantity + Quantity;
+            if (newTotal > selectedVariant.SoLuong)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Bạn đã có {existing.Quantity} sản phẩm này trong giỏ hàng. Không thể thêm tiếp vì vượt quá tồn kho ({selectedVariant.SoLuong}).");
+                return;
+            }
+            existing.Quantity = newTotal;
         }
         else
         {
+            if (Quantity > selectedVariant.SoLuong)
+            {
+                 await JSRuntime.InvokeVoidAsync("alert", $"Không thể thêm vì vượt quá tồn kho ({selectedVariant.SoLuong}).");
+                 return;
+            }
             basket.Items.Add(new BasketItemDto
             {
-                ProductId = currentProduct?.MaSP.ToString() ?? "",
+                ProductId = variantId,
                 ProductName = productName,
                 Price = productPrice,
                 Quantity = Quantity,
