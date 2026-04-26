@@ -105,6 +105,9 @@ namespace blazor_frontend.Services
             // Clear Chat sessions
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "chat_session_id");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "chat_guest_id");
+
+            // Clear pending discount
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "pending_discount_code");
         }
 
         public Task InitializeAsync()

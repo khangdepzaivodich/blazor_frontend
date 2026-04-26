@@ -124,7 +124,16 @@ namespace blazor_frontend.Services
         public async Task<string?> UploadVariantPhotoAsync(Guid variantId, Stream fileStream, string fileName)
         {
             using var content = new MultipartFormDataContent();
-            using var streamContent = new StreamContent(fileStream);
+            var streamContent = new StreamContent(fileStream);
+            var extension = Path.GetExtension(fileName).ToLower();
+            var contentType = extension switch
+            {
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
+            };
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
             content.Add(streamContent, "file", fileName);
 
             var response = await _httpClient.PostAsync($"api/ChiTietSanPham/{variantId}/photo", content);
@@ -139,7 +148,16 @@ namespace blazor_frontend.Services
         public async Task<string?> UploadPhotoAsync(Stream fileStream, string fileName)
         {
             using var content = new MultipartFormDataContent();
-            using var streamContent = new StreamContent(fileStream);
+            var streamContent = new StreamContent(fileStream);
+            var extension = Path.GetExtension(fileName).ToLower();
+            var contentType = extension switch
+            {
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
+            };
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
             content.Add(streamContent, "file", fileName);
 
             var response = await _httpClient.PostAsync("api/photo/upload", content);

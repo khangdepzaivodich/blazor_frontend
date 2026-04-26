@@ -154,7 +154,7 @@
                                     <div class="font-semibold text-sm text-gray-900 truncate">@item.ProductName</div>
                                     <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
                                         <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
-                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(GetItemEffectivePrice(item))</span>
+                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(item.Price)</span>
                                     </div>
                                     @if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
                                     {
@@ -168,7 +168,7 @@
                                     <button class="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" @onclick="() => IncreaseItemAsync(item.ProductId)">+</button>
                                     <button class="h-8 w-8 rounded-full border border-red-200 text-red-600 hover:bg-red-50" @onclick="() => RemoveItemAsync(item.ProductId)">×</button>
                                 </div>
-                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(GetItemEffectivePrice(item) * item.Quantity)</div>
+                                <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(item.Price * item.Quantity)</div>
                             </div>
                         }
                     </div>
@@ -298,7 +298,11 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span>Voucher giảm giá:</span>
-                        <span class="text-gray-900">@FormatMoney(VoucherGiamGia)</span>
+                        <span class="text-gray-900">-@FormatMoney(VoucherGiamGia)</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                        <span class="font-bold text-gray-900">Tổng cộng:</span>
+                        <span class="font-extrabold text-xl text-[#0b3b72]">@FormatMoney(ThanhTien)</span>
                     </div>
                 </div>
             </div>
@@ -356,10 +360,9 @@
 
     private Guid? MaGiamGia => AppliedDiscount?.MaGG;
 
-    private decimal VoucherGiamGia => AppliedDiscount != null ? CalculateCartDiscount(AppliedDiscount) : 0m;
-
-    private decimal TamTinh => CartModel?.Items?.Sum(item => GetItemEffectivePrice(item) * item.Quantity) ?? 0;
-    private decimal ThanhTien => Math.Max(TamTinh - VoucherGiamGia, 0);
+    private decimal VoucherGiamGia => AppliedDiscount == null ? 0 : CalculateCartDiscount(AppliedDiscount);
+    private decimal TamTinh => CartModel?.Items?.Sum(item => item.Price * item.Quantity) ?? 0;
+    private decimal ThanhTien => TamTinh - VoucherGiamGia;
     private bool IsGuest = true;
     private string CheckoutRequirementMessage
     {
@@ -425,16 +428,6 @@
         productById = (await ProductService.GetAllAsync()).ToDictionary(x => x.MaSP.ToString(), x => x);
         DiscountCode = await JS.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code") ?? string.Empty;
         await LoadVietnamProvincesAsync();
-
-        if (CartModel?.Items?.Any() == true)
-        {
-            foreach (var item in CartModel.Items)
-            {
-                item.Price = GetItemEffectivePrice(item);
-            }
-
-            await BasketService.UpdateBasketAsync(CartModel);
-        }
     }
 
     private async Task LoadVietnamProvincesAsync()
@@ -655,8 +648,14 @@
             return item.Price;
         }
 
-        var discount = DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
-        return DiscountPricingHelper.GetFinalPrice(discount, item.Price);
+        // CHỈ ÁP DỤNG nếu có mã giảm giá được chọn thủ công (AppliedDiscount)
+        if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
+        {
+            return DiscountPricingHelper.GetFinalPrice(AppliedDiscount, item.Price);
+        }
+
+        // Không tự động áp dụng mã nữa, trả về giá gốc nếu không có voucher được chọn
+        return item.Price;
     }
 
     private MaGiamGiaDto? GetItemBestDiscount(BasketItemDto item)

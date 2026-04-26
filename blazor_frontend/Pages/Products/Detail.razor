@@ -330,7 +330,25 @@
         discounts = (await DiscountService.GetDiscountsAsync()).ToList();
         allCategories = (await categoryService.GetAllAsync()).ToList();
         allCategoryGroups = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
-        selectedVoucherCode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code");
+        
+        var codeInStorage = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code");
+        if (!string.IsNullOrEmpty(codeInStorage))
+        {
+            var discount = discounts.FirstOrDefault(d => string.Equals(d.MaCode, codeInStorage, StringComparison.OrdinalIgnoreCase));
+            // Chỉ hiển thị "Đã áp dụng" nếu mã đó thực sự dùng được cho sản phẩm này
+            if (discount != null && DiscountPricingHelper.IsScopeApplicable(discount, currentProduct, currentDanhMuc?.MaLDM))
+            {
+                selectedVoucherCode = codeInStorage;
+            }
+            else
+            {
+                selectedVoucherCode = null;
+            }
+        }
+        else
+        {
+            selectedVoucherCode = null;
+        }
 
         selectedColor = AvailableColors.FirstOrDefault();
         selectedSize = AvailableSizes.FirstOrDefault();
@@ -419,7 +437,9 @@
 
     private decimal CurrentPrice => SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0m;
 
-    private MaGiamGiaDto? CurrentDiscount => DiscountPricingHelper.GetBestApplicableDiscount(currentProduct, CurrentPrice, allCategoryGroups, allCategories, discounts);
+    private MaGiamGiaDto? CurrentDiscount => string.IsNullOrEmpty(selectedVoucherCode) 
+        ? null 
+        : discounts.FirstOrDefault(d => string.Equals(d.MaCode, selectedVoucherCode, StringComparison.OrdinalIgnoreCase));
 
     private decimal CurrentFinalPrice => DiscountPricingHelper.GetFinalPrice(CurrentDiscount, CurrentPrice);
 
@@ -498,7 +518,8 @@
             }
         }
         var productName = currentProduct?.TenSP ?? "Sản phẩm";
-        var productPrice = CurrentFinalPrice > 0 ? CurrentFinalPrice : SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams.FirstOrDefault()?.Gia ?? 0m;
+        // QUAN TRỌNG: Gửi GIÁ GỐC vào giỏ hàng để tránh bị giảm giá 2 lần
+        var productPrice = CurrentPrice; 
         var productImage = CurrentImage;
 
         var basket = await BasketService.GetBasketAsync(buyerId) ?? new BasketDto { UserName = buyerId };

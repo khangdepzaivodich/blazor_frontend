@@ -254,18 +254,36 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Danh mục</label>
-                            <div class="relative group">
-                                <i class="ph ph-folders absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                                <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editor.MaDM">
-                                    <option value="@Guid.Empty">-- Chọn danh mục --</option>
-                                    @foreach (var cat in categories)
-                                    {
-                                        <option value="@cat.MaDM">@cat.TenLDM — @cat.TenDM</option>
-                                    }
-                                </select>
-                                <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loại danh mục</label>
+                                <div class="relative group">
+                                    <i class="ph ph-stack absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" 
+                                            @bind="selectedMaLDM">
+                                        <option value="@Guid.Empty">-- Chọn loại --</option>
+                                        @foreach (var ldm in loaiDanhMucs)
+                                        {
+                                            <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                                        }
+                                    </select>
+                                    <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Danh mục</label>
+                                <div class="relative group">
+                                    <i class="ph ph-folders absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                                    <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editor.MaDM">
+                                        <option value="@Guid.Empty">-- Chọn danh mục --</option>
+                                        @foreach (var cat in categories.Where(c => selectedMaLDM == Guid.Empty || c.MaLDM == selectedMaLDM))
+                                        {
+                                            <option value="@cat.MaDM">@cat.TenDM</option>
+                                        }
+                                    </select>
+                                    <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                </div>
                             </div>
                         </div>
 
@@ -546,6 +564,7 @@
     private SanPhamCreateRequest editor = new();
     private List<ChiTietSanPhamCreateRequest> editorVariants = new();
     private Guid editingId = Guid.Empty;
+    private Guid selectedMaLDM = Guid.Empty;
     private string tempProductImage = string.Empty;
     private bool isAuthorized;
     private int currentPage = 1;
@@ -736,16 +755,13 @@
     private void New()
     {
         editingId = Guid.Empty;
+        selectedMaLDM = Guid.Empty;
         tempProductImage = string.Empty;
         editor = new SanPhamCreateRequest();
         editorVariants = new List<ChiTietSanPhamCreateRequest> 
         { 
             new ChiTietSanPhamCreateRequest { Mau = "Mặc định", KichCo = "Mặc định", Gia = 0, SoLuong = 100 } 
         };
-        if (categories != null && categories.Any())
-        {
-            editor.MaDM = categories.First().MaDM;
-        }
         showEditor = true;
     }
 
@@ -762,6 +778,7 @@
     private async Task Edit(SanPhamDto it)
     {
         editingId = it.MaSP;
+        selectedMaLDM = categories.FirstOrDefault(c => c.MaDM == it.MaDM)?.MaLDM ?? Guid.Empty;
         editor = new SanPhamCreateRequest { MaDM = it.MaDM, TenSP = it.TenSP, MoTa = it.MoTa };
         
         // Tải biến thể hiện tại vào editor
