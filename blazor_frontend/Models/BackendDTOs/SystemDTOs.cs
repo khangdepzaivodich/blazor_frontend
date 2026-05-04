@@ -175,6 +175,21 @@ namespace blazor_frontend.Models.BackendDTOs
         public List<ChiTietDonHangDto> ChiTietDonHangs { get; set; } = new();
     }
 
+    public class PagedResult<T>
+    {
+        public IEnumerable<T> Items { get; set; } = new List<T>();
+        public int TotalCount { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    public class DiscountPaginationRequest
+    {
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public string? Keyword { get; set; }
+    }
+
     public class PagedDonHangResult
     {
         public IEnumerable<DonHangDto> Items { get; set; } = new List<DonHangDto>();

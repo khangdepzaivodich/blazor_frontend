@@ -7,58 +7,97 @@
 
 <PageTitle>Mã giảm giá</PageTitle>
 
-<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-800">Quản lý Mã giảm giá</h2>
-            <p class="text-sm text-gray-500 mt-1">Tạo mã theo TENLDM, TENDM hoặc 1 món cụ thể.</p>
+<div class="max-w-full mx-auto p-4 lg:p-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+            <div>
+                <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">Quản lý Mã giảm giá</h2>
+                <p class="text-sm text-gray-500 mt-1">Thiết lập các chương trình ưu đãi cho cửa hàng của bạn.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative">
+                    <input type="text" class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-full sm:w-64" 
+                           placeholder="Tìm mã code..." 
+                           @bind="keyword" 
+                           @bind:event="oninput"
+                           @onkeyup="HandleSearch" />
+                    <div class="absolute left-3 top-2.5 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" @onclick="ToggleForm">
+                    @if (showForm)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 0114.14 0L10 8.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Đóng form</span>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Tạo mã mới</span>
+                    }
+                </button>
+            </div>
         </div>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors" @onclick="ToggleForm">
-            @(showForm ? "Đóng form" : "Tạo mã mới")
-        </button>
-    </div>
-
     @if (showForm)
     {
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 p-6 border border-gray-100 rounded-xl bg-white shadow-sm transition-all">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Mã code</label>
-                    <input class="w-full rounded border px-3 py-2" @bind="model.MaCode" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mã code</label>
+                    <input class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all @(!string.IsNullOrEmpty(errorMessage) && errorMessage.Contains("Mã") ? "border-red-500" : "")" 
+                           placeholder="VÍ DỤ: GIAMGIA100"
+                           @bind="model.MaCode" 
+                           @oninput="() => errorMessage = null" />
+                    @if (!string.IsNullOrEmpty(errorMessage) && errorMessage.Contains("Mã"))
+                    {
+                        <p class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            @errorMessage
+                        </p>
+                    }
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Loại giảm giá</label>
-                    <select class="w-full rounded border px-3 py-2" @bind="model.Loai">
-                        <option value="PhanTram">Phần trăm</option>
-                        <option value="Tien">Số tiền cố định</option>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Loại giảm giá</label>
+                    <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.Loai">
+                        <option value="PhanTram">Phần trăm (%)</option>
+                        <option value="Tien">Số tiền cố định (đ)</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Giá trị</label>
-                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.SoTien" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Giá trị</label>
+                    <input type="number" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.SoTien" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Giảm tối đa</label>
-                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.GiaTriGiamToiDa" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Giảm tối đa</label>
+                    <input type="number" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.GiaTriGiamToiDa" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Số tiền tối thiếu trong đơn hàng để áp dụng </label>
-                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.DonHangToiThieu" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Đơn tối thiểu</label>
+                    <input type="number" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.DonHangToiThieu" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
-                    <input type="number" class="w-full rounded border px-3 py-2" @bind="model.SoLuong" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Số lượng</label>
+                    <input type="number" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.SoLuong" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Hạn sử dụng</label>
-                    <input type="datetime-local" class="w-full rounded border px-3 py-2" value="@expireText" @onchange="OnExpireChanged" />
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Hạn sử dụng</label>
+                    <input type="datetime-local" class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" value="@expireText" @onchange="OnExpireChanged" />
                 </div>
             </div>
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Áp dụng cho</label>
-                    <select class="w-full rounded border px-3 py-2" @bind="model.ApDungCho" @bind:after="OnScopeChanged">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Áp dụng cho</label>
+                    <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="model.ApDungCho" @bind:after="OnScopeChanged">
                         <option value="TatCa">Tất cả sản phẩm</option>
                         <option value="TenLDM">Loại danh mục</option>
                         <option value="TenDM">Danh mục</option>
@@ -69,8 +108,8 @@
                 @if (model.ApDungCho == "TenLDM")
                 {
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">TENLDM</label>
-                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Loại danh mục</label>
+                        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
                             <option value="">-- Chọn loại danh mục --</option>
                             @foreach (var ldm in loaiDanhMucs)
                             {
@@ -82,8 +121,8 @@
                 else if (model.ApDungCho == "TenDM")
                 {
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại danh mục</label>
-                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Loại danh mục</label>
+                        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
                             <option value="">-- Chọn loại danh mục --</option>
                             @foreach (var ldm in loaiDanhMucs)
                             {
@@ -94,8 +133,8 @@
                         @if (!string.IsNullOrWhiteSpace(selectedLoaiDanhMucId))
                         {
                             <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
-                                <select class="w-full rounded border px-3 py-2" @bind="selectedDanhMucId">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Danh mục</label>
+                                <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="selectedDanhMucId">
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach (var dm in DanhMucsOfSelectedLoaiDanhMuc)
                                     {
@@ -109,8 +148,8 @@
                 else if (model.ApDungCho == "SanPham")
                 {
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại danh mục</label>
-                        <select class="w-full rounded border px-3 py-2" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Loại danh mục</label>
+                        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="selectedLoaiDanhMucId" @bind:after="OnLoaiDanhMucChanged">
                             <option value="">-- Chọn loại danh mục --</option>
                             @foreach (var ldm in loaiDanhMucs)
                             {
@@ -121,8 +160,8 @@
                         @if (!string.IsNullOrWhiteSpace(selectedLoaiDanhMucId))
                         {
                             <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
-                                <select class="w-full rounded border px-3 py-2" @bind="selectedDanhMucInProductScopeId" @bind:after="OnDanhMucChanged">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Danh mục</label>
+                                <select class="w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" @bind="selectedDanhMucInProductScopeId" @bind:after="OnDanhMucChanged">
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach (var dm in DanhMucsOfSelectedLoaiDanhMuc)
                                     {
@@ -135,12 +174,12 @@
                         @if (!string.IsNullOrWhiteSpace(selectedDanhMucInProductScopeId))
                         {
                             <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Chọn nhiều sản phẩm trong danh mục</label>
-                                <div class="max-h-64 overflow-y-auto rounded border bg-white p-3 space-y-2">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Chọn sản phẩm</label>
+                                <div class="max-h-64 overflow-y-auto rounded-lg border border-gray-100 bg-white p-3 space-y-2">
                                     @foreach (var sp in SanPhamsOfSelectedDanhMuc)
                                     {
-                                        <label class="flex items-center gap-2 text-sm text-gray-700">
-                                            <input type="checkbox" checked="@selectedProductIds.Contains(sp.MaSP.ToString())" @onchange="(ChangeEventArgs e) => ToggleSelectedProduct(sp.MaSP.ToString(), e)" />
+                                        <label class="flex items-center gap-3 p-2 rounded hover:bg-blue-50 cursor-pointer transition-colors text-sm text-gray-700">
+                                            <input type="checkbox" class="rounded text-blue-600" checked="@selectedProductIds.Contains(sp.MaSP.ToString())" @onchange="(ChangeEventArgs e) => ToggleSelectedProduct(sp.MaSP.ToString(), e)" />
                                             <span>@sp.TenSP</span>
                                         </label>
                                     }
@@ -151,7 +190,7 @@
                 }
 
                 <div class="pt-4">
-                    <button class="rounded bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700" @onclick="SaveAsync">
+                    <button class="w-full sm:w-auto rounded-lg bg-blue-600 px-6 py-2.5 text-white font-semibold hover:bg-blue-700 shadow-md shadow-blue-100 transition-all" @onclick="SaveAsync">
                         @(editingDiscountId.HasValue ? "Cập nhật mã" : "Lưu mã giảm giá")
                     </button>
                 </div>
@@ -159,43 +198,106 @@
         </div>
     }
 
-    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="w-full text-left">
-            <thead class="bg-gray-100 text-gray-600 text-sm uppercase">
+    <div class="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-white border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wider">
                 <tr>
-                    <th class="p-4">Code</th>
-                    <th class="p-4">Loại</th>
-                    <th class="p-4">Áp dụng cho</th>
-                    <th class="p-4">Giá trị</th>
-                    <th class="p-4">Số lượng</th>
-                    <th class="p-4">Đơn tối thiểu</th>
-                    <th class="p-4">Hạn</th>
-                    <th class="p-4">Thao tác</th>
+                    <th class="p-4 font-bold">Code</th>
+                    <th class="p-4 font-bold">Loại</th>
+                    <th class="p-4 font-bold">Áp dụng cho</th>
+                    <th class="p-4 font-bold text-center">Giá trị</th>
+                    <th class="p-4 font-bold text-center">Số lượng</th>
+                    <th class="p-4 font-bold">Đơn tối thiểu</th>
+                    <th class="p-4 font-bold">Hạn</th>
+                    <th class="p-4 font-bold text-right">Thao tác</th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach (var item in discounts)
+            <tbody class="text-sm">
+                @if (pagedResult.Items != null && pagedResult.Items.Any())
                 {
-                    <tr class="border-t">
-                        <td class="p-4 font-semibold">@item.MaCode</td>
-                        <td class="p-4">@item.Loai</td>
-                        <td class="p-4">@DiscountPricingHelper.GetScopeDisplayText(item, loaiDanhMucs, danhMucs, sanPhams)</td>
-                        <td class="p-4">@item.SoTien</td>
-                        <td class="p-4">@item.SoLuong</td>
-                        <td class="p-4">@(item.DonHangToiThieu?.ToString("N0") ?? "0")</td>
-                        <td class="p-4">@item.HanSuDung.ToString("dd/MM/yyyy")</td>
-                        <td class="p-4">
-                            <button class="text-blue-600 font-medium hover:underline" @onclick="() => EditDiscount(item)">Sửa</button>
+                    @foreach (var item in pagedResult.Items)
+                    {
+                        <tr class="border-b border-gray-50 hover:bg-blue-50/30 transition-colors group">
+                            <td class="p-4 font-bold text-blue-600">@item.MaCode</td>
+                            <td class="p-4 text-gray-500">@item.Loai</td>
+                            <td class="p-4 text-gray-600 italic">@DiscountPricingHelper.GetScopeDisplayText(item, loaiDanhMucs, danhMucs, sanPhams)</td>
+                            <td class="p-4 text-center font-bold text-gray-900">@item.SoTien.ToString("N0")@(item.Loai == "PhanTram" ? "%" : "đ")</td>
+                            <td class="p-4 text-center">
+                                <span class="inline-flex items-center justify-center w-7 h-7 bg-gray-50 rounded-full text-xs font-bold text-gray-600 border border-gray-100">@item.SoLuong</span>
+                            </td>
+                            <td class="p-4 text-gray-500 font-medium">@(item.DonHangToiThieu?.ToString("N0") ?? "0")đ</td>
+                            <td class="p-4">
+                                <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium @(item.HanSuDung < DateTime.Now ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600")">
+                                    @item.HanSuDung.ToString("dd/MM/yyyy")
+                                </div>
+                            </td>
+                            <td class="p-4 text-right">
+                                <button class="inline-flex items-center gap-1.5 text-blue-600 font-bold hover:text-blue-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50" @onclick="() => EditDiscount(item)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                    Sửa
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="p-12 text-center text-gray-400 italic bg-white">
+                            <div class="flex flex-col items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Không tìm thấy mã giảm giá nào.</span>
+                            </div>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs font-medium text-gray-400 uppercase tracking-widest">
+                Hiển thị <span class="text-gray-900">@(((pageNumber - 1) * pageSize) + 1)</span> - <span class="text-gray-900">@(Math.Min(pageNumber * pageSize, pagedResult.TotalCount))</span> / <span class="text-gray-900">@pagedResult.TotalCount</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button class="h-9 px-4 border border-gray-100 rounded-lg text-sm font-bold transition-all @(pageNumber == 1 ? "opacity-30 cursor-not-allowed text-gray-300" : "hover:bg-blue-600 hover:text-white text-gray-600 shadow-sm")" 
+                        @onclick="PreviousPage" disabled="@(pageNumber == 1)">
+                    Trước
+                </button>
+                <div class="flex items-center gap-1 px-2">
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        var p = i;
+                        <button class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all @(pageNumber == p ? "bg-blue-600 text-white shadow-md shadow-blue-100" : "text-gray-400 hover:text-gray-900 hover:bg-gray-50")" 
+                                @onclick="() => GoToPage(p)">
+                            @p
+                        </button>
+                    }
+                </div>
+                <button class="h-9 px-4 border border-gray-100 rounded-lg text-sm font-bold transition-all @(pageNumber >= totalPages ? "opacity-30 cursor-not-allowed text-gray-300" : "hover:bg-blue-600 hover:text-white text-gray-600 shadow-sm")" 
+                        @onclick="NextPage" disabled="@(pageNumber >= totalPages)">
+                    Sau
+                </button>
+            </div>
+        </div>
+    }
+    </div>
 </div>
 
 @code {
-    private List<MaGiamGiaDto> discounts = new();
+    private PagedResult<MaGiamGiaDto> pagedResult = new();
+    private int pageNumber = 1;
+    private int pageSize = 10;
+    private string keyword = "";
+    private int totalPages => (int)Math.Ceiling((double)pagedResult.TotalCount / pageSize);
+
     private List<LoaiDanhMucDto> loaiDanhMucs = new();
     private List<DanhMucDto> danhMucs = new();
     private List<SanPhamDto> sanPhams = new();
@@ -206,6 +308,7 @@
     private string? selectedSanPhamId;
     private string? selectedDanhMucInProductScopeId;
     private HashSet<string> selectedProductIds = new(StringComparer.OrdinalIgnoreCase);
+    private string? errorMessage;
 
     private CreateMaGiamGiaRequest model = new()
     {
@@ -230,11 +333,17 @@
     {
         try
         {
-            discounts = (await DiscountService.GetDiscountsAsync()).ToList();
+            var request = new DiscountPaginationRequest 
+            { 
+                PageNumber = pageNumber, 
+                PageSize = pageSize,
+                Keyword = keyword 
+            };
+            pagedResult = await DiscountService.GetDiscountsAsync(request);
         }
         catch
         {
-            discounts = new List<MaGiamGiaDto>();
+            pagedResult = new PagedResult<MaGiamGiaDto>();
         }
 
         loaiDanhMucs = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
@@ -259,6 +368,36 @@
         selectedSanPhamId = null;
         selectedDanhMucInProductScopeId = null;
         selectedProductIds.Clear();
+    }
+
+    private async Task HandleSearch()
+    {
+        pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPage(int p)
+    {
+        pageNumber = p;
+        await LoadAsync();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (pageNumber > 1)
+        {
+            pageNumber--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (pageNumber < totalPages)
+        {
+            pageNumber++;
+            await LoadAsync();
+        }
     }
 
     private void OnLoaiDanhMucChanged()
@@ -342,25 +481,34 @@
         if (model.ApDungCho == "TenDM" && model.MaDM == null) return;
         if (model.ApDungCho == "SanPham" && model.MaSPs.Count == 0) return;
 
-        MaGiamGiaDto? result = null;
-        if (editingDiscountId.HasValue)
+        errorMessage = null;
+        try
         {
-            result = await DiscountService.UpdateDiscountAsync(editingDiscountId.Value, model);
-        }
-        else
-        {
-            result = await DiscountService.CreateDiscountAsync(model);
-        }
+            MaGiamGiaDto? result = null;
+            if (editingDiscountId.HasValue)
+            {
+                result = await DiscountService.UpdateDiscountAsync(editingDiscountId.Value, model);
+            }
+            else
+            {
+                result = await DiscountService.CreateDiscountAsync(model);
+            }
 
-        if (result != null)
+            if (result != null)
+            {
+                await LoadAsync();
+                ResetForm();
+            }
+        }
+        catch (Exception ex)
         {
-            await LoadAsync();
-            ResetForm();
+            errorMessage = ex.Message;
         }
     }
 
     private void ResetForm()
     {
+        errorMessage = null;
         editingDiscountId = null;
         model = new CreateMaGiamGiaRequest
         {

@@ -7,7 +7,8 @@ namespace blazor_frontend.Services
 {
     public interface IDiscountService
     {
-        Task<IEnumerable<MaGiamGiaDto>> GetDiscountsAsync();
+        Task<PagedResult<MaGiamGiaDto>> GetDiscountsAsync(DiscountPaginationRequest request);
+        Task<IEnumerable<MaGiamGiaDto>> GetDiscountsAsync(); // Keep old one for backward compatibility if needed, or update it
         Task<MaGiamGiaDto?> GetDiscountByCodeAsync(string code);
         Task<bool> ApplyDiscountAsync(string code);
         Task<MaGiamGiaDto?> CreateDiscountAsync(CreateMaGiamGiaRequest request);
@@ -33,9 +34,20 @@ namespace blazor_frontend.Services
             return null;
         }
 
+        public async Task<PagedResult<MaGiamGiaDto>> GetDiscountsAsync(DiscountPaginationRequest request)
+        {
+            var queryString = $"?pageNumber={request.PageNumber}&pageSize={request.PageSize}";
+            if (!string.IsNullOrEmpty(request.Keyword)) queryString += $"&keyword={request.Keyword}";
+            
+            return await _httpClient.GetFromJsonAsync<PagedResult<MaGiamGiaDto>>($"api/magiamgia{queryString}") 
+                   ?? new PagedResult<MaGiamGiaDto>();
+        }
+
         public async Task<IEnumerable<MaGiamGiaDto>> GetDiscountsAsync()
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<MaGiamGiaDto>>("api/magiamgia") ?? new List<MaGiamGiaDto>();
+            // For backward compatibility, get first 100 items or similar
+            var result = await GetDiscountsAsync(new DiscountPaginationRequest { PageNumber = 1, PageSize = 100 });
+            return result.Items;
         }
 
         public async Task<bool> ApplyDiscountAsync(string code)
@@ -49,7 +61,8 @@ namespace blazor_frontend.Services
             var response = await _httpClient.PostAsJsonAsync("api/magiamgia", request);
             if (!response.IsSuccessStatusCode)
             {
-                return null;
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new Exception(error?.Message ?? "Có lỗi xảy ra khi tạo mã giảm giá.");
             }
 
             return await response.Content.ReadFromJsonAsync<MaGiamGiaDto>();
@@ -60,10 +73,17 @@ namespace blazor_frontend.Services
             var response = await _httpClient.PutAsJsonAsync($"api/magiamgia/{id}", request);
             if (!response.IsSuccessStatusCode)
             {
-                return null;
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new Exception(error?.Message ?? "Có lỗi xảy ra khi cập nhật mã giảm giá.");
             }
 
             return await response.Content.ReadFromJsonAsync<MaGiamGiaDto>();
+        }
+
+        private class ErrorResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("message")]
+            public string Message { get; set; } = string.Empty;
         }
     }
 }
