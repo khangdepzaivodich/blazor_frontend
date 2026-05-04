@@ -123,24 +123,7 @@
                     <a href="/products" class="text-gray-500 underline text-sm">Sản phẩm</a>
                 </div>
 
-                @if (ApplicableCartDiscounts.Any())
-                {
-                    <div class="rounded-md border border-red-200 bg-red-50 p-3 text-red-700">
-                        <div class="text-sm font-semibold mb-2">Mã giảm giá áp dụng cho giỏ hàng</div>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach (var discount in ApplicableCartDiscounts)
-                            {
-                                var isSelectedVoucher = string.Equals(DiscountCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
-                                <div class="flex items-center gap-2 rounded-full px-3 py-1 @(isSelectedVoucher ? "border-2 border-red-600 bg-red-100" : "border border-red-300 bg-white")">
-                                    <span class="text-xs font-semibold text-red-700">@discount.MaCode - @FormatDiscountText(discount)</span>
-                                    <button class="rounded-full @(isSelectedVoucher ? "bg-red-800" : "bg-red-600") px-2 py-1 text-[11px] font-bold text-white hover:bg-red-700" @onclick="() => ApplyVoucherCodeAsync(discount.MaCode)">
-                                        @(isSelectedVoucher ? "Đã áp dụng" : "Áp dụng")
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
+
 
                 @if (CartModel?.Items?.Any() == true)
                 {
@@ -448,7 +431,11 @@
         allCategories = (await CategoryService.GetAllAsync()).ToList();
         allCategoryGroups = (await CategoryService.GetAllLoaiDanhMucAsync()).ToList();
         var allProducts = (await ProductService.GetAllAsync()).ToList();
-        productById = allProducts.ToDictionary(x => x.MaSP.ToString(), x => x);
+        
+        // Fix mapping: BasketItem contains VariantId (MaCTSP), so we map VariantId to its Parent Product
+        productById = allProducts.SelectMany(p => p.ChiTietSanPhams.Select(v => new { VariantId = v.MaCTSP.ToString(), Product = p }))
+                                 .ToDictionary(x => x.VariantId, x => x.Product);
+
         variantById = allProducts.SelectMany(p => p.ChiTietSanPhams).ToDictionary(v => v.MaCTSP.ToString(), v => v);
         DiscountCode = await JS.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code") ?? string.Empty;
         await LoadVietnamProvincesAsync();
@@ -695,18 +682,6 @@
         return item.Price;
     }
 
-    private MaGiamGiaDto? GetItemBestDiscount(BasketItemDto item)
-    {
-        if (variantById.TryGetValue(item.ProductId, out var variant))
-        {
-            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
-            {
-                return DiscountPricingHelper.GetBestApplicableDiscount(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
-            }
-        }
-        return null;
-    }
-
     private decimal CalculateCartDiscount(MaGiamGiaDto discount)
     {
         if (CartModel?.Items?.Any() != true)
@@ -722,25 +697,27 @@
                 eligibleTotal += item.Price * item.Quantity;
             }
         }
+        
+        // If scope is "TatCa", the entire cart total is eligible
+        if (discount.ApDungCho == "TatCa") eligibleTotal = TamTinh;
 
         return DiscountPricingHelper.GetDiscountAmount(discount, eligibleTotal);
     }
 
     private bool IsVoucherApplicableToItem(BasketItemDto item, MaGiamGiaDto discount)
     {
-        if (variantById.TryGetValue(item.ProductId, out var variant))
+        if (discount.ApDungCho == "TatCa") return true;
+
+        if (productById.TryGetValue(item.ProductId, out var product))
         {
-            if (productById.TryGetValue(variant.MaSP.ToString(), out var product))
-            {
-                var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
-                return DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh);
-            }
+            var currentCategory = allCategories.FirstOrDefault(c => c.MaDM == product.MaDM);
+            return DiscountPricingHelper.IsApplicable(discount, product, currentCategory?.MaLDM, TamTinh);
         }
         return false;
     }
 
     private bool IsVoucherApplicableToCart(MaGiamGiaDto discount)
-        => CartModel?.Items?.Any(item => IsVoucherApplicableToItem(item, discount)) ?? false;
+        => discount.ApDungCho == "TatCa" || (CartModel?.Items?.Any(item => IsVoucherApplicableToItem(item, discount)) ?? false);
 
     private static string FormatDiscountText(MaGiamGiaDto discount)
         => discount.Loai == "PhanTram"
