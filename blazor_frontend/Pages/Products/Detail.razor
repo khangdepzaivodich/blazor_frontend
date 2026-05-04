@@ -100,8 +100,25 @@
             
             <p class="text-sm text-gray-600 mb-2">Mã sản phẩm: <span class="font-semibold text-gray-800">@(currentProduct?.MaSP.ToString()[..8].ToUpper() ?? "N/A")</span></p>
             
-            <div class="flex items-end gap-3 mb-6">
-                <span class="text-3xl font-extrabold text-[#002f6c]">@CurrentPrice.ToString("N0")₫</span>
+            <div class="flex flex-col mb-6">
+                <div class="flex items-end gap-3">
+                    @if (BestDiscount != null)
+                    {
+                        <span class="text-3xl font-extrabold text-red-600">@BestDiscountedPrice.ToString("N0")₫</span>
+                        <span class="text-lg text-gray-400 line-through mb-1">@CurrentPrice.ToString("N0")₫</span>
+                    }
+                    else
+                    {
+                        <span class="text-3xl font-extrabold text-[#002f6c]">@CurrentPrice.ToString("N0")₫</span>
+                    }
+                </div>
+                @if (BestDiscount != null)
+                {
+                    <div class="mt-2 inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-100 w-fit">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.266 0 .52.105.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+                        GIÁ ƯU ĐÃI TỐT NHẤT
+                    </div>
+                }
             </div>
 
 
@@ -274,6 +291,18 @@
     private List<ProductList.ProductDto> similarProducts = new();
     private string? selectedColor;
     private string? selectedSize;
+    private List<MaGiamGiaDto> allDiscounts = new();
+    private List<DanhMucDto> allCategories = new();
+    private List<LoaiDanhMucDto> allCategoryGroups = new();
+
+    private MaGiamGiaDto? BestDiscount => DiscountPricingHelper.GetBestApplicableDiscount(
+        currentProduct, 
+        CurrentPrice, 
+        allCategoryGroups, 
+        allCategories, 
+        allDiscounts);
+
+    private decimal BestDiscountedPrice => DiscountPricingHelper.GetFinalPrice(BestDiscount, CurrentPrice);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -293,14 +322,15 @@
         selectedColor = AvailableColors.FirstOrDefault();
         selectedSize = AvailableSizes.FirstOrDefault();
 
-        var danhMucs = (await categoryService.GetAllAsync()).ToList();
-        var categoryTypes = (await categoryService.GetCategoryTypesAsync()).ToList();
-        
-        currentDanhMuc = danhMucs.FirstOrDefault(x => x.MaDM == currentProduct.MaDM);
+        allDiscounts = (await DiscountService.GetDiscountsAsync()).ToList();
+        allCategories = (await categoryService.GetAllAsync()).ToList();
+        allCategoryGroups = (await categoryService.GetCategoryTypesAsync()).ToList();
+
+        currentDanhMuc = allCategories.FirstOrDefault(x => x.MaDM == currentProduct.MaDM);
         
         if (currentDanhMuc != null && string.IsNullOrEmpty(currentDanhMuc.TenLDM))
         {
-            var parentType = categoryTypes.FirstOrDefault(x => x.MaLDM == currentDanhMuc.MaLDM);
+            var parentType = allCategoryGroups.FirstOrDefault(x => x.MaLDM == currentDanhMuc.MaLDM);
             if (parentType != null)
             {
                 currentDanhMuc.TenLDM = parentType.TenLDM;
@@ -308,7 +338,7 @@
         }
 
         var currentTenDM = currentDanhMuc?.TenDM ?? string.Empty;
-        var danhMucIdsCungTenDm = danhMucs
+        var danhMucIdsCungTenDm = allCategories
             .Where(x => string.Equals(x.TenDM, currentTenDM, StringComparison.OrdinalIgnoreCase))
             .Select(x => x.MaDM)
             .ToHashSet();
@@ -378,7 +408,7 @@
     private decimal CurrentPrice => SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0m;
 
 
-    private async Task SelectMedia(int index)
+    private async Task SelectMedia(int index, bool skipColorSync = false)
     {
         if (thumbnails.Length == 0)
         {
@@ -387,6 +417,26 @@
         }
 
         selectedMediaIndex = Math.Clamp(index, 0, thumbnails.Length - 1);
+        
+        // Nếu click vào ảnh, tự động chọn màu tương ứng (nếu chưa chọn hoặc skipColorSync = false)
+        if (!skipColorSync)
+        {
+            var clickedImg = thumbnails[selectedMediaIndex];
+            var variantWithThisImg = Variants.FirstOrDefault(v => string.Equals(v.Anh, clickedImg, StringComparison.OrdinalIgnoreCase));
+            if (variantWithThisImg != null && !string.IsNullOrEmpty(variantWithThisImg.Mau))
+            {
+                if (!string.Equals(selectedColor, variantWithThisImg.Mau, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedColor = variantWithThisImg.Mau;
+                    if (!AvailableSizes.Contains(selectedSize ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+                    {
+                        selectedSize = AvailableSizes.FirstOrDefault();
+                    }
+                    ValidateQuantity();
+                }
+            }
+        }
+
         StateHasChanged();
         // Cuộn hộp thumbnail đủ để ảnh đang chọn xuất hiện trong khung nhìn (không ép lên đầu nếu không cần thiết)
         await JSRuntime.InvokeVoidAsync("eval", $"var el = document.getElementById('thumb-{index}'); if(el) el.scrollIntoView({{behavior: 'smooth', block: 'nearest'}});");
@@ -406,9 +456,23 @@
         await SelectMedia(newIndex);
     }
 
-    private void SelectColor(string color)
+    private async Task SelectColor(string color)
     {
         selectedColor = color;
+        
+        // Cập nhật ảnh tương ứng với màu
+        var firstImageForColor = Variants
+            .FirstOrDefault(v => string.Equals(v.Mau, color, StringComparison.OrdinalIgnoreCase))?.Anh;
+
+        if (!string.IsNullOrEmpty(firstImageForColor))
+        {
+            var imgIndex = Array.FindIndex(thumbnails, t => string.Equals(t, firstImageForColor, StringComparison.OrdinalIgnoreCase));
+            if (imgIndex >= 0)
+            {
+                await SelectMedia(imgIndex, skipColorSync: true);
+            }
+        }
+
         if (!AvailableSizes.Contains(selectedSize ?? string.Empty, StringComparer.OrdinalIgnoreCase))
         {
             selectedSize = AvailableSizes.FirstOrDefault();
