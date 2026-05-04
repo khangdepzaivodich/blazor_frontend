@@ -135,7 +135,28 @@
                                     <img src="@GetItemImage(item)" alt="@item.ProductName" class="h-full w-full object-cover object-top" onerror="this.src='product1.jpg';" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-semibold text-sm text-gray-900 truncate">@item.ProductName</div>
+                                    @{
+                                        var parentProduct = productById.GetValueOrDefault(item.ProductId);
+                                        var variant = variantById.GetValueOrDefault(item.ProductId);
+                                    }
+                                    <div class="font-semibold text-sm text-gray-900 truncate">@(parentProduct?.TenSP ?? item.ProductName)</div>
+                                    @if (variant != null)
+                                    {
+                                        <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                            @if (!string.IsNullOrEmpty(variant.Mau))
+                                            {
+                                                <span class="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
+                                                    @variant.Mau
+                                                </span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(variant.KichCo))
+                                            {
+                                                <span class="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
+                                                    @variant.KichCo
+                                                </span>
+                                            }
+                                        </div>
+                                    }
                                     <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
                                         <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
                                         <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(item.Price)</span>
@@ -725,6 +746,25 @@
             : discount.SoTien.ToString("N0") + "đ";
 
     private static string FormatMoney(decimal money) => $"{money:n0}đ";
+
+    private static string GetBaseProductName(string productName)
+    {
+        var idx = productName.LastIndexOf('(');
+        return idx > 0 ? productName[..idx].Trim() : productName;
+    }
+
+    private static (string color, string size) GetVariantInfo(string productName)
+    {
+        var idx = productName.LastIndexOf('(');
+        if (idx < 0) return ("", "");
+        var end = productName.LastIndexOf(')');
+        if (end <= idx) return ("", "");
+        var inner = productName[(idx + 1)..end];
+        var parts = inner.Split(',', 2);
+        var color = parts.Length > 0 ? parts[0].Trim() : "";
+        var size = parts.Length > 1 ? parts[1].Trim() : "";
+        return (color, size);
+    }
 
     private bool ShowFieldError(string? value) => showFieldErrors && string.IsNullOrWhiteSpace(value);
 
