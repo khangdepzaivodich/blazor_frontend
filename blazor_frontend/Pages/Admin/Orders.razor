@@ -4,6 +4,7 @@
 @inject blazor_frontend.Services.IOrderService orderService
 @inject blazor_frontend.Services.IUserService userService
 @inject blazor_frontend.Services.ICatalogService catalogService
+@inject blazor_frontend.Services.IProductService productService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject blazor_frontend.Services.AuthState AuthState
@@ -27,18 +28,28 @@
                 <p class="text-sm text-gray-500 mt-1">Đơn hàng lấy từ Ordering Service.</p>
             </div>
 
-            <div class="grid grid-cols-3 gap-3 text-sm">
-                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                    <div class="text-gray-500">Tổng đơn</div>
-                    <div class="mt-1 text-lg font-bold text-gray-900">@orders.Count</div>
-                </div>
-                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                    <div class="text-gray-500">Chờ xác nhận</div>
-                    <div class="mt-1 text-lg font-bold text-amber-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "pending")</div>
-                </div>
-                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                    <div class="text-gray-500">Hoàn tất</div>
-                    <div class="mt-1 text-lg font-bold text-green-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "completed")</div>
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-3 text-sm w-full lg:w-auto">
+                    <div class="flex-1 lg:flex-none lg:min-w-[140px] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Tổng đơn</div>
+                        <div class="mt-1 text-lg font-bold text-gray-900">@orders.Count</div>
+                    </div>
+                    <div class="flex-1 lg:flex-none lg:min-w-[140px] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="text-amber-500 text-[10px] font-bold uppercase tracking-wider">Chờ xác nhận</div>
+                        <div class="mt-1 text-lg font-bold text-amber-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "pending")</div>
+                    </div>
+                    <div class="flex-1 lg:flex-none lg:min-w-[140px] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="text-blue-500 text-[10px] font-bold uppercase tracking-wider">Đang xử lý</div>
+                        <div class="mt-1 text-lg font-bold text-blue-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "processing")</div>
+                    </div>
+                    <div class="flex-1 lg:flex-none lg:min-w-[140px] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="text-purple-500 text-[10px] font-bold uppercase tracking-wider">Đang giao</div>
+                        <div class="mt-1 text-lg font-bold text-purple-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "shipping")</div>
+                    </div>
+                    <div class="flex-1 lg:flex-none lg:min-w-[140px] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="text-green-500 text-[10px] font-bold uppercase tracking-wider">Hoàn tất</div>
+                        <div class="mt-1 text-lg font-bold text-green-600">@orders.Count(o => NormalizeStatus(o.TrangThaiDH) == "completed")</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,12 +82,12 @@
                                         <th class="px-5 py-4 font-semibold">Ảnh</th>
                                         <th class="px-5 py-4 font-semibold">Tên món</th>
                                         <th class="px-5 py-4 font-semibold">Người đặt</th>
-                                        <th class="px-5 py-4 font-semibold">Ghi chú</th>
                                         <th class="px-5 py-4 text-center font-semibold">Số lượng</th>
                                         <th class="px-5 py-4 font-semibold">Mã giảm giá</th>
                                         <th class="px-5 py-4 font-semibold">Ngày đặt</th>
                                         <th class="px-5 py-4 text-right font-semibold">Tổng tiền</th>
                                         <th class="px-5 py-4 text-center font-semibold">Trạng thái</th>
+                                        <th class="px-5 py-4 text-center font-semibold">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -87,13 +98,12 @@
                                                 <img src="@GetOrderImage(order)" alt="@order.HoTen" class="h-12 w-12 rounded object-cover border border-gray-200" onerror="this.src='product1.jpg';" />
                                             </td>
                                             <td class="px-5 py-4">
-                                                <div class="font-semibold text-gray-900">@GetItemNames(order)</div>
+                                                <div class="font-semibold text-gray-900">@GetItemSummary(order)</div>
                                             </td>
                                             <td class="px-5 py-4 text-gray-700">
                                                 <div class="font-semibold">@order.HoTen</div>
                                                 <div class="text-xs text-gray-500">@order.SoDienThoai</div>
                                             </td>
-                                            <td class="px-5 py-4 text-gray-600">-</td>
                                             <td class="px-5 py-4 text-center text-gray-700">@GetTotalQuantity(order)</td>
                                             <td class="px-5 py-4 text-gray-700">@GetDiscountCode(order)</td>
                                             <td class="px-5 py-4 text-gray-600">@order.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
@@ -102,11 +112,22 @@
                                                 <select class="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold @GetStatusClass(order.TrangThaiDH)"
                                                         value="@NormalizeStatus(order.TrangThaiDH)"
                                                         @onchange="async e => await OnStatusChangedAsync(order, e.Value?.ToString())">
-                                                    @foreach (var status in AllowedStatuses)
-                                                    {
-                                                        <option value="@status">@GetStatusText(status)</option>
-                                                    }
+                                                        @foreach (var status in AllowedStatuses)
+                                                        {
+                                                            <option value="@status" style="@GetStatusOptionStyle(status)">
+                                                                @GetStatusText(status)
+                                                            </option>
+                                                        }
                                                 </select>
+                                            </td>
+                                            <td class="px-5 py-4 text-center">
+                                                <button class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                        @onclick="() => ViewDetail(order.MaDH)">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12H9m12 0c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                                                    </svg>
+                                                    Xem chi tiết
+                                                </button>
                                             </td>
                                         </tr>
                                     }
@@ -116,8 +137,114 @@
                     </div>
                 }
             </div>
-        }
     }
+}
+
+@if (showDetailModal && selectedOrder != null)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" @onclick="CloseModal">
+                <div class="absolute inset-0 bg-gray-500 opacity-75 backdrop-blur-sm"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full relative z-50">
+                <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl leading-6 font-bold text-gray-900" id="modal-title">
+                            Chi tiết đơn hàng #@selectedOrder.MaDH.ToString().Substring(0,8)
+                        </h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-500" @onclick="CloseModal">
+                            <span class="sr-only">Đóng</span>
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 max-h-[60vh] overflow-y-auto">
+                    <!-- Customer Info -->
+                    <div class="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Thông tin người nhận</h4>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Họ tên:</span> @selectedOrder.HoTen</p>
+                            <p class="text-sm text-gray-800"><span class="font-medium">SĐT:</span> @selectedOrder.SoDienThoai</p>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Địa chỉ:</span> @selectedOrder.DiaChiGiaoHang</p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Thông tin giao dịch</h4>
+                            <p class="text-sm text-gray-800"><span class="font-medium">Ngày đặt:</span> @selectedOrder.NgayDat.ToString("dd/MM/yyyy HH:mm")</p>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-800">Trạng thái:</span>
+                                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold @GetStatusClass(selectedOrder.TrangThaiDH)">
+                                    @GetStatusText(selectedOrder.TrangThaiDH)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products List -->
+                    <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-3">Sản phẩm</h4>
+                    <ul class="divide-y divide-gray-200 border-t border-gray-200">
+                        @if (selectedOrder.ChiTietDonHangs != null)
+                        {
+                            @foreach (var detail in selectedOrder.ChiTietDonHangs)
+                            {
+                                <li class="py-4 flex">
+                                    <div class="shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden">
+                                        <img src="@GetVariantImage(detail.MaCTSP)" alt="@detail.TenSP_LuuTru" class="w-full h-full object-center object-cover" onerror="this.src='product1.jpg';" />
+                                    </div>
+                                    <div class="ml-4 flex-1 flex flex-col">
+                                        <div>
+                                            <div class="flex justify-between text-base font-medium text-gray-900">
+                                                <div class="flex flex-col">
+                                                    <h3 class="text-sm font-bold text-gray-900">@GetRealProductName(detail)</h3>
+                                                    <p class="text-xs text-gray-500 italic">@detail.TenSP_LuuTru</p>
+                                                    <div class="mt-1 flex flex-wrap gap-2">
+                                                        @if (!string.IsNullOrWhiteSpace(detail.Mau_LuuTru))
+                                                        {
+                                                            <span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">Loại: @detail.Mau_LuuTru</span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(detail.KichCo_LuuTru))
+                                                        {
+                                                            <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">Size: @detail.KichCo_LuuTru</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <p class="ml-4 text-sm font-bold text-red-600">@detail.Gia_LuuTru.ToString("N0")đ</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 flex items-end justify-between text-sm">
+                                            <p class="text-gray-500">Số lượng: @detail.SoLuong</p>
+                                            <p class="font-medium text-gray-900">Thành tiền: @((detail.Gia_LuuTru * detail.SoLuong).ToString("N0"))đ</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-center sm:items-end rounded-b-xl border-t border-gray-200">
+                    <div class="mb-4 sm:mb-0 text-left">
+                        @if (selectedOrder.MaGG.HasValue)
+                        {
+                            <p class="text-sm text-gray-500">Mã giảm giá áp dụng: <span class="font-semibold text-gray-900">@GetDiscountCode(selectedOrder)</span></p>
+                        }
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">Tổng tiền thanh toán</p>
+                        <p class="text-2xl font-bold text-red-600">@selectedOrder.TongTien.ToString("N0")đ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 </div>
 
 @code {
@@ -127,6 +254,10 @@
     private string searchText = string.Empty;
     private Dictionary<Guid, string> emailByUserId = new();
     private Dictionary<Guid, string> imageByOrderId = new();
+    private Dictionary<Guid, string> productNameByCtspId = new();
+
+    private bool showDetailModal = false;
+    private DonHangDto? selectedOrder = null;
 
     private static readonly string[] AllowedStatuses = ["pending", "processing", "shipping", "completed", "cancelled"];
 
@@ -175,12 +306,14 @@
 
             await LoadUserEmailsAsync(orders.Select(x => x.MaTK));
             await LoadOrderImagesAsync(orders);
+            await LoadRealProductNamesAsync(orders);
         }
         catch
         {
             orders = new List<DonHangDto>();
             emailByUserId = new Dictionary<Guid, string>();
             imageByOrderId = new Dictionary<Guid, string>();
+            productNameByCtspId = new Dictionary<Guid, string>();
         }
         finally
         {
@@ -246,25 +379,57 @@
     private string GetOrderImage(DonHangDto order)
         => imageByOrderId.TryGetValue(order.MaDH, out var image) ? image : "product1.jpg";
 
-    private static string GetItemNames(DonHangDto order)
+    private async Task LoadRealProductNamesAsync(IEnumerable<DonHangDto> source)
+    {
+        try
+        {
+            var ctspIds = source
+                .SelectMany(x => x.ChiTietDonHangs)
+                .Select(x => x.MaCTSP)
+                .Distinct()
+                .ToList();
+
+            foreach (var id in ctspIds)
+            {
+                if (!productNameByCtspId.ContainsKey(id))
+                {
+                    var ctsp = await catalogService.GetProductByIdAsync(id);
+                    if (ctsp != null)
+                    {
+                        var sp = await productService.GetByIdAsync(ctsp.MaSP);
+                        if (sp != null)
+                        {
+                            productNameByCtspId[id] = sp.TenSP;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    private string GetRealProductName(ChiTietDonHangDto detail)
+    {
+        if (productNameByCtspId.TryGetValue(detail.MaCTSP, out var name))
+        {
+            return name;
+        }
+        return detail.TenSP_LuuTru;
+    }
+
+    private string GetItemSummary(DonHangDto order)
     {
         if (order.ChiTietDonHangs == null || order.ChiTietDonHangs.Count == 0)
         {
             return "Chưa có sản phẩm";
         }
 
-        var names = order.ChiTietDonHangs
-            .Select(x => x.TenSP_LuuTru)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .ToList();
-
-        if (names.Count <= 2)
-        {
-            return string.Join(", ", names);
-        }
-
-        return $"{names[0]}, {names[1]} +{names.Count - 2}";
+        var firstDetail = order.ChiTietDonHangs[0];
+        var firstName = GetRealProductName(firstDetail);
+        
+        return order.ChiTietDonHangs.Count > 1 
+            ? $"{firstName} và {order.ChiTietDonHangs.Count - 1} món khác" 
+            : firstName;
     }
 
     private static int GetTotalQuantity(DonHangDto order)
@@ -272,6 +437,35 @@
 
     private static string GetDiscountCode(DonHangDto order)
         => order.MaGG.HasValue ? order.MaGG.Value.ToString()[..8].ToUpperInvariant() : "Không có";
+
+    private async Task ViewDetail(Guid maDH)
+    {
+        selectedOrder = orders.FirstOrDefault(o => o.MaDH == maDH);
+        if (selectedOrder != null)
+        {
+            showDetailModal = true;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showDetailModal = false;
+        selectedOrder = null;
+    }
+
+    private string GetVariantImage(Guid maCTSP)
+    {
+        var detail = orders
+            .SelectMany(o => o.ChiTietDonHangs)
+            .FirstOrDefault(d => d.MaCTSP == maCTSP);
+
+        if (!string.IsNullOrWhiteSpace(detail?.Anh_LuuTru))
+        {
+            return detail.Anh_LuuTru!;
+        }
+
+        return "product1.jpg";
+    }
 
     private async Task OnStatusChangedAsync(DonHangDto order, string? selected)
     {
@@ -336,6 +530,19 @@
             "completed" => "border-green-200 bg-green-50 text-green-700",
             "cancelled" => "border-red-200 bg-red-50 text-red-700",
             _ => "border-gray-200 bg-gray-50 text-gray-700"
+        };
+    }
+
+    private static string GetStatusOptionStyle(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "pending" => "background-color: #fffbeb; color: #b45309;",
+            "processing" => "background-color: #eff6ff; color: #1d4ed8;",
+            "shipping" => "background-color: #f5f3ff; color: #7c3aed;",
+            "completed" => "background-color: #f0fdf4; color: #15803d;",
+            "cancelled" => "background-color: #fef2f2; color: #b91c1c;",
+            _ => ""
         };
     }
 
