@@ -7,6 +7,7 @@
 @inject NavigationManager Navigation
 @inject blazor_frontend.Services.IProductService productService
 @inject blazor_frontend.Services.ICategoryService categoryService
+@inject blazor_frontend.Services.AuthState AuthState
 
 <div class="bg-white pb-16 min-h-screen">
     <!-- Breadcrumb -->
@@ -46,14 +47,15 @@
             <!-- Vertical Thumbnails Scrollable -->
             <div class="w-20 hidden md:flex flex-col relative">
                 <!-- Nút ấn Lên -->
-                <button aria-label="Up" onclick="document.getElementById('thumb-scroll').scrollBy({ top: -108, behavior: 'smooth' })" class="w-full h-6 mb-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
+                <button aria-label="Up" @onclick="PrevMedia" class="w-full h-6 mb-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
                 </button>
 
                 <div id="thumb-scroll" class="flex-1 flex flex-col gap-3 overflow-y-auto snap-y scroll-smooth" style="max-height: 420px; scrollbar-width: none; -ms-overflow-style: none;">
                     <style>#thumb-scroll::-webkit-scrollbar { display: none; }</style>
-                    @for (var index = 0; index < thumbnails.Length; index++)
+                    @for (var i = 0; i < thumbnails.Length; i++)
                     {
+                        var index = i;
                         var thumbnail = thumbnails[index];
                         <button id="thumb-@index" @onclick="() => SelectMedia(index)" class="snap-start shrink-0 h-24 relative border-2 transition-all overflow-hidden @(selectedMediaIndex == index ? "border-black shadow-md" : "border-transparent opacity-70 hover:opacity-100")">
                             <img src="@thumbnail" class="w-full h-full object-cover object-top" onerror="this.src='/product1.jpg';" />
@@ -62,7 +64,7 @@
                 </div>
 
                 <!-- Nút ấn Xuống -->
-                <button aria-label="Down" onclick="document.getElementById('thumb-scroll').scrollBy({ top: 108, behavior: 'smooth' })" class="w-full h-6 mt-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
+                <button aria-label="Down" @onclick="NextMedia" class="w-full h-6 mt-2 bg-white hover:bg-gray-100 flex items-center justify-center shadow-sm rounded border border-gray-200 z-10 text-gray-500 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
             </div>
@@ -76,7 +78,7 @@
                 <img src="@CurrentImage" class="w-full h-full object-cover object-top" onerror="this.src='product1.jpg';" />
 
                 <button @onclick="NextMedia" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow z-10 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">
-                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7-7" /></svg>
+                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                 </button>
             </div>
         </div>
@@ -551,10 +553,14 @@
 
     private async Task AddToCartAsync()
     {
-        var buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-        if (string.IsNullOrEmpty(buyerId))
+        string buyerId;
+        if (AuthState.IsAuthenticated)
         {
-            buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id");
+            buyerId = AuthState.UserId.ToString();
+        }
+        else
+        {
+            buyerId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "buyer_id") ?? string.Empty;
             if (string.IsNullOrEmpty(buyerId))
             {
                 buyerId = Guid.NewGuid().ToString();

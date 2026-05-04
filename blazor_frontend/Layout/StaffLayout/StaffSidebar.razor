@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject blazor_frontend.Services.IAuthService AuthService
 
 <div class="h-full flex flex-col bg-white border-r border-gray-200 text-gray-800">
     <!-- Header của Sidebar -->
@@ -70,10 +71,7 @@
 
     private async Task LogoutAsync()
     {
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        await AuthService.LogoutAsync();
         Navigation.NavigateTo("/account/signin", forceLoad: true);
     }
 

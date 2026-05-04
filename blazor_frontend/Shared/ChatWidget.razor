@@ -210,13 +210,9 @@
     {
         if (string.IsNullOrEmpty(currentSessionId) || ChatService.ConnectionState != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected) return;
 
-        var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
-        var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
-
-        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(hoTen))
+        if (AuthState.IsAuthenticated)
         {
-            var avatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar");
-            await ChatService.UpgradeSessionAsync(currentSessionId, userId, hoTen, avatar);
+            await ChatService.UpgradeSessionAsync(currentSessionId, AuthState.UserId.ToString(), AuthState.HoTen, AuthState.AvatarUrl);
         }
     }
 
@@ -256,7 +252,7 @@
         var textToSend = newMessage.Trim();
         newMessage = "";
 
-        var avatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar") ?? "";
+        var avatar = AuthState.AvatarUrl;
         messages.Add(new ChatMessage { Text = textToSend, IsMine = true, Timestamp = DateTime.Now, Avatar = avatar });
         await SaveMessages();
         
@@ -266,16 +262,14 @@
 
         if (ChatService.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
         {
-            var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
-            var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
-            bool isUser = !string.IsNullOrEmpty(userId);
+            bool isUser = AuthState.IsAuthenticated;
 
             var tn = new blazor_frontend.Models.ChatMessageDto
             {
                 MaPhien = Guid.Parse(currentSessionId),
                 SenderType = isUser ? "USER" : "GUEST",
-                SenderID = isUser ? Guid.Parse(userId) : Guid.Empty,
-                SenderName = hoTen ?? (isUser ? "Thành viên" : "Khách"),
+                SenderID = isUser ? AuthState.UserId : Guid.Empty,
+                SenderName = AuthState.IsAuthenticated ? AuthState.HoTen : "Khách",
                 SenderAvatar = avatar ?? "",
                 NoiDung = textToSend,
                 TrangThai = "sent"

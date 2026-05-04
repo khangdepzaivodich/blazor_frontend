@@ -104,19 +104,19 @@
         ChatService.OnStaffNameUpdated += HandleStaffNameUpdated;
         await ChatService.InitializeAsync();
 
-        userAvatar = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_avatar") ?? "";
-        hoTen = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten") ?? "";
+        userAvatar = AuthState.AvatarUrl;
+        hoTen = AuthState.HoTen;
 
         var session = await JS.InvokeAsync<string>("localStorage.getItem", "chat_session_id");
-        var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
+        var userId = AuthState.UserId;
 
-        if (!string.IsNullOrEmpty(userId))
+        if (AuthState.IsAuthenticated)
         {
             // Bắt buộc xóa ID cũ để tránh dùng lại phiên khách
             await JS.InvokeVoidAsync("localStorage.removeItem", "chat_session_id");
             session = null;
 
-            var serverSession = await ChatService.GetLatestActiveSessionAsync(userId);
+            var serverSession = await ChatService.GetLatestActiveSessionAsync(userId.ToString());
             if (serverSession != null)
             {
                 session = serverSession.Id.ToString();
@@ -124,7 +124,7 @@
             }
             else
             {
-                session = await ChatService.CreateNewChatSessionAsync(userId, "USER");
+                session = await ChatService.CreateNewChatSessionAsync(userId.ToString(), "USER");
                 if (!string.IsNullOrEmpty(session))
                 {
                     await JS.InvokeVoidAsync("localStorage.setItem", "chat_session_id", session);
@@ -217,12 +217,9 @@
 
     private async Task TryUpgradeSession()
     {
-        var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
-        var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
-
-        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(hoTen))
+        if (AuthState.IsAuthenticated)
         {
-            await ChatService.UpgradeSessionAsync(currentSessionId, userId, hoTen);
+            await ChatService.UpgradeSessionAsync(currentSessionId, AuthState.UserId.ToString(), AuthState.HoTen);
         }
     }
 
@@ -240,18 +237,15 @@
 
         if (ChatService.ConnectionState == Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected && !string.IsNullOrWhiteSpace(currentSessionId))
         {
-            var userId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id");
-            var hoTen = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten");
-            var avatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar");
-            bool isUser = !string.IsNullOrEmpty(userId);
+            bool isUser = AuthState.IsAuthenticated;
 
             var tn = new blazor_frontend.Models.ChatMessageDto
             {
                 MaPhien = Guid.Parse(currentSessionId),
                 SenderType = isUser ? "USER" : "GUEST",
-                SenderID = isUser ? Guid.Parse(userId) : Guid.Empty,
-                SenderName = hoTen ?? (isUser ? "Thành viên" : "Khách"),
-                SenderAvatar = avatar ?? "",
+                SenderID = isUser ? AuthState.UserId : Guid.Empty,
+                SenderName = AuthState.IsAuthenticated ? AuthState.HoTen : "Khách",
+                SenderAvatar = AuthState.AvatarUrl ?? "",
                 NoiDung = textToSend,
                 TrangThai = "sent"
             };

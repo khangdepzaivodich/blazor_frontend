@@ -14,15 +14,11 @@ namespace blazor_frontend.Services
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            // Nếu đã đăng nhập, tự động gắn Token vào Header
-            if (_authState.IsAuthenticated)
+            // Nếu đã đăng nhập và CHƯA có header Authorization, tự động gắn Token vào
+            if (_authState.IsAuthenticated && request.Headers.Authorization == null)
             {
-                Console.WriteLine($"[DEBUG] AuthHandler({_authState.GetHashCode()}): Gắn Token cho {request.RequestUri}");
+                Console.WriteLine($"[DEBUG] AuthHandler: Gắn Token cho {request.RequestUri}");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _authState.Token);
-            }
-            else 
-            {
-                Console.WriteLine($"[DEBUG] AuthHandler({_authState.GetHashCode()}): CHƯA ĐĂNG NHẬP cho {request.RequestUri}");
             }
 
             return await base.SendAsync(request, cancellationToken);

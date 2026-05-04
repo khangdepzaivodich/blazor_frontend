@@ -130,7 +130,7 @@
 </style>
 
 @code {
-    [Inject] private IJSRuntime JS { get; set; }
+    [Inject] private IJSRuntime JS { get; set; } = default!;
     private List<ProductList.ProductDto> featured = new();
     private int pageSize = 8;
 

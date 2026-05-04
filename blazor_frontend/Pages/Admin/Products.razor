@@ -5,6 +5,7 @@
 @inject blazor_frontend.Services.IOrderService orderService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject blazor_frontend.Services.AuthState AuthState
 
 <PageTitle>Quản lý Sản phẩm</PageTitle>
 
@@ -258,9 +259,12 @@
                                     <i class="ph ph-folders absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
                                     <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editorMaLDM">
                                         <option value="@Guid.Empty">-- Chọn loại danh mục --</option>
-                                        @foreach (var ldm in loaiDanhMucs)
+                                        @if (loaiDanhMucs != null)
                                         {
-                                            <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                                            @foreach (var ldm in loaiDanhMucs)
+                                            {
+                                                <option value="@ldm.MaLDM">@ldm.TenLDM</option>
+                                            }
                                         }
                                     </select>
                                     <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -273,9 +277,12 @@
                                     <i class="ph ph-folder-open absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
                                     <select class="w-full rounded-2xl border border-gray-200 pl-11 pr-10 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 appearance-none" @bind="editor.MaDM" disabled="@(editorMaLDM == Guid.Empty)">
                                         <option value="@Guid.Empty">-- Chọn danh mục --</option>
-                                        @foreach (var cat in categories.Where(c => c.MaLDM == editorMaLDM))
+                                        @if (categories != null)
                                         {
-                                            <option value="@cat.MaDM">@cat.TenDM</option>
+                                            @foreach (var cat in categories.Where(c => c.MaLDM == editorMaLDM))
+                                            {
+                                                <option value="@cat.MaDM">@cat.TenDM</option>
+                                            }
                                         }
                                     </select>
                                     <i class="ph ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -721,9 +728,8 @@
     {
         await AuthService.InitializeAsync();
         
-        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
-        var isAdmin = string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase);
-        var isStaff = string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
+        var isAdmin = string.Equals(AuthState.Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+        var isStaff = string.Equals(AuthState.Role, "STAFF", StringComparison.OrdinalIgnoreCase);
         isAuthorized = isAdmin || isStaff;
 
         if (!isAuthorized)

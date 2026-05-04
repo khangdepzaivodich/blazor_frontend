@@ -6,6 +6,7 @@
 @inject blazor_frontend.Services.ICatalogService catalogService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject blazor_frontend.Services.AuthState AuthState
 
 <PageTitle>Quản lý đơn hàng</PageTitle>
 
@@ -150,9 +151,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var role = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
-        isAuthorized = string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
+        isAuthorized = string.Equals(AuthState.Role, "ADMIN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(AuthState.Role, "STAFF", StringComparison.OrdinalIgnoreCase);
 
         if (!isAuthorized)
         {

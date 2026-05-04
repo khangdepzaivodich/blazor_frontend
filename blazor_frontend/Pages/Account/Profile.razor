@@ -247,8 +247,6 @@
             {
                 await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", user.Avatar);
             }
-            await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", user.HoTen);
-            await JS.InvokeVoidAsync("localStorage.setItem", "auth_role", user.VaiTro);
 
             AuthState.SetUser(token, user.MaTK, user.Email, user.VaiTro, user.HoTen, user.Avatar ?? "");
         }
@@ -297,71 +295,76 @@
 
     private async Task SaveChanges()
     {
-        message = "Saving...";
-        StateHasChanged();
-
-        string? avatarUrlToSave = null;
-
-        if (pendingAvatarBytes is not null && pendingAvatarBytes.Length > 0)
+        try 
         {
-            using var stream = new MemoryStream(pendingAvatarBytes);
-            avatarUrlToSave = await UserService.UploadAvatarAsync(stream, pendingAvatarFileName ?? "avatar.png");
-        }
-        else if (avatarDataUrl == null && currentAvatarUrl != null)
-        {
-            avatarUrlToSave = string.Empty;
-        }
+            message = "Saving...";
+            StateHasChanged();
 
-        var request = new UpdateMeRequest
-        {
-            HoTen = account.HoTen,
-            SoDienThoai = account.SoDienThoai,
-            DiaChi = account.DiaChi,
-            NgaySinh = account.NgaySinh,
-            Avatar = avatarUrlToSave
-        };
+            string? avatarUrlToSave = null;
 
-        var ok = await UserService.UpdateMeAsync(request);
-        if (ok)
-        {
-            // Re-fetch to get latest state
-            var user = await UserService.GetMeAsync();
-            if (user != null)
+            if (pendingAvatarBytes is not null && pendingAvatarBytes.Length > 0)
             {
-                // Sync to localStorage & AuthState
-                await JS.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", user.HoTen);
-                
-                var avatarUrl = avatarUrlToSave ?? user.Avatar ?? currentAvatarUrl ?? "";
-                if (!string.IsNullOrEmpty(avatarUrl))
-                {
-                    await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", avatarUrl);
-                }
-                else
-                {
-                    await JS.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
-                }
-                
-                AuthState.SetUser(
-                    await JS.InvokeAsync<string>("localStorage.getItem", "auth_token"),
-                    user.MaTK,
-                    user.Email,
-                    user.VaiTro,
-                    user.HoTen,
-                    avatarUrl
-                );
-                
-                currentAvatarUrl = avatarUrl;
-                avatarDataUrl = avatarUrl;
-                pendingAvatarBytes = null;
-                pendingAvatarFileName = null;
+                using var stream = new MemoryStream(pendingAvatarBytes);
+                avatarUrlToSave = await UserService.UploadAvatarAsync(stream, pendingAvatarFileName ?? "avatar.png");
+            }
+            else if (avatarDataUrl == null && currentAvatarUrl != null)
+            {
+                avatarUrlToSave = string.Empty;
             }
 
-            isEditing = false;
-            message = "Profile updated successfully!";
+            var request = new UpdateMeRequest
+            {
+                HoTen = account.HoTen,
+                SoDienThoai = account.SoDienThoai,
+                DiaChi = account.DiaChi,
+                NgaySinh = account.NgaySinh,
+                Avatar = avatarUrlToSave
+            };
+
+            var ok = await UserService.UpdateMeAsync(request);
+            if (ok)
+            {
+                // Re-fetch to get latest state
+                var user = await UserService.GetMeAsync();
+                if (user != null)
+                {
+                    var avatarUrl = avatarUrlToSave ?? user.Avatar ?? currentAvatarUrl ?? "";
+                    if (!string.IsNullOrEmpty(avatarUrl))
+                    {
+                        await JS.InvokeVoidAsync("localStorage.setItem", "auth_avatar", avatarUrl);
+                    }
+                    else
+                    {
+                        await JS.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
+                    }
+                    
+                    AuthState.SetUser(
+                        await JS.InvokeAsync<string>("localStorage.getItem", "auth_token"),
+                        user.MaTK,
+                        user.Email,
+                        user.VaiTro,
+                        user.HoTen,
+                        avatarUrl
+                    );
+                    
+                    currentAvatarUrl = avatarUrl;
+                    avatarDataUrl = avatarUrl;
+                    pendingAvatarBytes = null;
+                    pendingAvatarFileName = null;
+                }
+
+                isEditing = false;
+                message = "Profile updated successfully!";
+            }
+            else
+            {
+                message = "Failed to update profile.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            message = "Failed to update profile.";
+            message = $"Error: {ex.Message}";
+            Console.WriteLine($"[ERROR] SaveChanges: {ex}");
         }
     }
 

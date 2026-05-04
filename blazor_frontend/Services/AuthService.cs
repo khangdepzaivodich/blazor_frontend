@@ -49,12 +49,7 @@ namespace blazor_frontend.Services
                     );
 
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_token", loginResponse.Token);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_user_id", loginResponse.UserId.ToString());
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_email", loginResponse.Email);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_role", loginResponse.Role);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_ho_ten", loginResponse.HoTen);
-                    
-                    // Always set auth_avatar, even if empty, to overwrite old data
+                    // Always set auth_avatar, even if empty, to overwrite old data (avatar is usually not in JWT)
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_avatar", loginResponse.Avatar ?? "");
                 }
                 return loginResponse;
@@ -94,10 +89,6 @@ namespace blazor_frontend.Services
             _initializeTask = null; // Allow re-initialization for next user
             
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_email");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_avatar");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_account");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user_avatar");
@@ -125,11 +116,14 @@ namespace blazor_frontend.Services
                 var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
                 if (string.IsNullOrEmpty(token)) return;
 
-                var userIdStr = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-                var email = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_email");
-                var role = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role");
-                var hoTen = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten");
                 var avatar = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_avatar");
+
+                var claims = ParseClaimsFromJwt(token);
+                
+                var userIdStr = claims.GetValueOrDefault("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.ToString();
+                var email = claims.GetValueOrDefault("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.ToString();
+                var hoTen = claims.GetValueOrDefault("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")?.ToString();
+                var role = claims.GetValueOrDefault("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.ToString();
 
                 if (Guid.TryParse(userIdStr, out var userId))
                 {
@@ -140,6 +134,24 @@ namespace blazor_frontend.Services
             {
                 Console.WriteLine($"[DEBUG] InitializeAsync ERROR: {ex.Message}");
             }
+        }
+
+        private System.Collections.Generic.Dictionary<string, object> ParseClaimsFromJwt(string jwt)
+        {
+            var payload = jwt.Split('.')[1];
+            var jsonBytes = ParseBase64WithoutPadding(payload);
+            return System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(jsonBytes) 
+                ?? new System.Collections.Generic.Dictionary<string, object>();
+        }
+
+        private byte[] ParseBase64WithoutPadding(string base64)
+        {
+            switch (base64.Length % 4)
+            {
+                case 2: base64 += "=="; break;
+                case 3: base64 += "="; break;
+            }
+            return System.Convert.FromBase64String(base64);
         }
     }
 }

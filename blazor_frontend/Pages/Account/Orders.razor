@@ -8,6 +8,7 @@
 @inject blazor_frontend.Services.IDiscountService discountService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject blazor_frontend.Services.AuthState AuthState
 
 <PageTitle>Đơn hàng của tôi</PageTitle>
 
@@ -220,14 +221,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
-        var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-
-        if (string.IsNullOrWhiteSpace(token) || !Guid.TryParse(userIdText, out var userId))
+        if (!AuthState.IsAuthenticated)
         {
             Navigation.NavigateTo("/account/signin?returnUrl=/account/orders");
             return;
         }
+
+        var userId = AuthState.UserId;
 
         try
         {

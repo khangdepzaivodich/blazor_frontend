@@ -8,6 +8,7 @@
 @inject IOrderService OrderService
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject blazor_frontend.Services.AuthState AuthState
 
 <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-6 pb-32">
     <div class="text-sm text-gray-500 mb-6 flex items-center gap-2">
@@ -411,11 +412,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authUserId = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-        if (!string.IsNullOrEmpty(authUserId))
+        if (AuthState.IsAuthenticated)
         {
-            BuyerId = authUserId;
+            BuyerId = AuthState.UserId.ToString();
             IsGuest = false;
+            HoTen = AuthState.HoTen;
         }
         else
         {
@@ -430,7 +431,6 @@
 
         if (!IsGuest)
         {
-            HoTen = await JS.InvokeAsync<string?>("localStorage.getItem", "auth_ho_ten") ?? string.Empty;
             var userAccountJson = await JS.InvokeAsync<string?>("localStorage.getItem", "user_account");
             if (!string.IsNullOrWhiteSpace(userAccountJson))
             {
@@ -439,10 +439,6 @@
                 {
                     SoDienThoai = account.SoDienThoai ?? string.Empty;
                     DiaChi = account.DiaChi ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(HoTen))
-                    {
-                        HoTen = account.HoTen ?? string.Empty;
-                    }
                 }
             }
         }

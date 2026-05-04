@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using System.Net.Http.Headers;
 using blazor_frontend.Models.BackendDTOs;
 
 namespace blazor_frontend.Services
@@ -9,10 +10,12 @@ namespace blazor_frontend.Services
     public class UserService : IUserService
     {
         private readonly HttpClient _httpClient;
+        private readonly AuthState _authState;
 
-        public UserService(IHttpClientFactory httpClientFactory)
+        public UserService(IHttpClientFactory httpClientFactory, AuthState authState)
         {
             _httpClient = httpClientFactory.CreateClient("IdentityAPI");
+            _authState = authState;
         }
 
         public async Task<UserPaginatedResult?> GetAllUsersAsync(int page, int pageSize)
@@ -111,11 +114,24 @@ namespace blazor_frontend.Services
 
         public async Task<string?> UploadAvatarAsync(Stream fileStream, string fileName)
         {
+            if (fileStream.CanSeek) fileStream.Position = 0;
+
             using var content = new MultipartFormDataContent();
             using var streamContent = new StreamContent(fileStream);
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             content.Add(streamContent, "file", fileName);
 
-            var response = await _httpClient.PostAsync("api/user/me/avatar", content);
+            // Tạo request thủ công để kiểm soát Header, tránh lỗi AuthHandler với Multipart trong WASM
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/user/me/avatar");
+            request.Content = content;
+
+            // Gắn token thủ công nếu đã đăng nhập
+            if (_authState.IsAuthenticated)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _authState.Token);
+            }
+
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<UploadResponse>();

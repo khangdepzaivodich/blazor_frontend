@@ -4,7 +4,10 @@
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IOrderService orderService
 @inject blazor_frontend.Services.IUserService userService
+@inject blazor_frontend.Services.IAuthService authService
 @inject blazor_frontend.Services.ICatalogService catalogService
+@inject blazor_frontend.Services.ICategoryService categoryService
+@inject blazor_frontend.Services.AuthState AuthState
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
@@ -341,10 +344,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var token = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_token");
-        var userIdText = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_user_id");
-        currentRole = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "auth_role") ?? string.Empty;
-        isAuthenticated = !string.IsNullOrWhiteSpace(token) && Guid.TryParse(userIdText, out currentUserId);
+        isAuthenticated = AuthState.IsAuthenticated;
+        currentUserId = AuthState.UserId;
+        currentRole = AuthState.Role;
 
         if (!isAuthenticated)
         {
@@ -511,10 +513,7 @@
 
     private async Task LogoutAsync()
     {
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_token");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_user_id");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_ho_ten");
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "auth_role");
+        await authService.LogoutAsync();
         Navigation.NavigateTo("/account/signin");
     }
 

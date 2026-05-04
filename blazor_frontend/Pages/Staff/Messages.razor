@@ -3,6 +3,7 @@
 @using blazor_frontend.Services
 @inject IChatService ChatService
 @inject IJSRuntime JS
+@inject blazor_frontend.Services.AuthState AuthState
 @implements IDisposable
 
 <PageTitle>Tư vấn khách hàng</PageTitle>
@@ -271,13 +272,13 @@
     
     protected override async Task OnInitializedAsync()
     {
-        // 0. Lấy ID thật của nhân viên từ Storage
-        myStaffId = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_id") ?? "STAFF_ANON";
-        myStaffAvatar = await JS.InvokeAsync<string>("localStorage.getItem", "auth_avatar") ?? "";
+        // 0. Lấy thông tin từ AuthState
+        myStaffId = AuthState.UserId.ToString();
+        myStaffAvatar = AuthState.AvatarUrl;
         if (string.IsNullOrEmpty(myStaffAvatar)) 
             myStaffAvatar = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString("STAFF")}&background=random";
             
-        var staffName = await JS.InvokeAsync<string>("localStorage.getItem", "auth_ho_ten") ?? "Tư vấn viên";
+        var staffName = AuthState.HoTen;
 
         ChatService.OnNewChatWaiting += HandleNewChatWaiting;
         ChatService.OnMessageReceived += HandleMessageReceived;
@@ -291,8 +292,7 @@
         await RefreshConversations();
 
         // 3. Đăng ký nhân viên này (CHỈ NẾU KHÔNG PHẢI ADMIN)
-        var userRole = await JS.InvokeAsync<string>("localStorage.getItem", "auth_user_role");
-        if (userRole != "ADMIN")
+        if (AuthState.Role != "ADMIN")
         {
             await ChatService.RegisterStaffAsync(myStaffId, staffName, myStaffAvatar);
         }
