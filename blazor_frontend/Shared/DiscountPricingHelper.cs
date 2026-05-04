@@ -27,8 +27,10 @@ public static class DiscountPricingHelper
 
     public static bool IsScopeApplicable(MaGiamGiaDto discount, SanPhamDto product, Guid? currentLoaiDanhMucId)
     {
-        // Don't show expired or fully used discounts
-        if (discount.HanSuDung < DateTime.Now.AddHours(-12)) return false;
+        // Kiểm tra hạn sử dụng (cho phép trễ 1 chút để tránh lệch giây)
+        if (discount.HanSuDung < DateTime.Now.AddSeconds(-30)) return false;
+        
+        // Kiểm tra số lượng còn lại
         if (discount.SoLuong <= 0) return false;
 
         return discount.ApDungCho switch
@@ -44,10 +46,7 @@ public static class DiscountPricingHelper
 
     public static bool IsConditionsMet(MaGiamGiaDto discount, decimal currentPriceOrTotal)
     {
-        // Expiration and quantity are already checked in IsScopeApplicable, but we check again for safety
-        if (discount.HanSuDung < DateTime.Now.AddHours(-12)) return false;
-        if (discount.SoLuong <= 0) return false;
-        
+        // Kiểm tra số tiền đơn hàng tối thiểu
         if (discount.DonHangToiThieu.HasValue && currentPriceOrTotal < discount.DonHangToiThieu.Value) return false;
         return true;
     }
@@ -77,18 +76,26 @@ public static class DiscountPricingHelper
         IReadOnlyCollection<DanhMucDto> danhMucs,
         IEnumerable<MaGiamGiaDto> discounts)
     {
-        if (product == null || price <= 0)
+        try
         {
+            if (product == null || price <= 0)
+            {
+                return Array.Empty<MaGiamGiaDto>();
+            }
+
+            var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
+            var currentLoaiDanhMucId = currentCategory?.MaLDM;
+
+            return discounts
+                .Where(discount => IsScopeApplicable(discount, product, currentLoaiDanhMucId))
+                .OrderByDescending(discount => GetDiscountAmount(discount, price))
+                .ThenBy(discount => discount.MaCode);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] GetApplicableDiscounts: {ex.Message}");
             return Array.Empty<MaGiamGiaDto>();
         }
-
-        var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
-        var currentLoaiDanhMucId = currentCategory?.MaLDM;
-
-        return discounts
-            .Where(discount => IsScopeApplicable(discount, product, currentLoaiDanhMucId))
-            .OrderByDescending(discount => GetDiscountAmount(discount, price))
-            .ThenBy(discount => discount.MaCode);
     }
 
     public static IEnumerable<MaGiamGiaDto> GetApplicableDiscountsForCart(
@@ -99,26 +106,38 @@ public static class DiscountPricingHelper
         IEnumerable<MaGiamGiaDto> discounts,
         decimal cartTotal)
     {
-        var matched = new List<MaGiamGiaDto>();
-
-        foreach (var item in items)
+        try
         {
-            if (!productById.TryGetValue(item.ProductId, out var product))
+            var matched = new List<MaGiamGiaDto>();
+
+            foreach (var item in items)
             {
-                continue;
+                if (!productById.TryGetValue(item.ProductId, out var product))
+                {
+                    continue;
+                }
+
+                var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
+                var currentLoaiDanhMucId = currentCategory?.MaLDM;
+
+                // Sử dụng IsApplicable để lọc cả điều kiện đơn tối thiểu
+                matched.AddRange(discounts.Where(discount => IsApplicable(discount, product, currentLoaiDanhMucId, cartTotal)));
             }
 
-            var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
-            var currentLoaiDanhMucId = currentCategory?.MaLDM;
+            // Thêm các mã áp dụng cho "Tất cả" (nhưng phải thỏa mãn Hạn dùng, Số lượng và Đơn tối thiểu)
+            matched.AddRange(discounts.Where(d => d.ApDungCho == "TatCa" && IsConditionsMet(d, cartTotal) && d.HanSuDung >= DateTime.Now.AddSeconds(-30) && d.SoLuong > 0));
 
-            matched.AddRange(discounts.Where(discount => IsScopeApplicable(discount, product, currentLoaiDanhMucId)));
+            return matched
+                .GroupBy(x => x.MaGG)
+                .Select(g => g.First())
+                .OrderByDescending(x => GetDiscountAmount(x, cartTotal))
+                .ThenBy(x => x.MaCode);
         }
-
-        return matched
-            .GroupBy(x => x.MaGG)
-            .Select(g => g.First())
-            .OrderByDescending(x => x.SoTien)
-            .ThenBy(x => x.MaCode);
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] GetApplicableDiscountsForCart: {ex.Message}");
+            return Array.Empty<MaGiamGiaDto>();
+        }
     }
 
     public static decimal GetDiscountAmount(MaGiamGiaDto discount, decimal price)
