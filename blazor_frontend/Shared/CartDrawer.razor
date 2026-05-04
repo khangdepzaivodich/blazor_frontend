@@ -2,6 +2,7 @@
 @using blazor_frontend.Services
 @using blazor_frontend.Shared
 @inject IBasketService BasketService
+@inject blazor_frontend.Services.IProductService ProductService
 @inject blazor_frontend.Services.AuthState AuthState
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -58,7 +59,24 @@
                             </div>
                             <div class="flex flex-1 flex-col justify-between py-1">
                                 <div>
-                                    <h4 class="text-sm font-bold text-gray-900 line-clamp-2">@item.ProductName</h4>
+                                    @{
+                                        var pp = _productById.GetValueOrDefault(item.ProductId);
+                                        var vv = _variantById.GetValueOrDefault(item.ProductId);
+                                    }
+                                    <h4 class="text-sm font-bold text-gray-900 line-clamp-2">@(pp?.TenSP ?? item.ProductName)</h4>
+                                    @if (vv != null)
+                                    {
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            @if (!string.IsNullOrEmpty(vv.Mau))
+                                            {
+                                                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">@vv.Mau</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(vv.KichCo))
+                                            {
+                                                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">@vv.KichCo</span>
+                                            }
+                                        </div>
+                                    }
                                     <div class="mt-1 flex items-center gap-2">
                                         <span class="text-xs font-bold text-blue-600">@item.Price.ToString("N0")₫</span>
                                         <span class="text-[10px] text-gray-400">x @item.Quantity</span>
@@ -102,6 +120,8 @@
     
     private BasketDto? _basket;
     private bool _isLoading = true;
+    private Dictionary<string, SanPhamDto> _productById = new();
+    private Dictionary<string, ChiTietSanPhamDto> _variantById = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -128,6 +148,19 @@
         {
             _basket = await BasketService.GetBasketAsync(buyerId);
         }
+
+        try
+        {
+            var allProducts = (await ProductService.GetAllAsync()).ToList();
+            _productById = allProducts
+                .SelectMany(p => p.ChiTietSanPhams.Select(v => new { VariantId = v.MaCTSP.ToString(), Product = p }))
+                .ToDictionary(x => x.VariantId, x => x.Product);
+            _variantById = allProducts
+                .SelectMany(p => p.ChiTietSanPhams)
+                .ToDictionary(v => v.MaCTSP.ToString(), v => v);
+        }
+        catch { }
+
         _isLoading = false;
         StateHasChanged();
     }

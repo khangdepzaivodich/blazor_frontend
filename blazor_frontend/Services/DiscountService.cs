@@ -45,9 +45,25 @@ namespace blazor_frontend.Services
 
         public async Task<IEnumerable<MaGiamGiaDto>> GetDiscountsAsync()
         {
-            // For backward compatibility, get first 100 items or similar
-            var result = await GetDiscountsAsync(new DiscountPaginationRequest { PageNumber = 1, PageSize = 100 });
-            return result.Items;
+            try
+            {
+                // Try fetching as a plain array first (most common API format)
+                var items = await _httpClient.GetFromJsonAsync<List<MaGiamGiaDto>>("api/magiamgia");
+                return items ?? new List<MaGiamGiaDto>();
+            }
+            catch
+            {
+                try
+                {
+                    // Fallback: try PagedResult format
+                    var result = await GetDiscountsAsync(new DiscountPaginationRequest { PageNumber = 1, PageSize = 100 });
+                    return result.Items;
+                }
+                catch
+                {
+                    return new List<MaGiamGiaDto>();
+                }
+            }
         }
 
         public async Task<bool> ApplyDiscountAsync(string code)
