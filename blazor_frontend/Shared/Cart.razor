@@ -585,13 +585,18 @@
             SoDienThoai = SoDienThoai,
             MaGG = MaGiamGia,
             DiaChiGiaoHang = fullAddress,
-            ChiTietDonHangs = CartModel.Items.Select(x => new CreateChiTietDonHangRequest
-            {
-                MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
-                TenSP_LuuTru = x.ProductName,
-                Gia_LuuTru = x.Price,
-                SoLuong = x.Quantity,
-                Anh_LuuTru = x.ImageUrl
+            ChiTietDonHangs = CartModel.Items.Select(x => {
+                var variant = variantById.GetValueOrDefault(x.ProductId);
+                return new CreateChiTietDonHangRequest
+                {
+                    MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
+                    TenSP_LuuTru = productById.TryGetValue(x.ProductId, out var p) ? p.TenSP : x.ProductName,
+                    Mau_LuuTru = variant?.Mau,
+                    KichCo_LuuTru = variant?.KichCo,
+                    Gia_LuuTru = x.Price,
+                    SoLuong = x.Quantity,
+                    Anh_LuuTru = x.ImageUrl
+                };
             }).ToList()
         };
 
