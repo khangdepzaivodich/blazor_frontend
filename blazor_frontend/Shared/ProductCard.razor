@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components
+@inject blazor_frontend.Services.AuthState AuthState
 
 <div class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden relative flex flex-col h-full border border-gray-100">
     <!-- Wishlist Button -->
@@ -25,7 +26,10 @@
                             opacity-0 translate-y-4 pointer-events-none
                             group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
                             transition-all duration-300 ease-out">
-                    <button class="flex-1 bg-white hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm" @onclick="OnAddToCartClicked">
+                    <button class="flex-1 bg-white hover:bg-gray-900 hover:text-white text-gray-900 font-bold py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm @(AuthState.Role == "ADMIN" ? "opacity-50 cursor-not-allowed" : "")" 
+                            @onclick="OnAddToCartClicked"
+                            disabled="@(AuthState.Role == "ADMIN")"
+                            title="@(AuthState.Role == "ADMIN" ? "Tài khoản quản trị viên không được mua hàng" : "")">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 6h12l-2-6"/></svg>
                         THÊM
                     </button>

@@ -1,9 +1,10 @@
 @page "/admin/users"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.IUserService userService
+@inject SweetAlertService Swal
 <PageTitle>Quản lý Người dùng</PageTitle>
 
-<div class="bg-white rounded-lg shadow-sm w-full h-full p-6">
+<div class="bg-white rounded-lg shadow-sm w-full p-6 flex flex-col">
     <div class="flex justify-between items-center mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-800">Quản lý Tài khoản</h2>
@@ -40,15 +41,15 @@
     </div>
 
     <!-- Bảng Dữ liệu -->
-    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="w-full text-left border-collapse">
+    <div class="overflow-x-auto border border-gray-200 rounded-lg custom-scrollbar">
+        <table class="min-w-full text-left border-collapse table-auto">
             <thead>
-                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                    <th class="p-4 font-semibold border-b border-gray-200">Tài khoản</th>
+                <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider whitespace-nowrap">
+                    <th class="p-4 pl-6 font-semibold border-b border-gray-200">Tài khoản</th>
                     <th class="p-4 font-semibold border-b border-gray-200">Vai trò</th>
                     <th class="p-4 font-semibold border-b border-gray-200">Dữ liệu liên hệ</th>
                     <th class="p-4 font-semibold border-b border-gray-200 text-center">Trạng Thái</th>
-                    <th class="p-4 font-semibold border-b border-gray-200 text-right">Thao tác</th>
+                    <th class="p-4 pr-6 font-semibold border-b border-gray-200 text-right">Thao tác</th>
                 </tr>
             </thead>
             <tbody class="text-gray-700 text-sm">
@@ -65,8 +66,8 @@
                     @foreach (var user in FilteredUsers)
                     {
                         var isBlocked = user.TrangThai == "Blocked";
-                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(isBlocked ? "bg-gray-50/50" : "")">
-                            <td class="p-4">
+                        <tr class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors @(isBlocked ? "bg-gray-50/50" : "") whitespace-nowrap">
+                            <td class="p-4 pl-6">
                                 <div class="flex items-center gap-3">
                                     <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(user.HoTen)&background=f3f4f6&color=475569"
                                     alt="@user.HoTen" class="w-10 h-10 rounded-full border border-gray-200 @(isBlocked ? "opacity-50 grayscale" : "")" />
@@ -123,7 +124,7 @@
                                 }
                             </td>
 
-                            <td class="p-4 text-right space-x-1">
+                            <td class="p-4 pr-6 text-right space-x-1">
                                 <button class="p-1.5 text-blue-500 hover:bg-blue-100 rounded transition-colors" title="Sửa thông tin" @onclick="() => EditUser(user)">
                                     <i class="ph ph-pencil-simple text-xl"></i>
                                 </button>
@@ -385,35 +386,56 @@
 
     private async Task SaveUser()
     {
-        errorMessage = string.Empty;
         if (editingId == Guid.Empty)
         {
             if (string.IsNullOrWhiteSpace(editorCreate.Email) || string.IsNullOrWhiteSpace(editorCreate.Password) || string.IsNullOrWhiteSpace(editorCreate.HoTen))
             {
-                errorMessage = "Vui lòng nhập đầy đủ Email, Mật khẩu và Họ tên.";
+                await Swal.FireAsync("Cảnh báo", "Vui lòng nhập đầy đủ Email, Mật khẩu và Họ tên.", SweetAlertIcon.Warning);
                 return;
             }
             try 
             {
                 var newId = await userService.CreateUserAsync(editorCreate);
-                if (newId == null)
+                if (newId != null)
                 {
-                    errorMessage = "Thêm thất bại. Không nhận được ID người dùng.";
+                    await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Thành công",
+                        Text = "Đã tạo tài khoản mới",
+                        Icon = SweetAlertIcon.Success,
+                        Timer = 2000,
+                        ShowConfirmButton = false
+                    });
+                }
+                else
+                {
+                    await Swal.FireAsync("Lỗi", "Thêm thất bại. Email có thể đã tồn tại.", SweetAlertIcon.Error);
                     return;
                 }
             }
             catch (Exception ex)
             {
-                errorMessage = $"Lỗi: {ex.Message}";
+                await Swal.FireAsync("Lỗi", ex.Message, SweetAlertIcon.Error);
                 return;
             }
         }
         else
         {
             var success = await userService.UpdateUserAsync(editingId, editorUpdate);
-            if (!success)
+            if (success)
             {
-                errorMessage = "Cập nhật thất bại.";
+                await Swal.FireAsync(new SweetAlertOptions
+                {
+                    Title = "Thành công",
+                    Text = "Đã cập nhật thông tin người dùng",
+                    Icon = SweetAlertIcon.Success,
+                    Timer = 2000,
+                    ShowConfirmButton = false
+                });
+            }
+            else
+            {
+                await Swal.FireAsync("Lỗi", "Cập nhật thất bại.", SweetAlertIcon.Error);
                 return;
             }
         }
@@ -424,16 +446,55 @@
 
     private async Task LockUser(Guid id)
     {
-        if (await userService.LockUserAsync(id)) await LoadData();
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Khóa tài khoản?",
+            Text = "Người dùng này sẽ không thể đăng nhập!",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Khóa",
+            CancelButtonText = "Hủy"
+        });
+
+        if (result.IsConfirmed)
+        {
+            if (await userService.LockUserAsync(id)) 
+            {
+                await Swal.FireAsync("Đã khóa", "Tài khoản đã bị tạm dừng hoạt động.", SweetAlertIcon.Success);
+                await LoadData();
+            }
+        }
     }
 
     private async Task UnlockUser(Guid id)
     {
-        if (await userService.UnlockUserAsync(id)) await LoadData();
+        if (await userService.UnlockUserAsync(id)) 
+        {
+            await Swal.FireAsync("Thành công", "Tài khoản đã được mở khóa.", SweetAlertIcon.Success);
+            await LoadData();
+        }
     }
 
     private async Task DeleteUser(Guid id)
     {
-        if (await userService.DeleteUserAsync(id)) await LoadData();
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Xác nhận xóa?",
+            Text = "Dữ liệu người dùng sẽ bị xóa vĩnh viễn!",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Xóa ngay",
+            CancelButtonText = "Hủy",
+            ConfirmButtonColor = "#ef4444"
+        });
+
+        if (result.IsConfirmed)
+        {
+            if (await userService.DeleteUserAsync(id)) 
+            {
+                await Swal.FireAsync("Đã xóa", "Tài khoản đã được loại bỏ.", SweetAlertIcon.Success);
+                await LoadData();
+            }
+        }
     }
 }

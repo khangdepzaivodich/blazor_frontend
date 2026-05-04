@@ -89,9 +89,8 @@
             </div>
         }
 
-        <div class="flex-1 overflow-hidden border border-gray-100 rounded-xl shadow-sm">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse bg-white">
+        <div class="flex-1 overflow-x-auto border border-gray-100 rounded-xl shadow-sm custom-scrollbar">
+            <table class="min-w-full text-left border-collapse bg-white table-auto">
                     <thead>
                         <tr class="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
                             <th class="p-4 border-b border-gray-100">Sản phẩm</th>
@@ -177,7 +176,6 @@
                         }
                     </tbody>
                 </table>
-            </div>
         </div>
 
         <!-- Phân trang UI (Căn giữa theo style storefront) -->
@@ -850,8 +848,7 @@
     {
         if (editor.MaDM == Guid.Empty || string.IsNullOrWhiteSpace(editor.TenSP))
         {
-            message = "Vui lòng nhập tên sản phẩm và chọn danh mục.";
-            isError = true;
+            await Swal.FireAsync("Cảnh báo", "Vui lòng nhập tên sản phẩm và chọn danh mục.", SweetAlertIcon.Warning);
             return;
         }
 
@@ -868,13 +865,18 @@
                         v.MaSP = res.MaSP;
                         await productService.CreateVariantAsync(v);
                     }
-                    message = "Đã tạo sản phẩm và biến thể.";
-                    isError = false;
+                    await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Thành công",
+                        Text = "Đã tạo sản phẩm và các biến thể",
+                        Icon = SweetAlertIcon.Success,
+                        Timer = 2000,
+                        ShowConfirmButton = false
+                    });
                 }
                 else
                 {
-                    message = "Tạo sản phẩm thất bại.";
-                    isError = true;
+                    await Swal.FireAsync("Lỗi", "Tạo sản phẩm thất bại.", SweetAlertIcon.Error);
                 }
             }
             else
@@ -882,51 +884,60 @@
                 var ok = await productService.UpdateAsync(editingId, editor);
                 if (ok)
                 {
-                    // Trong thực tế, việc cập nhật biến thể phức tạp hơn (xóa cũ thêm mới hoặc update từng cái)
-                    // Ở đây để đơn giản, ta chỉ thông báo cập nhật info sản phẩm thành công
-                    // và khuyên dùng Variant Manager nếu muốn chỉnh sửa sâu hơn.
-                    message = "Đã cập nhật thông tin sản phẩm. Lưu ý: Biến thể cần được chỉnh sửa riêng.";
-                    isError = false;
+                    await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Thành công",
+                        Text = "Đã cập nhật thông tin sản phẩm.",
+                        Icon = SweetAlertIcon.Success,
+                        Timer = 2000,
+                        ShowConfirmButton = false
+                    });
                 }
                 else
                 {
-                    message = "Cập nhật sản phẩm thất bại.";
-                    isError = true;
+                    await Swal.FireAsync("Lỗi", "Cập nhật sản phẩm thất bại.", SweetAlertIcon.Error);
                 }
             }
 
-            if (!isError)
-            {
-                await Load();
-                showEditor = false;
-            }
+            showEditor = false;
+            await Load();
         }
         catch (Exception ex)
         {
-            message = $"Lưu sản phẩm thất bại: {ex.Message}";
-            isError = true;
+            await Swal.FireAsync("Lỗi hệ thống", ex.Message, SweetAlertIcon.Error);
         }
     }
 
     private async Task Delete(Guid id)
     {
-        var result = await Swal.FireAsync(new SweetAlertOptions { Title = "Xác nhận xóa", Text = "Bạn chắc chắn muốn xóa sản phẩm này?", Icon = SweetAlertIcon.Warning, ShowCancelButton = true, ConfirmButtonText = "Xóa", CancelButtonText = "Hủy" });
-        if (result.Dismiss != null)
+        var result = await Swal.FireAsync(new SweetAlertOptions
         {
-            return;
-        }
+            Title = "Xác nhận xóa?",
+            Text = "Dữ liệu sản phẩm sẽ bị xóa vĩnh viễn!",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Xóa ngay",
+            CancelButtonText = "Hủy",
+            ConfirmButtonColor = "#ef4444"
+        });
 
-        var ok = await productService.DeleteAsync(id);
-        if (ok)
+        if (result.IsConfirmed)
         {
-            message = "Đã xóa sản phẩm.";
-            isError = false;
-            await Load();
-        }
-        else
-        {
-            message = "Xóa sản phẩm thất bại.";
-            isError = true;
+            if (await productService.DeleteAsync(id))
+            {
+                await Swal.FireAsync(new SweetAlertOptions
+                {
+                    Title = "Đã xóa",
+                    Icon = SweetAlertIcon.Success,
+                    Timer = 1500,
+                    ShowConfirmButton = false
+                });
+                await Load();
+            }
+            else
+            {
+                await Swal.FireAsync("Thất bại", "Không thể xóa sản phẩm này.", SweetAlertIcon.Error);
+            }
         }
     }
 

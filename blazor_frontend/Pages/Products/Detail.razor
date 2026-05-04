@@ -152,7 +152,10 @@
                                 @onclick="IncreaseQuantity" 
                                 disabled="@(SelectedVariant != null && Quantity >= SelectedVariant.SoLuong)">+</button>
                     </div>
-                    <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors" @onclick="AddToCartAsync">
+                    <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors @(AuthState.Role == "ADMIN" ? "opacity-50 cursor-not-allowed" : "")" 
+                            @onclick="AddToCartAsync"
+                            disabled="@(AuthState.Role == "ADMIN")"
+                            title="@(AuthState.Role == "ADMIN" ? "Tài khoản quản trị viên không được mua hàng" : "")">
                         THÊM VÀO GIỎ
                     </button>
                 </div>
@@ -170,7 +173,10 @@
                     </p>
                 }
             </div>
-            <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6" @onclick="BuyNowAsync">
+            <button class="w-full bg-[#0b3b72] text-white py-4 rounded-md font-bold text-lg uppercase tracking-wide hover:bg-[#082950] transition-colors shadow-md mb-6 @(AuthState.Role == "ADMIN" ? "opacity-50 cursor-not-allowed" : "")" 
+                    @onclick="BuyNowAsync"
+                    disabled="@(AuthState.Role == "ADMIN")"
+                    title="@(AuthState.Role == "ADMIN" ? "Tài khoản quản trị viên không được mua hàng" : "")">
                 MUA NGAY
             </button>
 

@@ -58,15 +58,49 @@ public static class DiscountPricingHelper
 
     public static string GetScopeDisplayText(MaGiamGiaDto item, IReadOnlyCollection<LoaiDanhMucDto> loaiDanhMucs, IReadOnlyCollection<DanhMucDto> danhMucs, IReadOnlyCollection<SanPhamDto> sanPhams)
     {
-        return item.ApDungCho switch
+        try
         {
-            "TenLDM" => $"Loại danh mục: {loaiDanhMucs.FirstOrDefault(x => x.MaLDM == item.MaLDM)?.TenLDM ?? item.MaLDM?.ToString() ?? "N/A"}",
-            "TenDM" => $"Danh mục: {danhMucs.FirstOrDefault(x => x.MaDM == item.MaDM)?.TenDM ?? item.MaDM?.ToString() ?? "N/A"}",
-            "SanPham" => item.MaSPs?.Count > 1
-                ? $"Danh mục > Sản phẩm: {item.MaSPs.Count} sản phẩm"
-                : $"Sản phẩm: {sanPhams.FirstOrDefault(x => x.MaSP == ((item.MaSPs ?? new List<Guid>()).FirstOrDefault() != Guid.Empty ? item.MaSPs!.FirstOrDefault() : item.MaSP))?.TenSP ?? item.MaSP?.ToString() ?? "N/A"}",
-            _ => "Tất cả"
-        };
+            return item.ApDungCho switch
+            {
+                "TenLDM" => $"Loại: {loaiDanhMucs.FirstOrDefault(x => x.MaLDM == item.MaLDM)?.TenLDM ?? item.MaLDM?.ToString() ?? "N/A"}",
+                "TenDM" => $"Danh mục: {danhMucs.FirstOrDefault(x => x.MaDM == item.MaDM)?.TenDM ?? item.MaDM?.ToString() ?? "N/A"}",
+                "SanPham" => GetSanPhamScopeText(item, sanPhams),
+                _ => "Tất cả"
+            };
+        }
+        catch
+        {
+            return "Tất cả";
+        }
+    }
+
+    private static string GetSanPhamScopeText(MaGiamGiaDto item, IReadOnlyCollection<SanPhamDto> sanPhams)
+    {
+        var ids = new List<Guid>();
+        if (item.MaSPs != null && item.MaSPs.Count > 0)
+        {
+            ids.AddRange(item.MaSPs);
+        }
+        else if (item.MaSP.HasValue && item.MaSP.Value != Guid.Empty)
+        {
+            ids.Add(item.MaSP.Value);
+        }
+
+        if (ids.Count == 0) return "Sản phẩm: N/A";
+
+        if (ids.Count == 1)
+        {
+            var sp = sanPhams.FirstOrDefault(x => x.MaSP == ids[0]);
+            return $"Sản phẩm: {sp?.TenSP ?? ids[0].ToString()}";
+        }
+
+        if (ids.Count <= 3)
+        {
+            var names = ids.Select(id => sanPhams.FirstOrDefault(x => x.MaSP == id)?.TenSP ?? id.ToString().Substring(0, 8)).ToList();
+            return $"Sản phẩm: {string.Join(", ", names)}";
+        }
+
+        return $"Sản phẩm: {ids.Count} sản phẩm";
     }
 
     public static IEnumerable<MaGiamGiaDto> GetApplicableDiscounts(

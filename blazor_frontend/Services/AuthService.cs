@@ -62,13 +62,21 @@ namespace blazor_frontend.Services
             var response = await _httpClient.PostAsJsonAsync("api/auth/register", request);
             var body = await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"STATUS: {response.StatusCode}");
-            Console.WriteLine($"BODY: {body}");
-            if (response.IsSuccessStatusCode)
+            try 
             {
-                return await response.Content.ReadFromJsonAsync<RegisterResponse>();
+                // Try to deserialize the response body (both success and error often return a message JSON)
+                var registerResponse = System.Text.Json.JsonSerializer.Deserialize<RegisterResponse>(body, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return registerResponse;
             }
-            return null;
+            catch
+            {
+                // If deserialization fails, return a generic error or based on status
+                return new RegisterResponse 
+                { 
+                    Success = response.IsSuccessStatusCode, 
+                    Message = response.IsSuccessStatusCode ? "Success" : $"Server error ({response.StatusCode})" 
+                };
+            }
         }
 
         public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)

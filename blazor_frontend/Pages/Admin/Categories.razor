@@ -2,6 +2,7 @@
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.ICategoryService categoryService
 @inject blazor_frontend.Services.IProductService productService
+@inject SweetAlertService Swal
 <PageTitle>Quản lý Danh mục</PageTitle>
 
 <div class="bg-white rounded-xl shadow-sm w-full p-6 pb-12 min-h-[600px] flex flex-col">
@@ -102,9 +103,8 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-hidden border border-gray-50 rounded-xl shadow-sm">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse bg-white">
+        <div class="flex-1 overflow-x-auto border border-gray-50 rounded-xl shadow-sm custom-scrollbar">
+            <table class="min-w-full text-left border-collapse bg-white table-auto">
                     <thead>
                         <tr class="bg-gray-50/50 text-gray-400 text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
                             <th class="p-4 border-b border-gray-50 w-1/3">Danh mục</th>
@@ -161,7 +161,6 @@
                         }
                     </tbody>
                 </table>
-            </div>
         </div>
 
         <!-- Phân trang UI (Căn giữa chuẩn style) -->
@@ -222,6 +221,7 @@
 
     private bool showEditorLoai = false;
     private bool showEditorDanh = false;
+    private bool isSaving = false;
     
     private LoaiDanhMucCreateUpdateRequest editorLoai = new();
     private DanhMucCreateUpdateRequest editorDanh = new();
@@ -349,23 +349,41 @@
         errorMessage = string.Empty;
         if (string.IsNullOrWhiteSpace(editorLoai.TenLDM))
         {
-            errorMessage = "Vui lòng nhập tên loại danh mục.";
+            await Swal.FireAsync("Cảnh báo", "Vui lòng nhập tên loại danh mục.", SweetAlertIcon.Warning);
             return;
         }
 
         if (itemsLoaiDanhMuc.Any(x => x.TenLDM.Equals(editorLoai.TenLDM, StringComparison.OrdinalIgnoreCase) && x.MaLDM != editingId))
         {
-            errorMessage = "Tên loại danh mục này đã tồn tại.";
+            await Swal.FireAsync("Cảnh báo", "Tên loại danh mục này đã tồn tại.", SweetAlertIcon.Warning);
             return;
         }
 
-        if (editingId == Guid.Empty)
-            await categoryService.CreateLoaiDanhMucAsync(editorLoai);
-        else
-            await categoryService.UpdateLoaiDanhMucAsync(editingId, editorLoai);
+        isSaving = true;
+        try 
+        {
+            if (editingId == Guid.Empty)
+            {
+                await categoryService.CreateLoaiDanhMucAsync(editorLoai);
+                await Swal.FireAsync(new SweetAlertOptions { Title = "Thành công", Text = "Đã tạo loại danh mục mới", Icon = SweetAlertIcon.Success, Timer = 2000, ShowConfirmButton = false });
+            }
+            else
+            {
+                await categoryService.UpdateLoaiDanhMucAsync(editingId, editorLoai);
+                await Swal.FireAsync(new SweetAlertOptions { Title = "Thành công", Text = "Đã cập nhật loại danh mục", Icon = SweetAlertIcon.Success, Timer = 2000, ShowConfirmButton = false });
+            }
 
-        showEditorLoai = false;
-        await Load();
+            showEditorLoai = false;
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await Swal.FireAsync("Lỗi", ex.Message, SweetAlertIcon.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task SaveDanh()
@@ -388,25 +406,62 @@
             return;
         }
 
-        if (editingId == Guid.Empty)
-            await categoryService.CreateAsync(editorDanh);
-        else
-            await categoryService.UpdateAsync(editingId, editorDanh);
-
-        showEditorDanh = false;
-        await Load();
+        isSaving = true;
+        try
+        {
+            if (editingId == Guid.Empty)
+            {
+                await categoryService.CreateAsync(editorDanh);
+                await Swal.FireAsync(new SweetAlertOptions
+                {
+                    Title = "Thành công",
+                    Text = "Đã tạo danh mục mới",
+                    Icon = SweetAlertIcon.Success,
+                    Timer = 2000,
+                    ShowConfirmButton = false
+                });
+            }
+            else
+            {
+                await categoryService.UpdateAsync(editingId, editorDanh);
+                await Swal.FireAsync(new SweetAlertOptions
+                {
+                    Title = "Thành công",
+                    Text = "Đã cập nhật danh mục",
+                    Icon = SweetAlertIcon.Success,
+                    Timer = 2000,
+                    ShowConfirmButton = false
+                });
+            }
+            showEditorDanh = false;
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            await Swal.FireAsync("Lỗi", ex.Message, SweetAlertIcon.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task DeleteLoai(Guid id)
     {
-        await categoryService.DeleteLoaiDanhMucAsync(id);
-        await Load();
+        var confirm = await Swal.FireAsync(new SweetAlertOptions { Title = "Xác nhận xóa?", Icon = SweetAlertIcon.Warning, ShowCancelButton = true });
+        if (confirm.IsConfirmed) {
+            await categoryService.DeleteLoaiDanhMucAsync(id);
+            await Load();
+        }
     }
     
     private async Task DeleteDanh(Guid id)
     {
-        await categoryService.DeleteAsync(id);
-        await Load();
+        var confirm = await Swal.FireAsync(new SweetAlertOptions { Title = "Xác nhận xóa?", Icon = SweetAlertIcon.Warning, ShowCancelButton = true });
+        if (confirm.IsConfirmed) {
+            await categoryService.DeleteAsync(id);
+            await Load();
+        }
     }
 
     private void GoToPage(int page)
@@ -447,9 +502,16 @@
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel">Hủy</button>
-                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveLoai">
-                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> Lưu lại
+                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel" disabled="@isSaving">Hủy</button>
+                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveLoai" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <i class="ph ph-circle-notch animate-spin mr-2"></i> <span>Đang lưu...</span>
+                    }
+                    else
+                    {
+                        <i class="ph ph-floppy-disk mr-2 text-lg"></i> <span>Lưu lại</span>
+                    }
                 </button>
             </div>
         </div>
@@ -495,9 +557,16 @@
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel">Hủy</button>
-                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveDanh">
-                    <i class="ph ph-floppy-disk mr-2 text-lg"></i> Lưu lại
+                <button class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 font-medium rounded-lg transition-colors" @onclick="Cancel" disabled="@isSaving">Hủy</button>
+                <button class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm flex items-center" @onclick="SaveDanh" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <i class="ph ph-circle-notch animate-spin mr-2"></i> <span>Đang lưu...</span>
+                    }
+                    else
+                    {
+                        <i class="ph ph-floppy-disk mr-2 text-lg"></i> <span>Lưu lại</span>
+                    }
                 </button>
             </div>
         </div>
