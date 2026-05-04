@@ -8,6 +8,7 @@
 @inject blazor_frontend.Services.IProductService productService
 @inject blazor_frontend.Services.ICategoryService categoryService
 @inject blazor_frontend.Services.AuthState AuthState
+@inject CurrieTechnologies.Razor.SweetAlert2.SweetAlertService Swal
 
 <div class="bg-white pb-16 min-h-screen">
     <!-- Breadcrumb -->
@@ -477,7 +478,7 @@
         var selectedVariant = SelectedVariant;
         if (selectedVariant == null)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Vui lòng chọn màu sắc và kích cỡ");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Thông báo", Text = "Vui lòng chọn màu sắc và kích cỡ", Icon = SweetAlertIcon.Warning, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             return;
         }
 
@@ -494,7 +495,7 @@
             var newTotal = existing.Quantity + Quantity;
             if (newTotal > selectedVariant.SoLuong)
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Bạn đã có {existing.Quantity} sản phẩm này trong giỏ hàng. Không thể thêm tiếp vì vượt quá tồn kho ({selectedVariant.SoLuong}).");
+                await Swal.FireAsync(new SweetAlertOptions { Title = "Vượt tồn kho", Text = $"Bạn đã có {existing.Quantity} sản phẩm này trong giỏ hàng. Không thể thêm tiếp vì vượt quá tồn kho ({selectedVariant.SoLuong}).", Icon = SweetAlertIcon.Warning, Timer = 3000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
                 return;
             }
             existing.Quantity = newTotal;
@@ -503,7 +504,7 @@
         {
             if (Quantity > selectedVariant.SoLuong)
             {
-                 await JSRuntime.InvokeVoidAsync("alert", $"Không thể thêm vì vượt quá tồn kho ({selectedVariant.SoLuong}).");
+                 await Swal.FireAsync(new SweetAlertOptions { Title = "Vượt tồn kho", Text = $"Không thể thêm vì vượt quá tồn kho ({selectedVariant.SoLuong}).", Icon = SweetAlertIcon.Warning, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
                  return;
             }
             basket.Items.Add(new BasketItemDto
@@ -517,6 +518,16 @@
         }
 
         await BasketService.UpdateBasketAsync(basket);
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Đã thêm vào giỏ hàng!",
+            Text = productName,
+            Icon = SweetAlertIcon.Success,
+            Timer = 1500,
+            ShowConfirmButton = false,
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd
+        });
     }
 
     private async Task BuyNowAsync()

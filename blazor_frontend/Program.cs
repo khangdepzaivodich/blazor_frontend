@@ -1,6 +1,7 @@
 using blazor_frontend;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using CurrieTechnologies.Razor.SweetAlert2;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -28,5 +29,6 @@ builder.Services.AddScoped<blazor_frontend.Services.IChatService, blazor_fronten
 builder.Services.AddScoped<blazor_frontend.Services.ICategoryService, blazor_frontend.Services.CategoryService>();
 builder.Services.AddScoped<blazor_frontend.Services.IProductService, blazor_frontend.Services.ProductService>();
 builder.Services.AddScoped<blazor_frontend.Services.IUserService, blazor_frontend.Services.UserService>();
+builder.Services.AddSweetAlert2();
 
 await builder.Build().RunAsync();

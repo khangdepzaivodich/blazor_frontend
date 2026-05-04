@@ -1,6 +1,7 @@
 @page "/admin/categories"
 @using blazor_frontend.Models.BackendDTOs
 @inject blazor_frontend.Services.ICategoryService categoryService
+@inject blazor_frontend.Services.IProductService productService
 <PageTitle>Quản lý Danh mục</PageTitle>
 
 <div class="bg-white rounded-xl shadow-sm w-full p-6 pb-12 min-h-[600px] flex flex-col">
@@ -105,21 +106,21 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse bg-white">
                     <thead>
-                        <tr class="bg-gray-50/50 text-gray-400 text-[11px] uppercase tracking-widest font-bold">
+                        <tr class="bg-gray-50/50 text-gray-400 text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
                             <th class="p-4 border-b border-gray-50 w-1/3">Danh mục</th>
                             <th class="p-4 border-b border-gray-50 w-1/4">Phân loại gốc</th>
-                            <th class="p-4 border-b border-gray-50">Đường dẫn (Slug)</th>
+                            <th class="p-4 border-b border-gray-50 text-center">Số sản phẩm</th>
                             <th class="p-4 border-b border-gray-50 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-700 text-sm">
                         @if (itemsDanhMuc == null)
                         {
-                            <tr><td colspan="4" class="p-4 text-center py-20 font-medium text-gray-400">Đang tải dữ liệu...</td></tr>
+                             <tr><td colspan="4" class="p-4 text-center py-20 font-medium text-gray-400">Đang tải dữ liệu...</td></tr>
                         }
                         else if (!PaginatedDanhMuc.Any())
                         {
-                            <tr><td colspan="4" class="p-4 text-center py-20 text-gray-400 italic">Không tìm thấy danh mục nào</td></tr>
+                             <tr><td colspan="4" class="p-4 text-center py-20 text-gray-400 italic">Không tìm thấy danh mục nào</td></tr>
                         }
                         else
                         {
@@ -134,13 +135,18 @@
                                             <span class="font-bold text-gray-900">@dm.TenDM</span>
                                         </div>
                                     </td>
-                                    <td class="p-4">
+                                    <td class="p-4 whitespace-nowrap">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">
                                             @(itemsLoaiDanhMuc?.FirstOrDefault(x => x.MaLDM == dm.MaLDM)?.TenLDM ?? "Chưa xác định")
                                         </span>
                                     </td>
-                                    <td class="p-4">
-                                        <code class="px-2 py-1 bg-gray-100 rounded-lg text-[11px] font-mono text-blue-600">/@dm.Slug</code>
+                                    <td class="p-4 text-center whitespace-nowrap">
+                                        @{
+                                            var pCount = GetProductCount(dm.MaDM);
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold @(pCount > 0 ? "bg-amber-50 text-amber-700" : "bg-gray-50 text-gray-400")">
+                                                @pCount sản phẩm
+                                            </span>
+                                        }
                                     </td>
                                     <td class="p-4 text-right space-x-1">
                                         <button class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" @onclick="() => EditDanh(dm)" title="Sửa">
@@ -294,7 +300,13 @@
     {
         itemsLoaiDanhMuc = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
         itemsDanhMuc = (await categoryService.GetAllAsync()).ToList();
+        try {
+            allProducts = (await productService.GetAllAsync()).ToList();
+        } catch { /* Ignore if products fail to load */ }
     }
+
+    private List<SanPhamDto> allProducts = new();
+    private int GetProductCount(Guid maDM) => allProducts.Count(p => p.MaDM == maDM);
 
     private void NewLoai()
     {

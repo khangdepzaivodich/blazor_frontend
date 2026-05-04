@@ -156,7 +156,7 @@
                                 </ul>
                             </div>
 
-                            @foreach (var loai in _loaiDanhMucs.Take(3))
+                            @foreach (var loai in _loaiDanhMucs.Where(l => l.TenLDM != "Khác"))
                             {
                                 <div class="px-6">
                                     <a href="/category/@loai.MaLDM/@Uri.EscapeDataString(loai.TenLDM)">

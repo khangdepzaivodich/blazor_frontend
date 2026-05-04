@@ -6,6 +6,7 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject blazor_frontend.Services.AuthState AuthState
+@inject SweetAlertService Swal
 
 <PageTitle>Quản lý Sản phẩm</PageTitle>
 
@@ -92,13 +93,14 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse bg-white">
                     <thead>
-                        <tr class="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold">
+                        <tr class="bg-gray-50/50 text-gray-500 text-[11px] uppercase tracking-widest font-bold whitespace-nowrap">
                             <th class="p-4 border-b border-gray-100">Sản phẩm</th>
                             <th class="p-4 border-b border-gray-100">Phân loại</th>
                             <th class="p-4 border-b border-gray-100">Mô tả</th>
                             <th class="p-4 border-b border-gray-100 text-center">Biến thể</th>
                             <th class="p-4 border-b border-gray-100 text-center">Kho</th>
                             <th class="p-4 border-b border-gray-100 text-center">Lượt bán</th>
+                            <th class="p-4 border-b border-gray-100 text-center">Ngày tạo</th>
                             <th class="p-4 border-b border-gray-100 text-right">Thao tác</th>
                             <th class="p-4 border-b border-gray-100 text-right">Ảnh</th>
                         </tr>
@@ -106,14 +108,14 @@
                     <tbody class="text-gray-700 text-sm">
                         @if (isLoading)
                         {
-                            <tr><td colspan="7" class="p-4 text-center py-20">
+                            <tr><td colspan="8" class="p-4 text-center py-20">
                                 <div class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em]"></div>
                                 <p class="mt-4 text-gray-500 font-medium">Đang tải dữ liệu...</p>
                             </td></tr>
                         }
                         else if (!PaginatedItems.Any())
                         {
-                            <tr><td colspan="7" class="p-4 text-center py-20 text-gray-400 italic">Không có sản phẩm nào được tìm thấy</td></tr>
+                            <tr><td colspan="8" class="p-4 text-center py-20 text-gray-400 italic">Không có sản phẩm nào được tìm thấy</td></tr>
                         }
                         else
                         {
@@ -127,7 +129,7 @@
                                         <p class="font-bold text-gray-900 leading-tight">@sp.TenSP</p>
                                     </td>
 
-                                    <td class="p-4 align-top">
+                                    <td class="p-4 align-top whitespace-nowrap">
                                         <div class="flex flex-col gap-1.5">
                                             <span class="inline-flex items-center w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 uppercase tracking-wider">@catName</span>
                                             <span class="text-xs text-gray-400">@GetLoaiDanhMucName(sp.MaDM)</span>
@@ -148,6 +150,11 @@
 
                                     <td class="p-4 text-center align-top">
                                         <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700">@sp.LuotBan</span>
+                                    </td>
+
+                                    <td class="p-4 text-center align-top whitespace-nowrap">
+                                        <span class="text-[10px] font-medium text-gray-400 block">@sp.NgayTao.ToString("dd/MM/yyyy")</span>
+                                        <span class="text-[9px] text-gray-300">@sp.NgayTao.ToString("HH:mm")</span>
                                     </td>
 
                                     <td class="p-4 text-right space-x-1 align-top whitespace-nowrap">
@@ -294,10 +301,22 @@
                             <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mô tả sản phẩm</label>
                             <div class="relative group">
                                 <i class="ph ph-article absolute left-4 top-4 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
-                                <textarea class="min-h-[300px] w-full rounded-2xl border border-gray-200 pl-11 pr-4 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 resize-none" 
+                                <textarea class="min-h-[220px] w-full rounded-2xl border border-gray-200 pl-11 pr-4 py-3.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-gray-50/30 resize-none" 
                                           placeholder="Mô tả chi tiết về sản phẩm..." @bind="editor.MoTa"></textarea>
                             </div>
                         </div>
+
+                        @if (editingId != Guid.Empty && editingNgayTao.HasValue)
+                        {
+                            <div>
+                                <label class="mb-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ngày tạo hệ thống</label>
+                                <div class="relative">
+                                    <i class="ph ph-calendar-blank absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
+                                    <input class="w-full rounded-2xl border border-gray-100 pl-11 pr-4 py-3.5 text-sm bg-gray-100/50 text-gray-400 cursor-not-allowed" 
+                                           value="@editingNgayTao.Value.ToString("dd/MM/yyyy HH:mm")" readonly />
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -591,6 +610,7 @@
     private SanPhamCreateRequest editor = new();
     private List<ChiTietSanPhamCreateRequest> editorVariants = new();
     private Guid editingId = Guid.Empty;
+    private DateTime? editingNgayTao;
     private Guid selectedMaLDM = Guid.Empty;
     private string tempProductImage = string.Empty;
     
@@ -771,6 +791,7 @@
     private void New()
     {
         editingId = Guid.Empty;
+        editingNgayTao = null;
         selectedMaLDM = Guid.Empty;
         tempProductImage = string.Empty;
         editor = new SanPhamCreateRequest();
@@ -798,6 +819,7 @@
     private async Task Edit(SanPhamDto it)
     {
         editingId = it.MaSP;
+        editingNgayTao = it.NgayTao;
         selectedMaLDM = categories.FirstOrDefault(c => c.MaDM == it.MaDM)?.MaLDM ?? Guid.Empty;
         editor = new SanPhamCreateRequest { MaDM = it.MaDM, TenSP = it.TenSP, MoTa = it.MoTa };
         
@@ -888,8 +910,8 @@
 
     private async Task Delete(Guid id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn chắc chắn muốn xóa sản phẩm này?");
-        if (!confirmed)
+        var result = await Swal.FireAsync(new SweetAlertOptions { Title = "Xác nhận xóa", Text = "Bạn chắc chắn muốn xóa sản phẩm này?", Icon = SweetAlertIcon.Warning, ShowCancelButton = true, ConfirmButtonText = "Xóa", CancelButtonText = "Hủy" });
+        if (result.Dismiss != null)
         {
             return;
         }
@@ -1025,8 +1047,8 @@
 
     private async Task DeleteVariant(Guid id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn chắc chắn muốn xóa biến thể này?");
-        if (!confirmed)
+        var result = await Swal.FireAsync(new SweetAlertOptions { Title = "Xác nhận xóa", Text = "Bạn chắc chắn muốn xóa biến thể này?", Icon = SweetAlertIcon.Warning, ShowCancelButton = true, ConfirmButtonText = "Xóa", CancelButtonText = "Hủy" });
+        if (result.Dismiss != null)
         {
             return;
         }

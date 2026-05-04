@@ -172,7 +172,7 @@
 
     private async Task LoadProducts()
     {
-        var result = await productService.GetPagedAsync(1, pageSize);
+        var result = await productService.GetPagedAsync(1, pageSize, sortBy: "newest");
         if (result != null)
         {
             featured = result.Data

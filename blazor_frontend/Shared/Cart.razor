@@ -9,6 +9,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject blazor_frontend.Services.AuthState AuthState
+@inject SweetAlertService Swal
 
 <div class="max-w-[1200px] mx-auto px-4 md:px-6 py-6 pb-32">
     <div class="text-sm text-gray-500 mb-6 flex items-center gap-2">
@@ -509,7 +510,7 @@
         var voucher = allDiscounts.FirstOrDefault(d => string.Equals(d.MaCode, DiscountCode, StringComparison.OrdinalIgnoreCase));
         if (voucher == null)
         {
-            await JS.InvokeVoidAsync("alert", "Mã giảm giá không tồn tại");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Không tìm thấy", Text = "Mã giảm giá không tồn tại", Icon = SweetAlertIcon.Error, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             DiscountCode = string.Empty;
             return;
         }
@@ -521,14 +522,14 @@
 
         if (!DiscountPricingHelper.IsConditionsMet(voucher, TamTinh))
         {
-            await JS.InvokeVoidAsync("alert", "Không đủ điều kiện áp dụng mã giảm giá này (kiểm tra đơn tối thiểu, số lượng hoặc HSD)");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Không đủ điều kiện", Text = "Không đủ điều kiện áp dụng mã giảm giá này (kiểm tra đơn tối thiểu, số lượng hoặc HSD)", Icon = SweetAlertIcon.Warning, Timer = 3000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             DiscountCode = string.Empty;
             return;
         }
 
         if (!IsVoucherApplicableToCart(voucher))
         {
-            await JS.InvokeVoidAsync("alert", "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Không áp dụng được", Text = "Mã giảm giá không áp dụng cho sản phẩm nào trong giỏ hàng", Icon = SweetAlertIcon.Warning, Timer = 2500, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             DiscountCode = string.Empty;
             return;
         }
@@ -560,7 +561,7 @@
         var fullAddress = GetFullAddress();
         if (IsGuest)
         {
-            await JS.InvokeVoidAsync("alert", "Bạn cần đăng nhập để thanh toán");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Cần đăng nhập", Text = "Bạn cần đăng nhập để thanh toán", Icon = SweetAlertIcon.Info, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             Navigation.NavigateTo("/account/signin?returnUrl=/cart");
             return;
         }
@@ -601,7 +602,7 @@
             {
                 if (item.Quantity > variant.SoLuong)
                 {
-                    await JS.InvokeVoidAsync("alert", $"Sản phẩm {item.ProductName} chỉ còn {variant.SoLuong} cái trong kho. Vui lòng điều chỉnh số lượng.");
+                    await Swal.FireAsync(new SweetAlertOptions { Title = "Vượt tồn kho", Text = $"Sản phẩm {item.ProductName} chỉ còn {variant.SoLuong} cái trong kho. Vui lòng điều chỉnh số lượng.", Icon = SweetAlertIcon.Warning, Timer = 3000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
                     return;
                 }
             }
@@ -610,7 +611,7 @@
         var order = await OrderService.CreateOrderAsync(request);
         if (order == null)
         {
-            await JS.InvokeVoidAsync("alert", "Đặt hàng thất bại");
+            await Swal.FireAsync(new SweetAlertOptions { Title = "Thất bại", Text = "Đặt hàng thất bại", Icon = SweetAlertIcon.Error, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
             return;
         }
 
@@ -620,7 +621,7 @@
         } catch { /* Silent fail for sync */ }
 
         await BasketService.DeleteBasketAsync(BuyerId);
-        await JS.InvokeVoidAsync("alert", "Đặt hàng thành công");
+        await Swal.FireAsync(new SweetAlertOptions { Title = "Thành công!", Text = "Đặt hàng thành công", Icon = SweetAlertIcon.Success, Timer = 2000, ShowConfirmButton = false });
         Navigation.NavigateTo("/account/orders");
     }
 
@@ -633,7 +634,7 @@
         {
             if (item.Quantity >= variant.SoLuong)
             {
-                await JS.InvokeVoidAsync("alert", "Số lượng trong giỏ đã đạt giới hạn tồn kho.");
+                await Swal.FireAsync(new SweetAlertOptions { Title = "Giới hạn tồn kho", Text = "Số lượng trong giỏ đã đạt giới hạn tồn kho.", Icon = SweetAlertIcon.Warning, Timer = 2000, ShowConfirmButton = false, Toast = true, Position = SweetAlertPosition.TopEnd });
                 return;
             }
         }
