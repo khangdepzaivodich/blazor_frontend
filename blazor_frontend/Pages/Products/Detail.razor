@@ -100,69 +100,10 @@
             <p class="text-sm text-gray-600 mb-2">Mã sản phẩm: <span class="font-semibold text-gray-800">@(currentProduct?.MaSP.ToString()[..8].ToUpper() ?? "N/A")</span></p>
             
             <div class="flex items-end gap-3 mb-6">
-                <span class="text-3xl font-extrabold text-[#002f6c]">@CurrentFinalPrice.ToString("N0")₫</span>
-                @if (SelectedVariant != null)
-                {
-                    <span class="text-lg text-gray-400 line-through">@SelectedVariant.Gia.ToString("N0")₫</span>
-                }
-                @if (CurrentDiscount != null)
-                {
-                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-                        -@FormatDiscountText(CurrentDiscount)
-                    </span>
-                }
+                <span class="text-3xl font-extrabold text-[#002f6c]">@CurrentPrice.ToString("N0")₫</span>
             </div>
 
-            @if (ApplicableDiscounts.Any())
-            {
-                <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    <div class="font-semibold mb-2">Mã giảm giá áp dụng</div>
-                    <div class="flex flex-col gap-3">
-                        @foreach (var discount in ApplicableDiscounts)
-                        {
-                            var isConditionsMet = DiscountPricingHelper.IsConditionsMet(discount, CurrentPrice);
-                            var isSelectedVoucher = string.Equals(selectedVoucherCode, discount.MaCode, StringComparison.OrdinalIgnoreCase);
-                            <div class="flex flex-col gap-1 rounded-lg border p-3 @(isSelectedVoucher ? "border-red-500 bg-red-50" : "border-gray-200 bg-white")">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-semibold text-gray-800">@discount.MaCode - @FormatDiscountText(discount)</span>
-                                    <div class="flex items-center gap-2">
-                                        @if (discount.GiaTriGiamToiDa.HasValue && discount.GiaTriGiamToiDa.Value > 0)
-                                        {
-                                            <span class="text-[11px] text-gray-500 italic">Giảm tối đa @(discount.GiaTriGiamToiDa.Value.ToString("N0"))đ</span>
-                                        }
-                                        <button class="rounded px-3 py-1 text-xs font-bold text-white transition-colors @(!isConditionsMet ? "bg-gray-400 cursor-not-allowed" : (isSelectedVoucher ? "bg-red-800 hover:bg-red-900" : "bg-red-600 hover:bg-red-700"))"
-                                                disabled="@(!isConditionsMet)"
-                                                @onclick="() => SaveVoucherForCartAsync(discount.MaCode)">
-                                            @(isSelectedVoucher ? "Đã áp dụng" : "Áp dụng")
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between items-center text-[11px] text-gray-500 mt-1">
-                                    @if (discount.DonHangToiThieu.HasValue && discount.DonHangToiThieu.Value > 0)
-                                    {
-                                        <span class="@(CurrentPrice < discount.DonHangToiThieu.Value ? "text-red-500 font-medium" : "")">
-                                            Đơn tối thiểu: @discount.DonHangToiThieu.Value.ToString("N0")đ
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span>Không yêu cầu tối thiểu</span>
-                                    }
-                                    <span class="@(discount.HanSuDung < DateTime.Now ? "text-red-500 font-medium" : "")">HSD: @discount.HanSuDung.ToString("dd/MM/yyyy HH:mm")</span>
-                                </div>
-                                @if (discount.SoLuong <= 0)
-                                {
-                                    <div class="text-[11px] text-red-500 font-medium mt-1">Mã đã hết lượt sử dụng</div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
 
-            <div class="mb-6 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-                Các mã trên chỉ hiển thị nếu sản phẩm hiện tại có thể áp dụng.
-            </div>
 
             <!-- Color Options -->
             <div class="mb-6">
@@ -326,10 +267,6 @@
     private List<ProductList.ProductDto> similarProducts = new();
     private string? selectedColor;
     private string? selectedSize;
-    private List<MaGiamGiaDto> discounts = new();
-    private List<DanhMucDto> allCategories = new();
-    private List<LoaiDanhMucDto> allCategoryGroups = new();
-    private string? selectedVoucherCode;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -346,29 +283,6 @@
         }
 
         var products = (await productService.GetAllAsync()).ToList();
-        discounts = (await DiscountService.GetDiscountsAsync()).ToList();
-        allCategories = (await categoryService.GetAllAsync()).ToList();
-        allCategoryGroups = (await categoryService.GetAllLoaiDanhMucAsync()).ToList();
-        
-        var codeInStorage = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "pending_discount_code");
-        if (!string.IsNullOrEmpty(codeInStorage))
-        {
-            var discount = discounts.FirstOrDefault(d => string.Equals(d.MaCode, codeInStorage, StringComparison.OrdinalIgnoreCase));
-            // Chỉ hiển thị "Đã áp dụng" nếu mã đó thực sự dùng được cho sản phẩm này
-            if (discount != null && DiscountPricingHelper.IsScopeApplicable(discount, currentProduct, currentDanhMuc?.MaLDM))
-            {
-                selectedVoucherCode = codeInStorage;
-            }
-            else
-            {
-                selectedVoucherCode = null;
-            }
-        }
-        else
-        {
-            selectedVoucherCode = null;
-        }
-
         selectedColor = AvailableColors.FirstOrDefault();
         selectedSize = AvailableSizes.FirstOrDefault();
 
@@ -456,13 +370,6 @@
 
     private decimal CurrentPrice => SelectedVariant?.Gia ?? currentProduct?.ChiTietSanPhams?.FirstOrDefault()?.Gia ?? 0m;
 
-    private MaGiamGiaDto? CurrentDiscount => string.IsNullOrEmpty(selectedVoucherCode) 
-        ? null 
-        : discounts.FirstOrDefault(d => string.Equals(d.MaCode, selectedVoucherCode, StringComparison.OrdinalIgnoreCase));
-
-    private decimal CurrentFinalPrice => DiscountPricingHelper.GetFinalPrice(CurrentDiscount, CurrentPrice);
-
-    private IEnumerable<MaGiamGiaDto> ApplicableDiscounts => DiscountPricingHelper.GetApplicableDiscounts(currentProduct, CurrentPrice, allCategoryGroups, allCategories, discounts);
 
     private async Task SelectMedia(int index)
     {
@@ -575,7 +482,7 @@
         }
 
         var productName = $"{currentProduct?.TenSP ?? "Sản phẩm"} ({selectedVariant.Mau}, {selectedVariant.KichCo})";
-        var productPrice = CurrentFinalPrice > 0 ? CurrentFinalPrice : selectedVariant.Gia;
+        var productPrice = CurrentPrice > 0 ? CurrentPrice : selectedVariant.Gia;
         var productImage = CurrentImage;
         var variantId = selectedVariant.MaCTSP.ToString();
 
@@ -610,7 +517,6 @@
         }
 
         await BasketService.UpdateBasketAsync(basket);
-        await JSRuntime.InvokeVoidAsync("alert", "Đã thêm vào giỏ hàng");
     }
 
     private async Task BuyNowAsync()
@@ -636,6 +542,7 @@
             Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
             BadgeText: "HÀNG MỚI",
             Colors: colors.Length > 0 ? colors : ["#000000"],
+            Category: "",
             CategoryId: product.MaDM,
             LuotBan: product.LuotBan);
     }
@@ -645,12 +552,7 @@
             ? discount.SoTien.ToString("0") + "%"
             : discount.SoTien.ToString("N0") + "đ";
 
-    private async Task SaveVoucherForCartAsync(string code)
-    {
-        selectedVoucherCode = code;
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "pending_discount_code", code);
-        await JSRuntime.InvokeVoidAsync("alert", $"Đã lưu mã {code}. Vào giỏ hàng để áp dụng.");
-    }
+
 
     private string FormatLuotBan(int count)
     {
