@@ -12,6 +12,8 @@
                 <ProductCard ImagePath="@p.ImagePath"
                              Title="@p.Title"
                              Price="@p.Price"
+                             OriginalPrice="@p.OriginalPrice"
+                             DiscountedPrice="@p.DiscountedPrice"
                              BadgeText="@p.BadgeText"
                              Colors="@p.Colors"
                              ProductId="@p.Id"
@@ -96,5 +98,17 @@
     [Parameter] public int TotalPages { get; set; } = 1;
     [Parameter] public EventCallback<int> OnPageChanged { get; set; }
 
-    public record ProductDto(string Id, string ImagePath, string Title, string Price, string BadgeText, string[] Colors, string Category = "", Guid? CategoryId = null, int LuotBan = 0);
+    public record ProductDto(
+        string Id, 
+        string ImagePath, 
+        string Title, 
+        string Price, 
+        string BadgeText, 
+        string[] Colors, 
+        string Category = "", 
+        Guid? CategoryId = null, 
+        int LuotBan = 0,
+        decimal OriginalPrice = 0,
+        decimal DiscountedPrice = 0
+    );
 }

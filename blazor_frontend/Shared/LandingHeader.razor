@@ -151,21 +151,21 @@
                                 <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900">Tất cả</h3>
                                 <ul class="space-y-1 text-[15px] font-medium text-gray-500">
                                     <li><a href="/products" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Tất cả sản phẩm</a></li>
-                                    <li><a href="/category/f641efa0-571c-4876-92d1-19c985968d39/Bán chạy" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Bán chạy</a></li>
-                                    <li><a href="/category/f641efa0-571c-4876-92d1-19c985968d39/Khuyến mãi" class="block border-l-2 border-transparent px-3 py-2 font-semibold text-red-500! transition-all duration-200 hover:border-red-500 hover:bg-red-50! hover:text-red-600!">Sale</a></li>
+                                    <li><a href="/products?filter=best-seller" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">Bán chạy</a></li>
+                                    <li><a href="/products?filter=sale" class="block border-l-2 border-transparent px-3 py-2 font-semibold text-red-500! transition-all duration-200 hover:border-red-500 hover:bg-red-50! hover:text-red-600!">Sale</a></li>
                                 </ul>
                             </div>
 
                             @foreach (var loai in _loaiDanhMucs.Where(l => l.TenLDM != "Khác"))
                             {
                                 <div class="px-6">
-                                    <a href="/category/@loai.MaLDM/@Uri.EscapeDataString(loai.TenLDM)">
+                                    <a href="@(!string.IsNullOrEmpty(loai.Slug) ? $"/c/{loai.Slug}" : $"/category/{loai.MaLDM}/{Uri.EscapeDataString(loai.TenLDM)}")">
                                         <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-900 hover:text-blue-600 transition-colors">@loai.TenLDM</h3>
                                     </a>
                                     <ul class="space-y-1 text-[15px] font-medium text-gray-500">
                                         @foreach (var danhMuc in _danhMucs.Where(d => d.MaLDM == loai.MaLDM))
                                         {
-                                            <li><a href="/subcategory/@danhMuc.MaDM/@Uri.EscapeDataString(danhMuc.TenDM)" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">@danhMuc.TenDM</a></li>
+                                            <li><a href="@(!string.IsNullOrEmpty(danhMuc.Slug) ? $"/sc/{danhMuc.Slug}" : $"/subcategory/{danhMuc.MaDM}/{Uri.EscapeDataString(danhMuc.TenDM)}")" class="block border-l-2 border-transparent px-3 py-2 transition-all duration-200 hover:border-gray-900 hover:bg-gray-50 hover:text-gray-900">@danhMuc.TenDM</a></li>
                                         }
                                     </ul>
                                 </div>
@@ -186,8 +186,8 @@
                 </div>
             </div>
 
-            <a href="/products/new" class="nav-link py-3">Hàng mới</a>
-            <a href="/products/best-seller" class="nav-link py-3">Bán chạy</a>
+            <a href="/products" class="nav-link py-3">Hàng mới</a>
+            <a href="/products?filter=best-seller" class="nav-link py-3">Bán chạy</a>
             <a href="/products/denim" class="nav-link py-3">DENIM</a>
             <a href="/products/outlet" class="nav-link py-3 text-red-500! hover:text-red-600! font-semibold">OUTLET</a>
 

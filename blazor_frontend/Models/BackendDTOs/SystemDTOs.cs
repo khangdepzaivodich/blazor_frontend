@@ -274,6 +274,7 @@ namespace blazor_frontend.Models.BackendDTOs
     {
         public Guid MaLDM { get; set; }
         public string TenLDM { get; set; } = string.Empty;
+        public string Slug { get; set; } = string.Empty;
         public List<DanhMucDto> DanhMucs { get; set; } = new();
     }
 

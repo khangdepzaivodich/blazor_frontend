@@ -169,6 +169,13 @@
                                 @onclick="IncreaseQuantity" 
                                 disabled="@(SelectedVariant != null && Quantity >= SelectedVariant.SoLuong)">+</button>
                     </div>
+                    @if (Quantity > 1)
+                    {
+                        <div class="flex flex-col justify-center min-w-[80px]">
+                            <span class="text-[9px] text-gray-400 uppercase font-black tracking-tighter">Tạm tính</span>
+                            <span class="text-sm font-black text-blue-600">@((BestDiscountedPrice * Quantity).ToString("N0"))₫</span>
+                        </div>
+                    }
                     <button class="flex-1 text-[#0b3b72] border-2 border-[#0b3b72] font-bold rounded-md uppercase tracking-wide hover:bg-blue-50 transition-colors @(AuthState.Role == "ADMIN" ? "opacity-50 cursor-not-allowed" : "")" 
                             @onclick="AddToCartAsync"
                             disabled="@(AuthState.Role == "ADMIN")"
@@ -295,7 +302,7 @@
     private List<DanhMucDto> allCategories = new();
     private List<LoaiDanhMucDto> allCategoryGroups = new();
 
-    private MaGiamGiaDto? BestDiscount => DiscountPricingHelper.GetBestApplicableDiscount(
+    private MaGiamGiaDto? BestDiscount => DiscountPricingHelper.GetBestPromotionForItem(
         currentProduct, 
         CurrentPrice, 
         allCategoryGroups, 
@@ -606,10 +613,22 @@
         Navigation.NavigateTo("/cart");
     }
 
-    private static ProductList.ProductDto MapToCard(SanPhamDto product)
+    private ProductList.ProductDto MapToCard(SanPhamDto product)
     {
         var details = product.ChiTietSanPhams ?? new List<ChiTietSanPhamDto>();
         var firstDetail = details.FirstOrDefault();
+        decimal originalPrice = firstDetail?.Gia ?? 0;
+
+        // Tính giá giảm giá tự động tốt nhất cho sản phẩm tương tự
+        var bestDiscount = DiscountPricingHelper.GetBestPromotionForItem(
+            product, 
+            originalPrice, 
+            allCategoryGroups, 
+            allCategories, 
+            allDiscounts);
+        
+        decimal discountedPrice = DiscountPricingHelper.GetFinalPrice(bestDiscount, originalPrice);
+
         var colors = details
             .Select(x => x.Mau)
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -620,12 +639,14 @@
             Id: product.Slug,
             ImagePath: firstDetail?.Anh ?? "product1.jpg",
             Title: product.TenSP,
-            Price: $"{(firstDetail?.Gia ?? 0):n0}₫",
-            BadgeText: "HÀNG MỚI",
+            Price: $"{discountedPrice:n0}₫",
+            BadgeText: discountedPrice < originalPrice ? "Sale" : "HÀNG MỚI",
             Colors: colors.Length > 0 ? colors : ["#000000"],
             Category: "",
             CategoryId: product.MaDM,
-            LuotBan: product.LuotBan);
+            LuotBan: product.LuotBan,
+            OriginalPrice: originalPrice,
+            DiscountedPrice: discountedPrice);
     }
 
     private static string FormatDiscountText(MaGiamGiaDto discount)

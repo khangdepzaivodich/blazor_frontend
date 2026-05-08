@@ -158,9 +158,19 @@
                                             }
                                         </div>
                                     }
-                                    <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                                        <span class="rounded-full bg-gray-100 px-2 py-0.5">SL: @item.Quantity</span>
-                                        <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">@FormatMoney(item.Price)</span>
+                                    <div class="mt-1 flex flex-col gap-0.5">
+                                        @{
+                                            var bestPromo = GetBestPromo(item);
+                                            var finalItemPrice = GetFinalItemPrice(item);
+                                        }
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-[#0b3b72]">@FormatMoney(finalItemPrice)</span>
+                                            @if (bestPromo != null)
+                                            {
+                                                <span class="text-xs text-gray-400 line-through">@FormatMoney(item.Price)</span>
+                                            }
+                                        </div>
+                                        <span class="text-[10px] text-gray-500 font-medium bg-gray-100 w-fit px-1.5 rounded">SL: @item.Quantity</span>
                                     </div>
                                     @if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
                                     {
@@ -188,7 +198,11 @@
                                     <button class="h-8 w-8 rounded-full border border-red-200 text-red-600 hover:bg-red-50" @onclick="() => RemoveItemAsync(item.ProductId)">×</button>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-semibold text-[#0b3b72] whitespace-nowrap">@FormatMoney(GetItemEffectivePrice(item) * item.Quantity)</div>
+                                    <div class="font-bold text-[#0b3b72] whitespace-nowrap text-base">@FormatMoney(GetFinalItemPrice(item) * item.Quantity)</div>
+                                    @if (GetBestPromo(item) != null)
+                                    {
+                                        <div class="text-[10px] text-red-500 font-bold italic">Đã giảm @FormatMoney(DiscountPricingHelper.GetDiscountAmount(GetBestPromo(item)!, item.Price) * item.Quantity)</div>
+                                    }
                                     @if (variantById.TryGetValue(item.ProductId, out var vr))
                                     {
                                         <div class="text-[10px] font-bold @(vr.SoLuong > 0 ? "text-gray-400" : "text-red-500") uppercase">
@@ -317,11 +331,16 @@
 
                 <div class="space-y-3 pt-4 text-gray-700">
                     <div class="flex justify-between items-center">
-                        <span>Tạm tính:</span>
-                        <div class="text-right">
-                            <span class="font-bold text-gray-900">@FormatMoney(TamTinh)</span>
-                            <div class="text-xs text-red-500">Tiết kiệm: @FormatMoney(VoucherGiamGia)</div>
-                        </div>
+                        <span>Tạm tính (giá gốc):</span>
+                        <span class="font-medium text-gray-600">@FormatMoney(OriginalTotal)</span>
+                    </div>
+                    <div class="flex justify-between items-center text-green-600">
+                        <span>Khuyến mãi sản phẩm:</span>
+                        <span>-@FormatMoney(TotalPromotionDiscount)</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span>Giá sau khuyến mãi:</span>
+                        <span class="font-bold text-gray-900">@FormatMoney(TamTinh)</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span>Phí vận chuyển:</span>
@@ -392,8 +411,10 @@
 
     private Guid? MaGiamGia => AppliedDiscount?.MaGG;
 
-    private decimal VoucherGiamGia => AppliedDiscount == null ? 0 : CalculateCartDiscount(AppliedDiscount);
-    private decimal TamTinh => CartModel?.Items?.Sum(item => item.Price * item.Quantity) ?? 0;
+    private decimal VoucherGiamGia => AppliedDiscount == null ? 0 : DiscountPricingHelper.GetDiscountAmount(AppliedDiscount, TamTinh);
+    private decimal OriginalTotal => CartModel?.Items?.Sum(item => item.Price * item.Quantity) ?? 0;
+    private decimal TotalPromotionDiscount => CartModel?.Items?.Sum(item => (item.Price - GetFinalItemPrice(item)) * item.Quantity) ?? 0;
+    private decimal TamTinh => OriginalTotal - TotalPromotionDiscount;
     private decimal ThanhTien => TamTinh - VoucherGiamGia;
     private bool IsGuest = true;
     private string CheckoutRequirementMessage
@@ -543,7 +564,7 @@
     }
 
     private IEnumerable<MaGiamGiaDto> ApplicableCartDiscounts => CartModel?.Items?.Any() == true
-        ? DiscountPricingHelper.GetApplicableDiscountsForCart(CartModel.Items, productById, allCategoryGroups, allCategories, allDiscounts, TamTinh)
+        ? DiscountPricingHelper.GetApplicableCartVouchers(allDiscounts, TamTinh)
         : Enumerable.Empty<MaGiamGiaDto>();
 
     private MaGiamGiaDto? BestApplicableCartDiscount => ApplicableCartDiscounts.FirstOrDefault();
@@ -587,13 +608,14 @@
             DiaChiGiaoHang = fullAddress,
             ChiTietDonHangs = CartModel.Items.Select(x => {
                 var variant = variantById.GetValueOrDefault(x.ProductId);
+                var finalPrice = GetFinalItemPrice(x);
                 return new CreateChiTietDonHangRequest
                 {
                     MaCTSP = Guid.TryParse(x.ProductId, out var ctsp) ? ctsp : Guid.NewGuid(),
                     TenSP_LuuTru = productById.TryGetValue(x.ProductId, out var p) ? p.TenSP : x.ProductName,
                     Mau_LuuTru = variant?.Mau,
                     KichCo_LuuTru = variant?.KichCo,
-                    Gia_LuuTru = x.Price,
+                    Gia_LuuTru = finalPrice,
                     SoLuong = x.Quantity,
                     Anh_LuuTru = x.ImageUrl
                 };
@@ -700,13 +722,24 @@
         return string.IsNullOrWhiteSpace(item.ImageUrl) ? "product1.jpg" : item.ImageUrl;
     }
 
+    private MaGiamGiaDto? GetBestPromo(BasketItemDto item)
+    {
+        if (productById.TryGetValue(item.ProductId, out var product))
+        {
+            return DiscountPricingHelper.GetBestPromotionForItem(product, item.Price, allCategoryGroups, allCategories, allDiscounts);
+        }
+        return null;
+    }
+
+    private decimal GetFinalItemPrice(BasketItemDto item)
+    {
+        var promo = GetBestPromo(item);
+        return DiscountPricingHelper.GetFinalPrice(promo, item.Price);
+    }
+
     private decimal GetItemEffectivePrice(BasketItemDto item)
     {
-        if (AppliedDiscount != null && IsVoucherApplicableToItem(item, AppliedDiscount))
-        {
-            return DiscountPricingHelper.GetFinalPrice(AppliedDiscount, item.Price);
-        }
-        return item.Price;
+        return GetFinalItemPrice(item);
     }
 
     private decimal CalculateCartDiscount(MaGiamGiaDto discount)

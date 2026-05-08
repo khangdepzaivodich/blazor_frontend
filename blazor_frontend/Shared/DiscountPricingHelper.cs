@@ -174,6 +174,35 @@ public static class DiscountPricingHelper
         }
     }
 
+    public static MaGiamGiaDto? GetBestPromotionForItem(
+        SanPhamDto? product,
+        decimal originalPrice,
+        IReadOnlyCollection<LoaiDanhMucDto> loaiDanhMucs,
+        IReadOnlyCollection<DanhMucDto> danhMucs,
+        IEnumerable<MaGiamGiaDto> discounts)
+    {
+        if (product == null || originalPrice <= 0) return null;
+
+        var currentCategory = danhMucs.FirstOrDefault(x => x.MaDM == product.MaDM);
+        var currentLoaiDanhMucId = currentCategory?.MaLDM;
+
+        // Chỉ lấy các mã áp dụng cho SP, DM, LDM (Khuyến mãi tự động)
+        return discounts
+            .Where(d => d.ApDungCho != "TatCa" && IsScopeApplicable(d, product, currentLoaiDanhMucId))
+            .OrderByDescending(d => GetDiscountAmount(d, originalPrice))
+            .FirstOrDefault();
+    }
+
+    public static IEnumerable<MaGiamGiaDto> GetApplicableCartVouchers(
+        IEnumerable<MaGiamGiaDto> discounts,
+        decimal cartTotal)
+    {
+        // Chỉ lấy các mã áp dụng cho "Tất cả" (Voucher nhập mã)
+        return discounts
+            .Where(d => d.ApDungCho == "TatCa" && IsConditionsMet(d, cartTotal) && d.HanSuDung >= DateTime.Now.AddSeconds(-30) && d.SoLuong > 0)
+            .OrderByDescending(d => GetDiscountAmount(d, cartTotal));
+    }
+
     public static decimal GetDiscountAmount(MaGiamGiaDto discount, decimal price)
     {
         if (price <= 0)

@@ -9,6 +9,7 @@ namespace blazor_frontend.Services
         Task<IEnumerable<LoaiDanhMucDto>> GetCategoryTypesAsync();
         Task<IEnumerable<LoaiDanhMucDto>> GetAllLoaiDanhMucAsync();
         Task<LoaiDanhMucDto?> GetCategoryTypeByIdAsync(Guid id);
+        Task<LoaiDanhMucDto?> GetCategoryTypeBySlugAsync(string slug);
         Task<bool> CreateLoaiDanhMucAsync(LoaiDanhMucCreateUpdateRequest request);
         Task<bool> UpdateLoaiDanhMucAsync(Guid id, LoaiDanhMucCreateUpdateRequest request);
         Task<bool> DeleteLoaiDanhMucAsync(Guid id);
@@ -16,6 +17,7 @@ namespace blazor_frontend.Services
         // Danh Muc
         Task<IEnumerable<DanhMucDto>> GetAllAsync();
         Task<DanhMucDto?> GetByIdAsync(Guid id);
+        Task<DanhMucDto?> GetBySlugAsync(string slug);
         Task<bool> CreateAsync(DanhMucCreateUpdateRequest request);
         Task<bool> UpdateAsync(Guid id, DanhMucCreateUpdateRequest request);
         Task<bool> DeleteAsync(Guid id);
@@ -48,6 +50,15 @@ namespace blazor_frontend.Services
             try
             {
                 return await _httpClient.GetFromJsonAsync<LoaiDanhMucDto>($"api/LoaiDanhMuc/{id}");
+            }
+            catch { return null; }
+        }
+
+        public async Task<LoaiDanhMucDto?> GetCategoryTypeBySlugAsync(string slug)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<LoaiDanhMucDto>($"api/LoaiDanhMuc/slug/{slug}");
             }
             catch { return null; }
         }
@@ -86,6 +97,15 @@ namespace blazor_frontend.Services
             try
             {
                 return await _httpClient.GetFromJsonAsync<DanhMucDto>($"api/DanhMuc/{id}");
+            }
+            catch { return null; }
+        }
+
+        public async Task<DanhMucDto?> GetBySlugAsync(string slug)
+        {
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<DanhMucDto>($"api/DanhMuc/slug/{slug}");
             }
             catch { return null; }
         }
